@@ -17,7 +17,11 @@ type IconName =
   | "contact"
   | "arrow"
   | "calendar"
-  | "phone";
+  | "phone"
+  | "card"
+  | "ticket"
+  | "user"
+  | "check";
 
 type ServiceCategory = "energy" | "candle" | "psychotherapy";
 
@@ -306,6 +310,7 @@ function Icon({ name }: { name: IconName }) {
       );
 
     case "contact":
+    case "user":
       return (
         <svg {...common}>
           <circle cx="12" cy="8" r="3" />
@@ -338,6 +343,32 @@ function Icon({ name }: { name: IconName }) {
         </svg>
       );
 
+    case "card":
+      return (
+        <svg {...common}>
+          <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
+          <path d="M3.5 9.5h17" />
+          <path d="M7 14h4" />
+        </svg>
+      );
+
+    case "ticket":
+      return (
+        <svg {...common}>
+          <path d="M4 7.5A2.5 2.5 0 0 0 6.5 5h11A2.5 2.5 0 0 0 20 7.5v1A2.5 2.5 0 0 0 20 13v1a2.5 2.5 0 0 0-2.5 2.5h-11A2.5 2.5 0 0 0 4 14v-1a2.5 2.5 0 0 0 0-4Z" />
+          <path d="M12 7.5v1" />
+          <path d="M12 11.5v1" />
+          <path d="M12 15.5v1" />
+        </svg>
+      );
+
+    case "check":
+      return (
+        <svg {...common}>
+          <path d="m5.5 12.5 4 4 9-9" />
+        </svg>
+      );
+
     default:
       return null;
   }
@@ -345,14 +376,12 @@ function Icon({ name }: { name: IconName }) {
 
 function getTodayJalali() {
   try {
-    const formatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+    return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
-    });
-
-    return formatter.format(new Date());
+    }).format(new Date());
   } catch {
     return "امروز";
   }
@@ -422,7 +451,6 @@ function HomePage() {
               <div className="section-kicker">TODAY</div>
               <h2>حال‌وهوای امروز</h2>
             </div>
-
             <Icon name="spark" />
           </div>
 
@@ -530,7 +558,6 @@ function ServiceTabs({
               boxShadow: selected
                 ? "0 5px 16px rgba(36, 99, 71, 0.1)"
                 : "0 3px 12px rgba(53, 59, 50, 0.06)",
-              transition: "all 0.2s ease",
             }}
           >
             {tab.title}
@@ -637,7 +664,6 @@ function ServiceDetail({
         </div>
 
         <h1>{service.title}</h1>
-
         <p>{service.description}</p>
       </div>
 
@@ -714,9 +740,7 @@ function ServicesPage() {
       <div className="page-intro">
         <div className="section-kicker">SERVICES</div>
         <h1>خدمات کائنات‌چی</h1>
-        <p>
-          هر بخش را انتخاب کن تا جزئیات آن را ببینی.
-        </p>
+        <p>هر بخش را انتخاب کن تا جزئیات آن را ببینی.</p>
       </div>
 
       <ServiceTabs active={activeTab} onChange={setActiveTab} />
@@ -741,6 +765,411 @@ function ServicesPage() {
   );
 }
 
+function VipPage({ onBack }: { onBack: () => void }) {
+  const [activePanel, setActivePanel] = useState<
+    "dashboard" | "bookings" | "payments" | "tokens" | "profile"
+  >("dashboard");
+
+  const vipActive = true;
+
+  if (activePanel === "bookings") {
+    return (
+      <div className="inner-page">
+        <button
+          type="button"
+          onClick={() => setActivePanel("dashboard")}
+          style={backButtonStyle}
+        >
+          ← بازگشت به VIP
+        </button>
+
+        <div className="page-intro">
+          <div className="section-kicker">VIP</div>
+          <h1>نوبت‌های من</h1>
+          <p>نوبت‌های ثبت‌شده شما در کائنات‌چی.</p>
+        </div>
+
+        <div className="glass-list-card">
+          <div className="list-icon">
+            <Icon name="calendar" />
+          </div>
+
+          <div className="list-copy">
+            <strong>هنوز نوبتی ثبت نشده</strong>
+            <span>
+              بعد از ثبت نوبت، اطلاعات آن در این بخش نمایش داده می‌شود.
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (activePanel === "payments") {
+    return (
+      <div className="inner-page">
+        <button
+          type="button"
+          onClick={() => setActivePanel("dashboard")}
+          style={backButtonStyle}
+        >
+          ← بازگشت به VIP
+        </button>
+
+        <div className="page-intro">
+          <div className="section-kicker">VIP</div>
+          <h1>پرداخت‌های من</h1>
+          <p>سوابق پرداخت شما در کائنات‌چی.</p>
+        </div>
+
+        <div className="glass-list-card">
+          <div className="list-icon">
+            <Icon name="card" />
+          </div>
+
+          <div className="list-copy">
+            <strong>هنوز پرداختی ثبت نشده</strong>
+            <span>
+              سوابق پرداخت پس از اتصال حساب شما به سیستم نمایش داده می‌شود.
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (activePanel === "tokens") {
+    return (
+      <div className="inner-page">
+        <button
+          type="button"
+          onClick={() => setActivePanel("dashboard")}
+          style={backButtonStyle}
+        >
+          ← بازگشت به VIP
+        </button>
+
+        <div className="page-intro">
+          <div className="section-kicker">VIP TOKENS</div>
+          <h1>توکن‌های تخفیف</h1>
+          <p>توکن‌های اختصاصی شما در باشگاه VIP.</p>
+        </div>
+
+        <div
+          className="glass-list-card"
+          style={{
+            border: "1px solid rgba(165, 139, 91, 0.25)",
+          }}
+        >
+          <div className="list-icon">
+            <Icon name="ticket" />
+          </div>
+
+          <div className="list-copy">
+            <strong>توکن فعال ندارید</strong>
+            <span>
+              توکن‌های صادرشده و وضعیت استفاده از آن‌ها اینجا نمایش داده می‌شود.
+            </span>
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginTop: "14px",
+            padding: "16px",
+            borderRadius: "18px",
+            background: "rgba(165, 139, 91, 0.08)",
+            border: "1px solid rgba(165, 139, 91, 0.15)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "9px",
+              color: "#8a7348",
+              marginBottom: "7px",
+            }}
+          >
+            <Icon name="spark" />
+            <strong>تخفیف VIP</strong>
+          </div>
+
+          <span style={{ fontSize: "13px", lineHeight: 1.8 }}>
+            توکن‌های ۳٪، ۵٪ و ۷٪ پس از اتصال به سیستم VIP از این بخش مدیریت
+            خواهند شد.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (activePanel === "profile") {
+    return (
+      <div className="inner-page">
+        <button
+          type="button"
+          onClick={() => setActivePanel("dashboard")}
+          style={backButtonStyle}
+        >
+          ← بازگشت به VIP
+        </button>
+
+        <div className="page-intro">
+          <div className="section-kicker">PROFILE</div>
+          <h1>پروفایل من</h1>
+          <p>اطلاعات حساب VIP شما.</p>
+        </div>
+
+        <div className="glass-list-card">
+          <div className="list-icon">
+            <Icon name="user" />
+          </div>
+
+          <div className="list-copy">
+            <strong>عضو VIP کائنات‌چی</strong>
+            <span>اطلاعات شخصی شما پس از اتصال حساب نمایش داده می‌شود.</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="inner-page">
+      <button type="button" onClick={onBack} style={backButtonStyle}>
+        ← بازگشت
+      </button>
+
+      <div
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          padding: "24px 20px",
+          borderRadius: "26px",
+          marginBottom: "18px",
+          background:
+            "linear-gradient(145deg, rgba(53,59,50,0.98), rgba(38,73,55,0.95))",
+          color: "#fff",
+          boxShadow: "0 18px 40px rgba(23,75,56,0.18)",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            width: "150px",
+            height: "150px",
+            borderRadius: "50%",
+            border: "1px solid rgba(255,255,255,0.14)",
+            top: "-65px",
+            left: "-45px",
+          }}
+        />
+
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            gap: "13px",
+          }}
+        >
+          <div
+            style={{
+              width: "50px",
+              height: "50px",
+              borderRadius: "17px",
+              display: "grid",
+              placeItems: "center",
+              background: "rgba(255,255,255,0.1)",
+              color: "#d8c59b",
+              flex: "0 0 auto",
+            }}
+          >
+            <Icon name="crown" />
+          </div>
+
+          <div>
+            <div
+              style={{
+                fontSize: "11px",
+                letterSpacing: "2px",
+                opacity: 0.7,
+                marginBottom: "5px",
+              }}
+            >
+              KAENATCHI
+            </div>
+
+            <h1
+              style={{
+                margin: 0,
+                fontSize: "24px",
+                fontWeight: 600,
+              }}
+            >
+              پنل VIP
+            </h1>
+          </div>
+        </div>
+
+        <div
+          style={{
+            position: "relative",
+            marginTop: "20px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            fontSize: "13px",
+          }}
+        >
+          <span
+            style={{
+              width: "8px",
+              height: "8px",
+              borderRadius: "50%",
+              background: "#d8c59b",
+            }}
+          />
+          {vipActive ? "عضویت VIP فعال است" : "عضویت VIP غیرفعال است"}
+        </div>
+      </div>
+
+      <div className="page-intro">
+        <div className="section-kicker">VIP CLUB</div>
+        <h1>فضای اختصاصی تو</h1>
+        <p>
+          نوبت‌ها، پرداخت‌ها، توکن‌های تخفیف و اطلاعات پروفایل در یکجا.
+        </p>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: "10px",
+        }}
+      >
+        <button
+          type="button"
+          className="glass-list-card"
+          onClick={() => setActivePanel("bookings")}
+          style={vipTileStyle}
+        >
+          <div className="list-icon">
+            <Icon name="calendar" />
+          </div>
+          <div className="list-copy">
+            <strong>نوبت‌های من</strong>
+            <span>مشاهده نوبت‌ها</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          className="glass-list-card"
+          onClick={() => setActivePanel("payments")}
+          style={vipTileStyle}
+        >
+          <div className="list-icon">
+            <Icon name="card" />
+          </div>
+          <div className="list-copy">
+            <strong>پرداخت‌ها</strong>
+            <span>سوابق پرداخت</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          className="glass-list-card"
+          onClick={() => setActivePanel("tokens")}
+          style={vipTileStyle}
+        >
+          <div className="list-icon">
+            <Icon name="ticket" />
+          </div>
+          <div className="list-copy">
+            <strong>توکن‌ها</strong>
+            <span>تخفیف‌های VIP</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          className="glass-list-card"
+          onClick={() => setActivePanel("profile")}
+          style={vipTileStyle}
+        >
+          <div className="list-icon">
+            <Icon name="user" />
+          </div>
+          <div className="list-copy">
+            <strong>پروفایل</strong>
+            <span>اطلاعات حساب</span>
+          </div>
+        </button>
+      </div>
+
+      <div
+        style={{
+          marginTop: "14px",
+          padding: "18px",
+          borderRadius: "20px",
+          background: "rgba(165,139,91,0.08)",
+          border: "1px solid rgba(165,139,91,0.16)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "9px",
+            color: "#8a7348",
+            marginBottom: "8px",
+          }}
+        >
+          <Icon name="check" />
+          <strong>عضویت فعال</strong>
+        </div>
+
+        <p
+          style={{
+            margin: 0,
+            fontSize: "13px",
+            lineHeight: 1.9,
+          }}
+        >
+          این بخش در مرحله اتصال به حساب واقعی VIP، اطلاعات شخصی و مزایای
+          اختصاصی هر عضو را نمایش خواهد داد.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const backButtonStyle = {
+  border: "none",
+  background: "transparent",
+  color: "#246347",
+  fontFamily: "inherit",
+  cursor: "pointer",
+  padding: "8px 0",
+  marginBottom: "12px",
+};
+
+const vipTileStyle = {
+  width: "100%",
+  minHeight: "135px",
+  border: "none",
+  textAlign: "right" as const,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  display: "flex",
+  flexDirection: "column" as const,
+  alignItems: "flex-start",
+};
+
 function MoreDetail({
   title,
   icon,
@@ -754,19 +1183,7 @@ function MoreDetail({
 }) {
   return (
     <div className="inner-page">
-      <button
-        type="button"
-        onClick={onBack}
-        style={{
-          border: "none",
-          background: "transparent",
-          color: "#246347",
-          fontFamily: "inherit",
-          cursor: "pointer",
-          padding: "8px 0",
-          marginBottom: "12px",
-        }}
-      >
+      <button type="button" onClick={onBack} style={backButtonStyle}>
         ← بازگشت
       </button>
 
@@ -796,6 +1213,10 @@ function MorePage() {
     (typeof moreItems)[number] | null
   >(null);
 
+  if (selected?.id === "vip") {
+    return <VipPage onBack={() => setSelected(null)} />;
+  }
+
   if (selected) {
     return (
       <MoreDetail
@@ -812,9 +1233,7 @@ function MorePage() {
       <div className="page-intro">
         <div className="section-kicker">MORE</div>
         <h1>بیشتر</h1>
-        <p>
-          بخش‌های دیگر کائنات‌چی را از اینجا دنبال کن.
-        </p>
+        <p>بخش‌های دیگر کائنات‌چی را از اینجا دنبال کن.</p>
       </div>
 
       <div className="more-list">
