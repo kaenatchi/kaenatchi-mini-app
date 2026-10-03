@@ -1,7 +1,5 @@
-import { useState } from "react";
-
+import { useEffect, useState } from "react";
 type Section = "home" | "services" | "more";
-
 type IconName =
   | "home"
   | "spark"
@@ -23,9 +21,7 @@ type IconName =
   | "user"
   | "check"
   | "search";
-
 type ServiceCategory = "energy" | "candle" | "psychotherapy";
-
 type Service = {
   id: string;
   title: string;
@@ -34,7 +30,6 @@ type Service = {
   duration: string;
   description: string;
 };
-
 type SearchItem = {
   id: string;
   title: string;
@@ -43,7 +38,23 @@ type SearchItem = {
   icon: IconName;
   service?: Service;
 };
-
+type VipCustomer = {
+  id?: string;
+  telegram_id?: number;
+  first_name?: string | null;
+  last_name?: string | null;
+  mobile?: string | null;
+  vip_status?: "active" | "inactive";
+  joined_at?: string | null;
+  bookings_count?: number;
+};
+type VipApiResponse = {
+  success: boolean;
+  message?: string;
+  customer?: VipCustomer;
+};
+const VIP_API_URL =
+  "https://pfcxcvwtvpgtzushmnlc.supabase.co/functions/v1/vip-api";
 const energyServices: Service[] = [
   {
     id: "coffee",
@@ -136,7 +147,6 @@ const energyServices: Service[] = [
       "خوانش اوراکل با تمرکز بر پیام‌ها و انرژی‌های مرتبط با موضوع شما.",
   },
 ];
-
 const mainServices: Service[] = [
   {
     id: "energy-reading",
@@ -166,7 +176,6 @@ const mainServices: Service[] = [
       "جلسه گفت‌وگومحور تلفنی برای صحبت درباره موضوع مورد نظر شما. این خدمت به‌عنوان روان‌درمانی یا خدمات درمانی بالینی ارائه نمی‌شود.",
   },
 ];
-
 const moreItems = [
   {
     id: "vip",
@@ -205,15 +214,9 @@ const moreItems = [
     description: "راه‌های ارتباطی کائنات‌چی",
   },
 ];
-
-/*
- * محتوای کلاس‌ها، ایونت‌ها و FAQ فعلاً از CMS خواهد آمد.
- * تا قبل از اتصال CMS، عمداً داده ساختگی وارد نمی‌کنیم.
- */
 const publishedClasses: SearchItem[] = [];
 const publishedEvents: SearchItem[] = [];
 const publishedFaq: SearchItem[] = [];
-
 function Icon({ name }: { name: IconName }) {
   const common = {
     width: 24,
@@ -225,7 +228,6 @@ function Icon({ name }: { name: IconName }) {
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
   };
-
   switch (name) {
     case "home":
       return (
@@ -235,7 +237,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="M9.5 20.2v-6h5v6" />
         </svg>
       );
-
     case "spark":
       return (
         <svg {...common}>
@@ -243,7 +244,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="m19 4 .5 2 1.7.8-1.7.8-.5-2-1.7-.8 1.7-.8Z" />
         </svg>
       );
-
     case "menu":
       return (
         <svg {...common}>
@@ -252,7 +252,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="M5 17h14" />
         </svg>
       );
-
     case "search":
       return (
         <svg {...common}>
@@ -260,7 +259,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="m15.5 15.5 4.2 4.2" />
         </svg>
       );
-
     case "energy":
       return (
         <svg {...common}>
@@ -268,7 +266,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="M12 7.2c1.8 2.1 2.6 3.7 2.6 5.2 0 1.9-1.2 3.2-2.6 3.2s-2.6-1.3-2.6-3.2c0-1.5.8-3.1 2.6-5.2Z" />
         </svg>
       );
-
     case "candle":
       return (
         <svg {...common}>
@@ -277,7 +274,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="M6.5 19h11" />
         </svg>
       );
-
     case "conversation":
       return (
         <svg {...common}>
@@ -286,7 +282,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="M8 12.5h5" />
         </svg>
       );
-
     case "crown":
       return (
         <svg {...common}>
@@ -294,7 +289,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="M6 20h12" />
         </svg>
       );
-
     case "class":
       return (
         <svg {...common}>
@@ -304,7 +298,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="M8 15h3" />
         </svg>
       );
-
     case "event":
       return (
         <svg {...common}>
@@ -317,7 +310,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="M16 13h.01" />
         </svg>
       );
-
     case "faq":
       return (
         <svg {...common}>
@@ -326,7 +318,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="M12 17h.01" />
         </svg>
       );
-
     case "clock":
       return (
         <svg {...common}>
@@ -334,7 +325,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="M12 7.5v4.8l3.2 2" />
         </svg>
       );
-
     case "contact":
     case "user":
       return (
@@ -343,7 +333,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="M5.5 20c.7-3.2 2.9-5 6.5-5s5.8 1.8 6.5 5" />
         </svg>
       );
-
     case "arrow":
       return (
         <svg {...common}>
@@ -351,7 +340,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="m13 6 6 6-6 6" />
         </svg>
       );
-
     case "calendar":
       return (
         <svg {...common}>
@@ -361,14 +349,12 @@ function Icon({ name }: { name: IconName }) {
           <path d="M4 9h16" />
         </svg>
       );
-
     case "phone":
       return (
         <svg {...common}>
           <path d="M7 4.5 9.5 4l1.5 4-2 1.5a13 13 0 0 0 5.5 5.5l1.5-2 4 1.5-.5 2.5c-.3 1.5-1.7 2.5-3.2 2.2C10.8 18.3 5.7 13.2 4.3 7.7 4 6.2 5.5 4.8 7 4.5Z" />
         </svg>
       );
-
     case "card":
       return (
         <svg {...common}>
@@ -377,7 +363,6 @@ function Icon({ name }: { name: IconName }) {
           <path d="M7 14h4" />
         </svg>
       );
-
     case "ticket":
       return (
         <svg {...common}>
@@ -387,19 +372,16 @@ function Icon({ name }: { name: IconName }) {
           <path d="M12 15.5v1" />
         </svg>
       );
-
     case "check":
       return (
         <svg {...common}>
           <path d="m5.5 12.5 4 4 9-9" />
         </svg>
       );
-
     default:
       return null;
   }
 }
-
 function getTodayJalali() {
   try {
     return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
@@ -412,11 +394,6 @@ function getTodayJalali() {
     return "امروز";
   }
 }
-
-/* =========================================================
-   Shared green section header
-   ========================================================= */
-
 function SectionHeaderCard({
   kicker,
   title,
@@ -456,7 +433,6 @@ function SectionHeaderCard({
           pointerEvents: "none",
         }}
       />
-
       <div
         style={{
           position: "absolute",
@@ -469,7 +445,6 @@ function SectionHeaderCard({
           pointerEvents: "none",
         }}
       />
-
       <div
         style={{
           position: "relative",
@@ -494,7 +469,6 @@ function SectionHeaderCard({
             <Icon name={icon} />
           </div>
         )}
-
         <div>
           <div
             style={{
@@ -506,7 +480,6 @@ function SectionHeaderCard({
           >
             {kicker}
           </div>
-
           <h1
             style={{
               margin: 0,
@@ -519,7 +492,6 @@ function SectionHeaderCard({
           </h1>
         </div>
       </div>
-
       <p
         style={{
           position: "relative",
@@ -531,7 +503,6 @@ function SectionHeaderCard({
       >
         {description}
       </p>
-
       {status && (
         <div
           style={{
@@ -559,14 +530,12 @@ function SectionHeaderCard({
     </div>
   );
 }
-
 function HomePage({
   onSearch,
 }: {
   onSearch: () => void;
 }) {
   const today = getTodayJalali();
-
   return (
     <>
       <header className="topbar">
@@ -574,7 +543,6 @@ function HomePage({
           <div className="logo-placeholder" aria-hidden="true">
             <Icon name="spark" />
           </div>
-
           <div className="brand-copy">
             <div className="brand-name">کائنات‌چی</div>
             <div className="brand-tagline">
@@ -582,7 +550,6 @@ function HomePage({
             </div>
           </div>
         </div>
-
         <div
           className="date-pill"
           style={{
@@ -595,7 +562,6 @@ function HomePage({
           {today}
         </div>
       </header>
-
       <main className="main-content">
         <button
           type="button"
@@ -621,36 +587,29 @@ function HomePage({
           <Icon name="search" />
           <span>جست‌وجو در کائنات‌چی...</span>
         </button>
-
         <section className="hero">
           <div className="hero-glow" />
-
           <div className="hero-art">
             <div className="orb orb-large" />
             <div className="orb orb-small" />
             <div className="botanical botanical-left" />
             <div className="botanical botanical-right" />
-
             <div className="hero-symbol">
               <Icon name="spark" />
             </div>
-
             <div className="hero-ring ring-one" />
             <div className="hero-ring ring-two" />
           </div>
-
           <div className="hero-content">
             <div className="eyebrow">
               <Icon name="spark" />
               <span>KAENATCHI</span>
             </div>
-
             <h1>
               جایی برای
               <br />
               دیدن نشانه‌ها
             </h1>
-
             <p>
               خدمات، تجربه‌ها و مسیرهای کائنات‌چی
               <br />
@@ -658,22 +617,18 @@ function HomePage({
             </p>
           </div>
         </section>
-
         <section className="today-section">
           <div className="section-heading-row">
             <div>
               <div className="section-kicker">TODAY</div>
               <h2>حال‌وهوای امروز</h2>
             </div>
-
             <Icon name="spark" />
           </div>
-
           <div className="today-card">
             <div className="today-decoration">
               <Icon name="spark" />
             </div>
-
             <div className="today-content">
               <strong>آرام‌تر نگاه کن.</strong>
               <span>
@@ -682,7 +637,6 @@ function HomePage({
             </div>
           </div>
         </section>
-
         <section className="featured-section">
           <div className="section-heading-row">
             <div>
@@ -690,7 +644,6 @@ function HomePage({
               <h2>پیشنهاد امروز</h2>
             </div>
           </div>
-
           <div className="featured-card">
             <div className="featured-art">
               <div className="featured-circle">
@@ -700,14 +653,11 @@ function HomePage({
                 <Icon name="spark" />
               </div>
             </div>
-
             <div className="featured-copy">
               <div className="featured-label">
                 KAENATCHI MOMENT
               </div>
-
               <h3>برای خودت یک مکث بساز.</h3>
-
               <p>
                 فضای کائنات‌چی برای تجربه‌ای آرام، شخصی و متفاوت
                 طراحی شده است.
@@ -715,10 +665,8 @@ function HomePage({
             </div>
           </div>
         </section>
-
         <section className="welcome-section">
           <h2>به کائنات‌چی خوش آمدی 🌿</h2>
-
           <p>
             از خدمات و انرژی‌خوانی تا کلاس‌ها، ایونت‌ها و باشگاه
             VIP؛ مسیرت را از منوی پایین پیدا کن.
@@ -728,7 +676,6 @@ function HomePage({
     </>
   );
 }
-
 function ServiceTabs({
   active,
   onChange,
@@ -745,7 +692,6 @@ function ServiceTabs({
     { id: "candle", title: "شمع‌تراپی" },
     { id: "psychotherapy", title: "سایکوتراپی" },
   ];
-
   return (
     <div
       style={{
@@ -758,7 +704,6 @@ function ServiceTabs({
     >
       {tabs.map((tab) => {
         const selected = active === tab.id;
-
         return (
           <button
             key={tab.id}
@@ -791,7 +736,6 @@ function ServiceTabs({
     </div>
   );
 }
-
 function ServiceCard({
   service,
   onClick,
@@ -805,7 +749,6 @@ function ServiceCard({
       : service.category === "candle"
         ? "candle"
         : "conversation";
-
   return (
     <button
       type="button"
@@ -822,12 +765,9 @@ function ServiceCard({
       <div className="list-icon">
         <Icon name={icon} />
       </div>
-
       <div className="list-copy">
         <strong>{service.title}</strong>
-
         <span>{service.description}</span>
-
         {(service.price || service.duration) && (
           <small
             style={{
@@ -843,14 +783,12 @@ function ServiceCard({
           </small>
         )}
       </div>
-
       <div className="list-arrow">
         <Icon name="arrow" />
       </div>
     </button>
   );
 }
-
 function ServiceDetail({
   service,
   onBack,
@@ -864,7 +802,6 @@ function ServiceDetail({
       : service.category === "candle"
         ? "candle"
         : "conversation";
-
   return (
     <div className="inner-page">
       <button
@@ -874,14 +811,12 @@ function ServiceDetail({
       >
         ← بازگشت
       </button>
-
       <SectionHeaderCard
         kicker="SERVICE"
         title={service.title}
         description={service.description}
         icon={icon}
       />
-
       <div className="glass-list-card">
         <div className="list-copy">
           {service.duration && (
@@ -890,7 +825,6 @@ function ServiceDetail({
               <span>{service.duration}</span>
             </div>
           )}
-
           {service.price && (
             <div>
               <strong>هزینه</strong>
@@ -899,7 +833,6 @@ function ServiceDetail({
           )}
         </div>
       </div>
-
       <button
         type="button"
         style={{
@@ -929,15 +862,12 @@ function ServiceDetail({
     </div>
   );
 }
-
 function ServicesPage() {
   const [activeTab, setActiveTab] = useState<
     "all" | ServiceCategory
   >("all");
-
   const [selectedService, setSelectedService] =
     useState<Service | null>(null);
-
   if (selectedService) {
     return (
       <ServiceDetail
@@ -946,9 +876,7 @@ function ServicesPage() {
       />
     );
   }
-
   let visibleServices: Service[];
-
   if (activeTab === "all") {
     visibleServices = mainServices;
   } else if (activeTab === "energy") {
@@ -958,7 +886,6 @@ function ServicesPage() {
       (service) => service.category === activeTab
     );
   }
-
   return (
     <div className="inner-page">
       <SectionHeaderCard
@@ -967,12 +894,10 @@ function ServicesPage() {
         description="هر بخش را انتخاب کن تا جزئیات آن را ببینی."
         icon="spark"
       />
-
       <ServiceTabs
         active={activeTab}
         onChange={setActiveTab}
       />
-
       <div className="service-list">
         {visibleServices.map((service) => (
           <ServiceCard
@@ -983,7 +908,6 @@ function ServicesPage() {
                 setActiveTab("energy");
                 return;
               }
-
               setSelectedService(service);
             }}
           />
@@ -992,11 +916,6 @@ function ServicesPage() {
     </div>
   );
 }
-
-/* =========================================================
-   SEARCH
-   ========================================================= */
-
 function SearchPage({
   onBack,
   onOpenService,
@@ -1005,7 +924,6 @@ function SearchPage({
   onOpenService: (service: Service) => void;
 }) {
   const [query, setQuery] = useState("");
-
   const serviceItems: SearchItem[] = [
     ...mainServices.map((service) => ({
       id: service.id,
@@ -1029,16 +947,13 @@ function SearchPage({
       service,
     })),
   ];
-
   const allItems: SearchItem[] = [
     ...serviceItems,
     ...publishedClasses,
     ...publishedEvents,
     ...publishedFaq,
   ];
-
   const normalizedQuery = query.trim().toLocaleLowerCase("fa");
-
   const results =
     normalizedQuery.length === 0
       ? []
@@ -1047,10 +962,8 @@ function SearchPage({
             `${item.title} ${item.description}`.toLocaleLowerCase(
               "fa"
             );
-
           return searchableText.includes(normalizedQuery);
         });
-
   return (
     <div className="inner-page">
       <button
@@ -1060,14 +973,12 @@ function SearchPage({
       >
         ← بازگشت
       </button>
-
       <SectionHeaderCard
         kicker="SEARCH"
         title="جست‌وجو"
         description="خدمات، کلاس‌ها، ایونت‌ها و سوالات متداول را پیدا کن."
         icon="search"
       />
-
       <div
         style={{
           display: "flex",
@@ -1084,7 +995,6 @@ function SearchPage({
         }}
       >
         <Icon name="search" />
-
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -1104,7 +1014,6 @@ function SearchPage({
             direction: "rtl",
           }}
         />
-
         {query && (
           <button
             type="button"
@@ -1124,7 +1033,6 @@ function SearchPage({
           </button>
         )}
       </div>
-
       {query.trim().length === 0 ? (
         <div
           className="glass-list-card"
@@ -1148,10 +1056,8 @@ function SearchPage({
           >
             <Icon name="search" />
           </div>
-
           <div className="list-copy">
             <strong>دنبال چه چیزی می‌گردی؟</strong>
-
             <span>
               نام خدمت، انرژی‌خوانی، کلاس، ایونت یا سوال مورد
               نظرت را جست‌وجو کن.
@@ -1187,7 +1093,6 @@ function SearchPage({
               <div className="list-icon">
                 <Icon name={item.icon} />
               </div>
-
               <div className="list-copy">
                 <small
                   style={{
@@ -1205,11 +1110,9 @@ function SearchPage({
                         ? "ایونت"
                         : "سوال متداول"}
                 </small>
-
                 <strong>{item.title}</strong>
                 <span>{item.description}</span>
               </div>
-
               {item.type === "service" && (
                 <div className="list-arrow">
                   <Icon name="arrow" />
@@ -1241,10 +1144,8 @@ function SearchPage({
           >
             <Icon name="search" />
           </div>
-
           <div className="list-copy">
             <strong>چیزی پیدا نشد</strong>
-
             <span>
               عبارت دیگری را امتحان کن یا نام بخش مورد نظرت را
               کوتاه‌تر بنویس.
@@ -1255,18 +1156,210 @@ function SearchPage({
     </div>
   );
 }
-
 /* =========================================================
-   VIP
+   TELEGRAM VIP
    ========================================================= */
-
+type TelegramWebApp = {
+  initData: string;
+  ready?: () => void;
+  expand?: () => void;
+};
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: TelegramWebApp;
+    };
+  }
+}
+async function loadTelegramIdentity(): Promise<VipApiResponse> {
+  const telegramWebApp = window.Telegram?.WebApp;
+  if (!telegramWebApp) {
+    return {
+      success: false,
+      message:
+        "این بخش باید از داخل تلگرام باز شود.",
+    };
+  }
+  const initData = telegramWebApp.initData;
+  if (!initData) {
+    return {
+      success: false,
+      message:
+        "اطلاعات ورود تلگرام دریافت نشد. لطفاً VIP را از داخل تلگرام باز کن.",
+    };
+  }
+  try {
+    const response = await fetch(VIP_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        initData,
+      }),
+    });
+    const data = (await response.json()) as VipApiResponse;
+    if (!response.ok) {
+      return {
+        success: false,
+        message:
+          data.message ||
+          "امکان دریافت اطلاعات VIP وجود ندارد.",
+      };
+    }
+    return data;
+  } catch {
+    return {
+      success: false,
+      message:
+        "ارتباط با سامانه VIP برقرار نشد. لطفاً دوباره تلاش کن.",
+    };
+  }
+}
 function VipPage({ onBack }: { onBack: () => void }) {
   const [activePanel, setActivePanel] = useState<
     "dashboard" | "bookings" | "payments" | "tokens" | "profile"
   >("dashboard");
-
-  const vipActive = true;
-
+  const [loading, setLoading] = useState(true);
+  const [vipCustomer, setVipCustomer] =
+    useState<VipCustomer | null>(null);
+  const [vipError, setVipError] = useState("");
+  useEffect(() => {
+    let mounted = true;
+    const initializeVip = async () => {
+      try {
+        window.Telegram?.WebApp?.ready?.();
+        window.Telegram?.WebApp?.expand?.();
+      } catch {
+        // Telegram methods are optional.
+      }
+      const result = await loadTelegramIdentity();
+      if (!mounted) {
+        return;
+      }
+      setLoading(false);
+      if (result.success && result.customer) {
+        setVipCustomer(result.customer);
+        setVipError("");
+        return;
+      }
+      setVipCustomer(null);
+      setVipError(
+        result.message ||
+          "عضویت VIP شما فعال نیست."
+      );
+    };
+    initializeVip();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+  const displayName =
+    `${vipCustomer?.first_name || ""} ${vipCustomer?.last_name || ""}`.trim() ||
+    "عضو VIP";
+  const vipActive =
+    vipCustomer?.vip_status === "active";
+  if (loading) {
+    return (
+      <div className="inner-page">
+        <button
+          type="button"
+          onClick={onBack}
+          style={backButtonStyle}
+        >
+          ← بازگشت
+        </button>
+        <SectionHeaderCard
+          kicker="KAENATCHI"
+          title="پنل VIP"
+          description="در حال بررسی عضویت VIP شما..."
+          icon="crown"
+        />
+        <div
+          className="glass-list-card"
+          style={{
+            display: "block",
+            textAlign: "center",
+            padding: "28px 20px",
+          }}
+        >
+          <div
+            style={{
+              width: "52px",
+              height: "52px",
+              margin: "0 auto 14px",
+              borderRadius: "18px",
+              display: "grid",
+              placeItems: "center",
+              background:
+                "rgba(36,99,71,0.08)",
+              color: "#246347",
+            }}
+          >
+            <Icon name="crown" />
+          </div>
+          <div className="list-copy">
+            <strong>در حال بررسی عضویت...</strong>
+            <span>
+              لطفاً چند لحظه صبر کن.
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (!vipCustomer || !vipActive) {
+    return (
+      <div className="inner-page">
+        <button
+          type="button"
+          onClick={onBack}
+          style={backButtonStyle}
+        >
+          ← بازگشت
+        </button>
+        <SectionHeaderCard
+          kicker="KAENATCHI VIP"
+          title="عضویت VIP"
+          description="دسترسی این بخش فقط برای اعضای فعال VIP کائنات‌چی امکان‌پذیر است."
+          icon="crown"
+          status="عضویت VIP فعال نیست"
+        />
+        <div
+          className="glass-list-card"
+          style={{
+            display: "block",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              width: "58px",
+              height: "58px",
+              margin: "0 auto 14px",
+              borderRadius: "20px",
+              display: "grid",
+              placeItems: "center",
+              background:
+                "rgba(53,59,50,0.07)",
+              color: "#353B32",
+            }}
+          >
+            <Icon name="crown" />
+          </div>
+          <div className="list-copy">
+            <strong>
+              دسترسی VIP فعال نیست
+            </strong>
+            <span>
+              {vipError ||
+                "در حال حاضر این حساب عضو فعال باشگاه VIP نیست."}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (activePanel === "bookings") {
     return (
       <div className="inner-page">
@@ -1277,32 +1370,31 @@ function VipPage({ onBack }: { onBack: () => void }) {
         >
           ← بازگشت به VIP
         </button>
-
         <SectionHeaderCard
           kicker="VIP"
           title="نوبت‌های من"
           description="نوبت‌های ثبت‌شده شما در کائنات‌چی."
           icon="calendar"
         />
-
         <div className="glass-list-card">
           <div className="list-icon">
             <Icon name="calendar" />
           </div>
-
           <div className="list-copy">
-            <strong>هنوز نوبتی ثبت نشده</strong>
-
+            <strong>
+              {vipCustomer.bookings_count
+                ? `${vipCustomer.bookings_count} نوبت ثبت شده`
+                : "هنوز نوبتی ثبت نشده"}
+            </strong>
             <span>
-              بعد از ثبت نوبت، اطلاعات آن در این بخش نمایش داده
-              می‌شود.
+              سوابق نوبت‌ها در مرحله بعد از اتصال کامل
+              سیستم رزرو نمایش داده خواهد شد.
             </span>
           </div>
         </div>
       </div>
     );
   }
-
   if (activePanel === "payments") {
     return (
       <div className="inner-page">
@@ -1313,32 +1405,27 @@ function VipPage({ onBack }: { onBack: () => void }) {
         >
           ← بازگشت به VIP
         </button>
-
         <SectionHeaderCard
           kicker="VIP"
           title="پرداخت‌های من"
           description="سوابق پرداخت شما در کائنات‌چی."
           icon="card"
         />
-
         <div className="glass-list-card">
           <div className="list-icon">
             <Icon name="card" />
           </div>
-
           <div className="list-copy">
-            <strong>هنوز پرداختی ثبت نشده</strong>
-
+            <strong>پرداخت‌ها</strong>
             <span>
-              سوابق پرداخت پس از اتصال حساب شما به سیستم نمایش
-              داده می‌شود.
+              سوابق پرداخت VIP در مرحله بعد از تکمیل اتصال
+              اطلاعات پرداخت نمایش داده خواهد شد.
             </span>
           </div>
         </div>
       </div>
     );
   }
-
   if (activePanel === "tokens") {
     return (
       <div className="inner-page">
@@ -1349,14 +1436,12 @@ function VipPage({ onBack }: { onBack: () => void }) {
         >
           ← بازگشت به VIP
         </button>
-
         <SectionHeaderCard
           kicker="VIP TOKENS"
           title="توکن‌های تخفیف"
           description="توکن‌های اختصاصی شما در باشگاه VIP."
           icon="ticket"
         />
-
         <div
           className="glass-list-card"
           style={{
@@ -1367,17 +1452,14 @@ function VipPage({ onBack }: { onBack: () => void }) {
           <div className="list-icon">
             <Icon name="ticket" />
           </div>
-
           <div className="list-copy">
-            <strong>توکن فعال ندارید</strong>
-
+            <strong>توکن‌های VIP</strong>
             <span>
-              توکن‌های صادرشده و وضعیت استفاده از آن‌ها اینجا
-              نمایش داده می‌شود.
+              توکن‌های اختصاصی شما در مرحله بعد از تکمیل
+              API توکن‌ها در این قسمت نمایش داده می‌شوند.
             </span>
           </div>
         </div>
-
         <div
           style={{
             marginTop: "14px",
@@ -1401,21 +1483,20 @@ function VipPage({ onBack }: { onBack: () => void }) {
             <Icon name="spark" />
             <strong>تخفیف VIP</strong>
           </div>
-
           <span
             style={{
               fontSize: "13px",
               lineHeight: 1.8,
             }}
           >
-            توکن‌های ۳٪، ۵٪ و ۷٪ پس از اتصال به سیستم VIP از
-            این بخش مدیریت خواهند شد.
+            تخفیف‌های VIP برای انرژی‌خوانی، کلاس‌ها و
+            ایونت‌ها در ادامه به‌صورت امن از سمت سرور مدیریت
+            خواهند شد.
           </span>
         </div>
       </div>
     );
   }
-
   if (activePanel === "profile") {
     return (
       <div className="inner-page">
@@ -1426,32 +1507,39 @@ function VipPage({ onBack }: { onBack: () => void }) {
         >
           ← بازگشت به VIP
         </button>
-
         <SectionHeaderCard
           kicker="PROFILE"
           title="پروفایل من"
           description="اطلاعات حساب VIP شما."
           icon="user"
+          status="عضویت VIP فعال است"
         />
-
         <div className="glass-list-card">
           <div className="list-icon">
             <Icon name="user" />
           </div>
-
           <div className="list-copy">
-            <strong>عضو VIP کائنات‌چی</strong>
-
+            <strong>{displayName}</strong>
             <span>
-              اطلاعات شخصی شما پس از اتصال حساب نمایش داده
-              می‌شود.
+              وضعیت عضویت: فعال
             </span>
+            {vipCustomer.mobile && (
+              <span>
+                شماره موبایل: {vipCustomer.mobile}
+              </span>
+            )}
+            {typeof vipCustomer.bookings_count ===
+              "number" && (
+              <span>
+                تعداد نوبت‌ها:{" "}
+                {vipCustomer.bookings_count}
+              </span>
+            )}
           </div>
         </div>
       </div>
     );
   }
-
   return (
     <div className="inner-page">
       <button
@@ -1461,19 +1549,13 @@ function VipPage({ onBack }: { onBack: () => void }) {
       >
         ← بازگشت
       </button>
-
       <SectionHeaderCard
         kicker="KAENATCHI"
-        title="پنل VIP"
+        title={`سلام ${displayName} 🌿`}
         description="فضای اختصاصی اعضای VIP کائنات‌چی."
         icon="crown"
-        status={
-          vipActive
-            ? "عضویت VIP فعال است"
-            : "عضویت VIP غیرفعال است"
-        }
+        status="عضویت VIP فعال است"
       />
-
       <div
         style={{
           display: "grid",
@@ -1491,13 +1573,15 @@ function VipPage({ onBack }: { onBack: () => void }) {
           <div className="list-icon">
             <Icon name="calendar" />
           </div>
-
           <div className="list-copy">
             <strong>نوبت‌های من</strong>
-            <span>مشاهده نوبت‌ها</span>
+            <span>
+              {vipCustomer.bookings_count
+                ? `${vipCustomer.bookings_count} نوبت`
+                : "مشاهده نوبت‌ها"}
+            </span>
           </div>
         </button>
-
         <button
           type="button"
           className="glass-list-card"
@@ -1507,13 +1591,11 @@ function VipPage({ onBack }: { onBack: () => void }) {
           <div className="list-icon">
             <Icon name="card" />
           </div>
-
           <div className="list-copy">
             <strong>پرداخت‌ها</strong>
             <span>سوابق پرداخت</span>
           </div>
         </button>
-
         <button
           type="button"
           className="glass-list-card"
@@ -1523,13 +1605,11 @@ function VipPage({ onBack }: { onBack: () => void }) {
           <div className="list-icon">
             <Icon name="ticket" />
           </div>
-
           <div className="list-copy">
             <strong>توکن‌ها</strong>
             <span>تخفیف‌های VIP</span>
           </div>
         </button>
-
         <button
           type="button"
           className="glass-list-card"
@@ -1539,14 +1619,12 @@ function VipPage({ onBack }: { onBack: () => void }) {
           <div className="list-icon">
             <Icon name="user" />
           </div>
-
           <div className="list-copy">
             <strong>پروفایل</strong>
             <span>اطلاعات حساب</span>
           </div>
         </button>
       </div>
-
       <div
         style={{
           marginTop: "14px",
@@ -1570,7 +1648,6 @@ function VipPage({ onBack }: { onBack: () => void }) {
           <Icon name="check" />
           <strong>عضویت فعال</strong>
         </div>
-
         <p
           style={{
             margin: 0,
@@ -1578,14 +1655,14 @@ function VipPage({ onBack }: { onBack: () => void }) {
             lineHeight: 1.9,
           }}
         >
-          این بخش در مرحله اتصال به حساب واقعی VIP، اطلاعات
-          شخصی و مزایای اختصاصی هر عضو را نمایش خواهد داد.
+          حساب تلگرام شما با عضویت VIP فعال شناسایی شد.
+          اطلاعات این بخش بر اساس حساب واقعی شما نمایش داده
+          می‌شود.
         </p>
       </div>
     </div>
   );
 }
-
 const backButtonStyle = {
   border: "none",
   background: "transparent",
@@ -1595,7 +1672,6 @@ const backButtonStyle = {
   padding: "8px 0",
   marginBottom: "12px",
 };
-
 const vipTileStyle = {
   width: "100%",
   minHeight: "135px",
@@ -1607,7 +1683,6 @@ const vipTileStyle = {
   flexDirection: "column" as const,
   alignItems: "flex-start",
 };
-
 function MoreDetail({
   title,
   icon,
@@ -1628,7 +1703,6 @@ function MoreDetail({
       >
         ← بازگشت
       </button>
-
       <SectionHeaderCard
         kicker={
           title === "کلاس‌ها"
@@ -1645,11 +1719,9 @@ function MoreDetail({
         description={description}
         icon={icon}
       />
-
       <div className="glass-list-card">
         <div className="list-copy">
           <strong>{title}</strong>
-
           <span>
             این بخش به‌صورت اختصاصی برای محتوای {title}
             کائنات‌چی طراحی می‌شود.
@@ -1659,7 +1731,6 @@ function MoreDetail({
     </div>
   );
 }
-
 function MorePage({
   onSearch,
 }: {
@@ -1668,13 +1739,11 @@ function MorePage({
   const [selected, setSelected] = useState<
     (typeof moreItems)[number] | null
   >(null);
-
   if (selected?.id === "vip") {
     return (
       <VipPage onBack={() => setSelected(null)} />
     );
   }
-
   if (selected) {
     return (
       <MoreDetail
@@ -1685,7 +1754,6 @@ function MorePage({
       />
     );
   }
-
   return (
     <div className="inner-page">
       <SectionHeaderCard
@@ -1694,7 +1762,6 @@ function MorePage({
         description="بخش‌های دیگر کائنات‌چی را از اینجا دنبال کن."
         icon="menu"
       />
-
       <button
         type="button"
         onClick={onSearch}
@@ -1722,7 +1789,6 @@ function MorePage({
         <Icon name="search" />
         <span>جست‌وجو در کائنات‌چی...</span>
       </button>
-
       <div className="more-list">
         {moreItems.map((item) => (
           <button
@@ -1741,12 +1807,10 @@ function MorePage({
             <div className="list-icon">
               <Icon name={item.icon} />
             </div>
-
             <div className="list-copy">
               <strong>{item.title}</strong>
               <span>{item.description}</span>
             </div>
-
             <div className="list-arrow">
               <Icon name="arrow" />
             </div>
@@ -1756,7 +1820,6 @@ function MorePage({
     </div>
   );
 }
-
 function BottomNav({
   active,
   onChange,
@@ -1776,10 +1839,8 @@ function BottomNav({
         <span className="nav-icon">
           <Icon name="home" />
         </span>
-
         <span>خانه</span>
       </button>
-
       <button
         type="button"
         className={`nav-item ${
@@ -1790,10 +1851,8 @@ function BottomNav({
         <span className="nav-icon">
           <Icon name="spark" />
         </span>
-
         <span>خدمات</span>
       </button>
-
       <button
         type="button"
         className={`nav-item ${
@@ -1804,40 +1863,32 @@ function BottomNav({
         <span className="nav-icon">
           <Icon name="menu" />
         </span>
-
         <span>بیشتر</span>
       </button>
     </nav>
   );
 }
-
 function App() {
   const [section, setSection] =
     useState<Section>("home");
-
   const [searchOpen, setSearchOpen] =
     useState(false);
-
   const [searchService, setSearchService] =
     useState<Service | null>(null);
-
   const openSearch = () => {
     setSearchService(null);
     setSearchOpen(true);
   };
-
   const closeSearch = () => {
     setSearchOpen(false);
     setSearchService(null);
   };
-
   if (searchOpen) {
     if (searchService) {
       return (
         <div className="app-shell">
           <div className="ambient ambient-one" />
           <div className="ambient ambient-two" />
-
           <ServiceDetail
             service={searchService}
             onBack={() => setSearchService(null)}
@@ -1845,12 +1896,10 @@ function App() {
         </div>
       );
     }
-
     return (
       <div className="app-shell">
         <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
-
         <SearchPage
           onBack={closeSearch}
           onOpenService={(service) =>
@@ -1860,22 +1909,17 @@ function App() {
       </div>
     );
   }
-
   return (
     <div className="app-shell">
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
-
       {section === "home" && (
         <HomePage onSearch={openSearch} />
       )}
-
       {section === "services" && <ServicesPage />}
-
       {section === "more" && (
         <MorePage onSearch={openSearch} />
       )}
-
       <BottomNav
         active={section}
         onChange={setSection}
@@ -1883,5 +1927,4 @@ function App() {
     </div>
   );
 }
-
 export default App;
