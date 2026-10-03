@@ -2,21 +2,35 @@ import { useMemo, useState } from "react";
 
 type Section = "home" | "services" | "more";
 
+type IconName =
+  | "home"
+  | "spark"
+  | "menu"
+  | "energy"
+  | "candle"
+  | "conversation"
+  | "crown"
+  | "class"
+  | "event"
+  | "faq"
+  | "clock"
+  | "contact";
+
 const services = [
   {
     title: "انرژی‌خوانی",
     description: "شناخت و بررسی انرژی در فضایی آرام و شخصی",
-    icon: "✦",
+    icon: "energy" as IconName,
   },
   {
     title: "شمع‌تراپی",
     description: "جلسات ریموت برای آرامش، تمرکز و همراهی",
-    icon: "🕯",
+    icon: "candle" as IconName,
   },
   {
     title: "سایکوتراپی",
     description: "گفت‌وگوی تلفنی برای بررسی مسائل و تجربه‌های شخصی",
-    icon: "◌",
+    icon: "conversation" as IconName,
   },
 ];
 
@@ -24,34 +38,177 @@ const moreItems = [
   {
     title: "VIP کائنات‌چی",
     description: "دسترسی به فضای ویژه و امکانات VIP",
-    icon: "✧",
+    icon: "crown" as IconName,
   },
   {
     title: "کلاس‌ها",
     description: "کلاس‌ها و آموزش‌های کائنات‌چی",
-    icon: "◎",
+    icon: "class" as IconName,
   },
   {
     title: "رویدادها",
     description: "برنامه‌ها و رویدادهای پیش‌رو",
-    icon: "◈",
+    icon: "event" as IconName,
   },
   {
     title: "سؤالات متداول",
     description: "پاسخ پرسش‌های متداول شما",
-    icon: "?",
+    icon: "faq" as IconName,
   },
   {
     title: "ساعات کاری",
     description: "زمان پاسخ‌گویی و ارائه خدمات",
-    icon: "◷",
+    icon: "clock" as IconName,
   },
   {
     title: "ارتباط با ما",
     description: "راه‌های ارتباطی کائنات‌چی",
-    icon: "⌁",
+    icon: "contact" as IconName,
   },
 ];
+
+function Icon({
+  name,
+  size = 22,
+}: {
+  name: IconName;
+  size?: number;
+}) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.55,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  switch (name) {
+    case "home":
+      return (
+        <svg {...common}>
+          <path d="M3.5 10.7 12 3.8l8.5 6.9" />
+          <path d="M5.5 9.7v9.5h13V9.7" />
+          <path d="M9.5 19.2v-5.4h5v5.4" />
+        </svg>
+      );
+
+    case "spark":
+      return (
+        <svg {...common}>
+          <path d="M12 3.2v4.1" />
+          <path d="M12 16.7v4.1" />
+          <path d="M3.2 12h4.1" />
+          <path d="M16.7 12h4.1" />
+          <path d="m5.8 5.8 2.9 2.9" />
+          <path d="m15.3 15.3 2.9 2.9" />
+          <path d="m18.2 5.8-2.9 2.9" />
+          <path d="m8.7 15.3-2.9 2.9" />
+          <circle cx="12" cy="12" r="2.4" />
+        </svg>
+      );
+
+    case "menu":
+      return (
+        <svg {...common}>
+          <path d="M5 7h14" />
+          <path d="M5 12h14" />
+          <path d="M5 17h14" />
+        </svg>
+      );
+
+    case "energy":
+      return (
+        <svg {...common}>
+          <path d="M12 3.5c1.8 3.1 5.5 4.5 5.5 8.5a5.5 5.5 0 1 1-11 0c0-4 3.7-5.4 5.5-8.5Z" />
+          <path d="M12 9c.9 1.3 2.1 2.1 2.1 3.7a2.1 2.1 0 1 1-4.2 0C9.9 11.1 11.1 10.3 12 9Z" />
+        </svg>
+      );
+
+    case "candle":
+      return (
+        <svg {...common}>
+          <path d="M9 10h6v9H9z" />
+          <path d="M10 10c0-1.5.8-2.3 2-3.5 1.2 1.2 2 2 2 3.5" />
+          <path d="M8 19h8" />
+          <path d="M12 3.5c.7 1 .9 1.8.3 2.5" />
+        </svg>
+      );
+
+    case "conversation":
+      return (
+        <svg {...common}>
+          <path d="M4.5 5.5h15v10h-8l-4.5 3v-3h-2.5z" />
+          <path d="M8 9.5h8" />
+          <path d="M8 12.5h5.5" />
+        </svg>
+      );
+
+    case "crown":
+      return (
+        <svg {...common}>
+          <path d="m4 7 4 3 4-5 4 5 4-3-2 10H6L4 7Z" />
+          <path d="M6.5 20h11" />
+        </svg>
+      );
+
+    case "class":
+      return (
+        <svg {...common}>
+          <path d="m3.5 9 8.5-4 8.5 4-8.5 4-8.5-4Z" />
+          <path d="M6 11v4.2c2.8 2.3 9.2 2.3 12 0V11" />
+          <path d="M20.5 9v6" />
+        </svg>
+      );
+
+    case "event":
+      return (
+        <svg {...common}>
+          <rect x="4" y="5.5" width="16" height="15" rx="2" />
+          <path d="M8 3.5v4" />
+          <path d="M16 3.5v4" />
+          <path d="M4 9.5h16" />
+          <path d="M8 13h.01" />
+          <path d="M12 13h.01" />
+          <path d="M16 13h.01" />
+          <path d="M8 17h.01" />
+          <path d="M12 17h.01" />
+        </svg>
+      );
+
+    case "faq":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M9.7 9.3a2.4 2.4 0 0 1 4.6 1c0 1.7-2.3 2-2.3 3.4" />
+          <path d="M12 16.8h.01" />
+        </svg>
+      );
+
+    case "clock":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7.5v5l3.2 2" />
+        </svg>
+      );
+
+    case "contact":
+      return (
+        <svg {...common}>
+          <path d="M5 6.5h14v10H9l-4 3v-3H5z" />
+          <path d="M8 10h8" />
+          <path d="M8 13h5" />
+        </svg>
+      );
+
+    default:
+      return null;
+  }
+}
 
 function getSolarDate() {
   try {
@@ -89,7 +246,9 @@ function App() {
 
           <div className="brand-copy">
             <span className="brand-name">کائنات‌چی</span>
-            <span className="brand-tagline">رزرو نوبت و مشاهده خدمات</span>
+            <span className="brand-tagline">
+              رزرو نوبت و مشاهده خدمات
+            </span>
           </div>
         </div>
 
@@ -123,7 +282,9 @@ function App() {
                   <span />
                 </div>
 
-                <div className="hero-symbol">✦</div>
+                <div className="hero-symbol">
+                  <Icon name="spark" size={30} />
+                </div>
 
                 <div className="hero-ring ring-one" />
                 <div className="hero-ring ring-two" />
@@ -152,7 +313,9 @@ function App() {
                   <h2>حال‌وهوای امروز</h2>
                 </div>
 
-                <span className="heading-symbol">☼</span>
+                <span className="heading-symbol">
+                  <Icon name="spark" size={21} />
+                </span>
               </div>
 
               <div className="today-card">
@@ -176,13 +339,17 @@ function App() {
                   <h2>یک لحظه برای خودت</h2>
                 </div>
 
-                <span className="heading-symbol">✧</span>
+                <span className="heading-symbol">
+                  <Icon name="spark" size={21} />
+                </span>
               </div>
 
               <article className="featured-card">
                 <div className="featured-art">
                   <div className="featured-circle">
-                    <span>✦</span>
+                    <span>
+                      <Icon name="spark" size={25} />
+                    </span>
                   </div>
 
                   <div className="featured-leaf leaf-a" />
@@ -236,7 +403,9 @@ function App() {
             <div className="service-list">
               {services.map((service) => (
                 <button className="glass-list-card" key={service.title}>
-                  <span className="list-icon">{service.icon}</span>
+                  <span className="list-icon">
+                    <Icon name={service.icon} size={22} />
+                  </span>
 
                   <span className="list-copy">
                     <strong>{service.title}</strong>
@@ -265,7 +434,9 @@ function App() {
             <div className="more-list">
               {moreItems.map((item) => (
                 <button className="glass-list-card" key={item.title}>
-                  <span className="list-icon">{item.icon}</span>
+                  <span className="list-icon">
+                    <Icon name={item.icon} size={22} />
+                  </span>
 
                   <span className="list-copy">
                     <strong>{item.title}</strong>
@@ -286,7 +457,9 @@ function App() {
           onClick={() => setSection("home")}
           type="button"
         >
-          <span className="nav-icon">⌂</span>
+          <span className="nav-icon">
+            <Icon name="home" size={21} />
+          </span>
           <span>خانه</span>
         </button>
 
@@ -297,7 +470,9 @@ function App() {
           onClick={() => setSection("services")}
           type="button"
         >
-          <span className="nav-icon">✦</span>
+          <span className="nav-icon">
+            <Icon name="spark" size={21} />
+          </span>
           <span>خدمات</span>
         </button>
 
@@ -306,7 +481,9 @@ function App() {
           onClick={() => setSection("more")}
           type="button"
         >
-          <span className="nav-icon">☰</span>
+          <span className="nav-icon">
+            <Icon name="menu" size={21} />
+          </span>
           <span>بیشتر</span>
         </button>
       </nav>
