@@ -1,148 +1,310 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 type Section = "home" | "services" | "more";
 
 const services = [
   {
     title: "انرژی‌خوانی",
-    description: "آشنایی با خدمات انرژی‌خوانی کائنات‌چی",
+    description: "شناخت و بررسی انرژی در فضایی آرام و شخصی",
     icon: "✦",
   },
   {
     title: "شمع‌تراپی",
-    description: "جلسات ریموت برای آرامش و تمرکز",
-    icon: "🕯️",
+    description: "جلسات ریموت برای آرامش، تمرکز و همراهی",
+    icon: "🕯",
   },
   {
     title: "سایکوتراپی",
-    description: "گفت‌وگوی تلفنی برای همراهی و بررسی مسائل شخصی",
-    icon: "☁️",
+    description: "گفت‌وگوی تلفنی برای بررسی مسائل و تجربه‌های شخصی",
+    icon: "◌",
   },
 ];
+
+const moreItems = [
+  {
+    title: "VIP کائنات‌چی",
+    description: "دسترسی به فضای ویژه و امکانات VIP",
+    icon: "✧",
+  },
+  {
+    title: "کلاس‌ها",
+    description: "کلاس‌ها و آموزش‌های کائنات‌چی",
+    icon: "◎",
+  },
+  {
+    title: "رویدادها",
+    description: "برنامه‌ها و رویدادهای پیش‌رو",
+    icon: "◈",
+  },
+  {
+    title: "سؤالات متداول",
+    description: "پاسخ پرسش‌های متداول شما",
+    icon: "?",
+  },
+  {
+    title: "ساعات کاری",
+    description: "زمان پاسخ‌گویی و ارائه خدمات",
+    icon: "◷",
+  },
+  {
+    title: "ارتباط با ما",
+    description: "راه‌های ارتباطی کائنات‌چی",
+    icon: "⌁",
+  },
+];
+
+function getSolarDate() {
+  try {
+    const formatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    return formatter.format(new Date());
+  } catch {
+    return "امروز";
+  }
+}
 
 function App() {
   const [section, setSection] = useState<Section>("home");
 
+  const solarDate = useMemo(() => getSolarDate(), []);
+
   return (
     <div className="app-shell">
+      <div className="ambient ambient-one" />
+      <div className="ambient ambient-two" />
+
       <header className="topbar">
-        <div className="brand">
-          <div className="brand-mark">ک</div>
-          <div>
-            <div className="brand-name">کائنات‌چی</div>
-            <div className="brand-subtitle">رزرو نوبت و مشاهده خدمات</div>
+        <div className="brand-area">
+          <div className="logo-placeholder" aria-label="لوگوی کائنات‌چی">
+            ک
           </div>
+
+          <div className="brand-copy">
+            <span className="brand-name">کائنات‌چی</span>
+            <span className="brand-tagline">رزرو نوبت و مشاهده خدمات</span>
+          </div>
+        </div>
+
+        <div className="date-pill">
+          <span className="date-dot" />
+          <span>{solarDate}</span>
         </div>
       </header>
 
-      <main className="content">
+      <main className="main-content">
         {section === "home" && (
-          <>
-            <section className="hero-card">
-              <div className="hero-decoration">✦</div>
+          <div className="home-page">
+            <section className="hero">
+              <div className="hero-glow" />
 
-              <p className="eyebrow">KAENATCHI</p>
+              <div className="hero-art">
+                <div className="orb orb-large" />
+                <div className="orb orb-small" />
 
-              <h1>
-                جایی برای
-                <br />
-                مکث، آگاهی و آرامش
-              </h1>
+                <div className="botanical botanical-left">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
 
-              <p className="hero-text">
-                در کائنات‌چی فضایی آرام برای شناخت بهتر خود، دریافت خدمات و
-                انتخاب آگاهانه نوبت شما فراهم شده است.
-              </p>
-            </section>
+                <div className="botanical botanical-right">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
 
-            <section className="daily-card">
-              <span className="daily-icon">☼</span>
-              <div>
-                <span className="section-label">امروز</span>
-                <h2>با خودت کمی مهربان‌تر باش.</h2>
-                <p>گاهی یک مکث کوتاه، شروع یک نگاه تازه است.</p>
+                <div className="hero-symbol">✦</div>
+
+                <div className="hero-ring ring-one" />
+                <div className="hero-ring ring-two" />
+              </div>
+
+              <div className="hero-content">
+                <span className="eyebrow">KAENATCHI</span>
+
+                <h1>
+                  آرام‌تر ببین،
+                  <br />
+                  آگاهانه‌تر انتخاب کن.
+                </h1>
+
+                <p>
+                  فضایی برای مکث، شناخت بهتر خود و تجربه‌ای آرام
+                  در مسیر آگاهی.
+                </p>
               </div>
             </section>
 
-            <section className="intro-section">
-              <span className="section-label">کائنات‌چی</span>
-              <h2>آرام‌تر ببین، آگاهانه‌تر انتخاب کن.</h2>
+            <section className="today-section">
+              <div className="section-heading-row">
+                <div>
+                  <span className="section-kicker">امروز</span>
+                  <h2>حال‌وهوای امروز</h2>
+                </div>
+
+                <span className="heading-symbol">☼</span>
+              </div>
+
+              <div className="today-card">
+                <div className="today-decoration">“</div>
+
+                <div className="today-content">
+                  <p>
+                    گاهی لازم نیست چیزی را حل کنی؛
+                    فقط کمی مکث کن و اجازه بده خودت را دوباره ببینی.
+                  </p>
+
+                  <span>یادداشت امروز کائنات‌چی</span>
+                </div>
+              </div>
+            </section>
+
+            <section className="featured-section">
+              <div className="section-heading-row">
+                <div>
+                  <span className="section-kicker">منتخب</span>
+                  <h2>یک لحظه برای خودت</h2>
+                </div>
+
+                <span className="heading-symbol">✧</span>
+              </div>
+
+              <article className="featured-card">
+                <div className="featured-art">
+                  <div className="featured-circle">
+                    <span>✦</span>
+                  </div>
+
+                  <div className="featured-leaf leaf-a" />
+                  <div className="featured-leaf leaf-b" />
+                  <div className="featured-leaf leaf-c" />
+                </div>
+
+                <div className="featured-copy">
+                  <span className="featured-label">KAENATCHI NOTE</span>
+
+                  <h3>
+                    هر انتخاب،
+                    <br />
+                    از یک مکث شروع می‌شود.
+                  </h3>
+
+                  <p>
+                    اینجا قرار است محتوای منتخب کائنات‌چی را ببینی؛
+                    محتوایی که بعداً از پنل مدیریت قابل تغییر خواهد بود.
+                  </p>
+                </div>
+              </article>
+            </section>
+
+            <section className="welcome-section">
+              <span className="section-kicker">کائنات‌چی</span>
+
+              <h2>فضایی ساده برای انتخابی آگاهانه</h2>
+
               <p>
-                خدمات، کلاس‌ها و برنامه‌های کائنات‌چی را در یک فضای ساده و
-                یکپارچه ببینید.
+                خدمات، آموزش‌ها و برنامه‌های کائنات‌چی در یک فضای
+                یکپارچه و آرام در کنار شما قرار می‌گیرند.
               </p>
             </section>
-          </>
+          </div>
         )}
 
         {section === "services" && (
-          <>
-            <section className="page-heading">
-              <span className="section-label">خدمات</span>
+          <div className="inner-page">
+            <section className="page-intro">
+              <span className="section-kicker">خدمات</span>
+
               <h1>خدمات کائنات‌چی</h1>
-              <p>خدمت موردنظر خود را انتخاب کنید.</p>
+
+              <p>
+                خدمات موردنظر خود را ببینید و برای دریافت نوبت
+                وارد مسیر رزرو شوید.
+              </p>
             </section>
 
             <div className="service-list">
               {services.map((service) => (
-                <button className="service-card" key={service.title}>
-                  <span className="service-icon">{service.icon}</span>
+                <button className="glass-list-card" key={service.title}>
+                  <span className="list-icon">{service.icon}</span>
 
-                  <span className="service-info">
+                  <span className="list-copy">
                     <strong>{service.title}</strong>
                     <span>{service.description}</span>
                   </span>
 
-                  <span className="arrow">‹</span>
+                  <span className="list-arrow">‹</span>
                 </button>
               ))}
             </div>
-          </>
+          </div>
         )}
 
         {section === "more" && (
-          <>
-            <section className="page-heading">
-              <span className="section-label">بیشتر</span>
+          <div className="inner-page">
+            <section className="page-intro">
+              <span className="section-kicker">بیشتر</span>
+
               <h1>کائنات‌چی</h1>
-              <p>دسترسی به بخش‌های دیگر برنامه</p>
+
+              <p>
+                بخش‌های دیگر کائنات‌چی را از اینجا دنبال کنید.
+              </p>
             </section>
 
-            <div className="more-grid">
-              <button>⭐ VIP</button>
-              <button>🎓 کلاس‌ها</button>
-              <button>✨ رویدادها</button>
-              <button>❓ سوالات متداول</button>
-              <button>🕰️ ساعات کاری</button>
-              <button>💬 ارتباط با ما</button>
+            <div className="more-list">
+              {moreItems.map((item) => (
+                <button className="glass-list-card" key={item.title}>
+                  <span className="list-icon">{item.icon}</span>
+
+                  <span className="list-copy">
+                    <strong>{item.title}</strong>
+                    <span>{item.description}</span>
+                  </span>
+
+                  <span className="list-arrow">‹</span>
+                </button>
+              ))}
             </div>
-          </>
+          </div>
         )}
       </main>
 
-      <nav className="bottom-nav">
+      <nav className="bottom-nav" aria-label="ناوبری اصلی">
         <button
-          className={section === "home" ? "active" : ""}
+          className={section === "home" ? "nav-item active" : "nav-item"}
           onClick={() => setSection("home")}
+          type="button"
         >
-          <span>⌂</span>
-          <small>خانه</small>
+          <span className="nav-icon">⌂</span>
+          <span>خانه</span>
         </button>
 
         <button
-          className={section === "services" ? "active" : ""}
+          className={
+            section === "services" ? "nav-item active" : "nav-item"
+          }
           onClick={() => setSection("services")}
+          type="button"
         >
-          <span>✦</span>
-          <small>خدمات</small>
+          <span className="nav-icon">✦</span>
+          <span>خدمات</span>
         </button>
 
         <button
-          className={section === "more" ? "active" : ""}
+          className={section === "more" ? "nav-item active" : "nav-item"}
           onClick={() => setSection("more")}
+          type="button"
         >
-          <span>☰</span>
-          <small>بیشتر</small>
+          <span className="nav-icon">☰</span>
+          <span>بیشتر</span>
         </button>
       </nav>
     </div>
