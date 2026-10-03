@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 type Section = "home" | "services" | "more";
+type ServiceCategory = "همه" | "انرژی‌خوانی" | "شمع‌تراپی" | "سایکوتراپی";
 
 type IconName =
   | "home"
@@ -14,23 +15,141 @@ type IconName =
   | "event"
   | "faq"
   | "clock"
-  | "contact";
+  | "contact"
+  | "back"
+  | "calendar"
+  | "price";
 
-const services = [
+type Service = {
+  title: string;
+  description: string;
+  category: Exclude<ServiceCategory, "همه">;
+  icon: IconName;
+  price: string;
+  duration: string;
+  details: string;
+};
+
+const services: Service[] = [
   {
-    title: "انرژی‌خوانی",
-    description: "شناخت و بررسی انرژی در فضایی آرام و شخصی",
-    icon: "energy" as IconName,
+    title: "قهوه",
+    description: "انرژی‌خوانی با قهوه",
+    category: "انرژی‌خوانی",
+    icon: "energy",
+    price: "۷۰۰,۰۰۰ تومان",
+    duration: "۳۰ دقیقه",
+    details:
+      "جلسه انرژی‌خوانی با قهوه در فضایی آرام و شخصی، با تمرکز بر بررسی نشانه‌ها و دریافت‌های مرتبط با موضوع موردنظر شما.",
+  },
+  {
+    title: "پاسور",
+    description: "انرژی‌خوانی با پاسور",
+    category: "انرژی‌خوانی",
+    icon: "energy",
+    price: "۶۵۰,۰۰۰ تومان",
+    duration: "۳۰ دقیقه",
+    details:
+      "جلسه انرژی‌خوانی با پاسور برای بررسی موضوع موردنظر شما در فضایی آرام و شخصی.",
+  },
+  {
+    title: "تاروت رایدر وایت",
+    description: "انرژی‌خوانی با تاروت رایدر وایت",
+    category: "انرژی‌خوانی",
+    icon: "energy",
+    price: "۷۵۰,۰۰۰ تومان",
+    duration: "۳۰ دقیقه",
+    details:
+      "جلسه انرژی‌خوانی با تاروت رایدر وایت با تمرکز بر موضوع انتخابی شما.",
+  },
+  {
+    title: "رایدر احساسی",
+    description: "بررسی انرژی و شرایط روابط عاطفی",
+    category: "انرژی‌خوانی",
+    icon: "energy",
+    price: "۷۵۰,۰۰۰ تومان",
+    duration: "۳۰ دقیقه",
+    details:
+      "جلسه‌ای با تمرکز بر موضوعات احساسی و روابط عاطفی موجود و بررسی انرژی‌های مرتبط با آن.",
+  },
+  {
+    title: "رایدر شغلی - مالی",
+    description: "بررسی موضوعات شغلی و مالی",
+    category: "انرژی‌خوانی",
+    icon: "energy",
+    price: "۷۵۰,۰۰۰ تومان",
+    duration: "۳۰ دقیقه",
+    details:
+      "جلسه انرژی‌خوانی با تمرکز بر موضوعات شغلی، مسیر حرفه‌ای و مسائل مالی موردنظر شما.",
+  },
+  {
+    title: "لنورماند فرانسوی",
+    description: "انرژی‌خوانی با لنورماند فرانسوی",
+    category: "انرژی‌خوانی",
+    icon: "energy",
+    price: "۷۵۰,۰۰۰ تومان",
+    duration: "۳۰ دقیقه",
+    details:
+      "جلسه انرژی‌خوانی با لنورماند فرانسوی برای بررسی موضوع انتخابی شما.",
+  },
+  {
+    title: "لنورماند احساسی",
+    description: "بررسی موضوعات احساسی با لنورماند",
+    category: "انرژی‌خوانی",
+    icon: "energy",
+    price: "۷۵۰,۰۰۰ تومان",
+    duration: "۳۰ دقیقه",
+    details:
+      "جلسه‌ای با تمرکز بر موضوعات احساسی و روابط عاطفی با استفاده از لنورماند فرانسوی.",
+  },
+  {
+    title: "تاروت یونانی احساسی",
+    description: "بررسی روابط و موضوعات احساسی",
+    category: "انرژی‌خوانی",
+    icon: "energy",
+    price: "۸۵۰,۰۰۰ تومان",
+    duration: "۳۰ دقیقه",
+    details:
+      "جلسه انرژی‌خوانی احساسی با تاروت یونانی برای بررسی موضوعات مرتبط با روابط و تجربه‌های عاطفی.",
+  },
+  {
+    title: "تاروت مارسی احساسی",
+    description: "بررسی روابط و موضوعات احساسی",
+    category: "انرژی‌خوانی",
+    icon: "energy",
+    price: "۸۵۰,۰۰۰ تومان",
+    duration: "۳۰ دقیقه",
+    details:
+      "جلسه انرژی‌خوانی احساسی با تاروت مارسی برای بررسی موضوع انتخابی شما.",
+  },
+  {
+    title: "جم اوراکل",
+    description: "انرژی‌خوانی با جم اوراکل",
+    category: "انرژی‌خوانی",
+    icon: "energy",
+    price: "۷۰۰,۰۰۰ تومان",
+    duration: "۳۰ دقیقه",
+    details:
+      "جلسه انرژی‌خوانی با جم اوراکل در فضایی آرام و شخصی.",
   },
   {
     title: "شمع‌تراپی",
-    description: "جلسات ریموت برای آرامش، تمرکز و همراهی",
-    icon: "candle" as IconName,
+    description: "جلسات ریموت برای آرامش و تمرکز",
+    category: "شمع‌تراپی",
+    icon: "candle",
+    price: "۵۵۰,۰۰۰ تومان",
+    duration: "۲۰ دقیقه",
+    details:
+      "جلسه ریموت شمع‌تراپی با هدف ایجاد فضایی آرام برای تمرکز و همراهی. این خدمت به‌صورت غیرحضوری انجام می‌شود.",
   },
   {
     title: "سایکوتراپی",
-    description: "گفت‌وگوی تلفنی برای بررسی مسائل و تجربه‌های شخصی",
-    icon: "conversation" as IconName,
+    description: "گفت‌وگوی تلفنی و همراهی در مسائل شخصی",
+    category: "سایکوتراپی",
+    icon: "conversation",
+    price: "۶۰۰,۰۰۰ تومان",
+    duration: "۴۵ دقیقه",
+    details:
+      "جلسه گفت‌وگوی تلفنی برای بررسی مسائل و تجربه‌های شخصی در فضایی امن، آرام و محرمانه.",
   },
 ];
 
@@ -123,8 +242,10 @@ function Icon({
     case "energy":
       return (
         <svg {...common}>
-          <path d="M12 3.5c1.8 3.1 5.5 4.5 5.5 8.5a5.5 5.5 0 1 1-11 0c0-4 3.7-5.4 5.5-8.5Z" />
-          <path d="M12 9c.9 1.3 2.1 2.1 2.1 3.7a2.1 2.1 0 1 1-4.2 0C9.9 11.1 11.1 10.3 12 9Z" />
+          <circle cx="12" cy="12" r="7.7" />
+          <ellipse cx="12" cy="12" rx="3.1" ry="7.7" />
+          <path d="M4.8 9.2c2.1 1.2 4.5 1.8 7.2 1.8s5.1-.6 7.2-1.8" />
+          <path d="M4.8 14.8c2.1-1.2 4.5-1.8 7.2-1.8s5.1.6 7.2 1.8" />
         </svg>
       );
 
@@ -205,6 +326,32 @@ function Icon({
         </svg>
       );
 
+    case "back":
+      return (
+        <svg {...common}>
+          <path d="m14.5 5-7 7 7 7" />
+        </svg>
+      );
+
+    case "calendar":
+      return (
+        <svg {...common}>
+          <rect x="4" y="5.5" width="16" height="15" rx="2" />
+          <path d="M8 3.5v4" />
+          <path d="M16 3.5v4" />
+          <path d="M4 9.5h16" />
+        </svg>
+      );
+
+    case "price":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7.5v9" />
+          <path d="M14.5 9.2c-.7-.7-1.5-1-2.5-1-1.4 0-2.4.7-2.4 1.8 0 2.8 5 1.3 5 4.1 0 1.1-1 1.8-2.5 1.8-1 0-2-.3-2.7-1" />
+        </svg>
+      );
+
     default:
       return null;
   }
@@ -227,8 +374,23 @@ function getSolarDate() {
 
 function App() {
   const [section, setSection] = useState<Section>("home");
+  const [category, setCategory] = useState<ServiceCategory>("همه");
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
 
   const solarDate = useMemo(() => getSolarDate(), []);
+
+  const filteredServices =
+    category === "همه"
+      ? services
+      : services.filter((service) => service.category === category);
+
+  const openService = (service: Service) => {
+    setSelectedService(service);
+  };
+
+  const closeService = () => {
+    setSelectedService(null);
+  };
 
   return (
     <div className="app-shell">
@@ -387,7 +549,7 @@ function App() {
           </div>
         )}
 
-        {section === "services" && (
+        {section === "services" && !selectedService && (
           <div className="inner-page">
             <section className="page-intro">
               <span className="section-kicker">خدمات</span>
@@ -395,14 +557,19 @@ function App() {
               <h1>خدمات کائنات‌چی</h1>
 
               <p>
-                خدمات موردنظر خود را ببینید و برای دریافت نوبت
-                وارد مسیر رزرو شوید.
+                خدمت موردنظر خود را انتخاب کنید تا جزئیات آن را
+                ببینید.
               </p>
             </section>
 
             <div className="service-list">
-              {services.map((service) => (
-                <button className="glass-list-card" key={service.title}>
+              {filteredServices.map((service) => (
+                <button
+                  className="glass-list-card"
+                  key={service.title}
+                  type="button"
+                  onClick={() => openService(service)}
+                >
                   <span className="list-icon">
                     <Icon name={service.icon} size={22} />
                   </span>
@@ -415,6 +582,92 @@ function App() {
                   <span className="list-arrow">‹</span>
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {section === "services" && selectedService && (
+          <div className="inner-page">
+            <button
+              className="glass-list-card"
+              type="button"
+              onClick={closeService}
+              style={{ marginBottom: "16px" }}
+            >
+              <span className="list-icon">
+                <Icon name="back" size={22} />
+              </span>
+
+              <span className="list-copy">
+                <strong>بازگشت به خدمات</strong>
+                <span>مشاهده فهرست خدمات کائنات‌چی</span>
+              </span>
+
+              <span className="list-arrow">‹</span>
+            </button>
+
+            <section className="page-intro">
+              <span className="section-kicker">
+                {selectedService.category}
+              </span>
+
+              <h1>{selectedService.title}</h1>
+
+              <p>{selectedService.description}</p>
+            </section>
+
+            <div className="service-list">
+              <div className="glass-list-card">
+                <span className="list-icon">
+                  <Icon name={selectedService.icon} size={22} />
+                </span>
+
+                <span className="list-copy">
+                  <strong>درباره خدمت</strong>
+                  <span>{selectedService.details}</span>
+                </span>
+              </div>
+
+              <div className="glass-list-card">
+                <span className="list-icon">
+                  <Icon name="calendar" size={22} />
+                </span>
+
+                <span className="list-copy">
+                  <strong>مدت جلسه</strong>
+                  <span>{selectedService.duration}</span>
+                </span>
+              </div>
+
+              <div className="glass-list-card">
+                <span className="list-icon">
+                  <Icon name="price" size={22} />
+                </span>
+
+                <span className="list-copy">
+                  <strong>هزینه</strong>
+                  <span>{selectedService.price}</span>
+                </span>
+              </div>
+
+              <button
+                className="glass-list-card"
+                type="button"
+                onClick={() => {
+                  // اتصال به Booking Mini App در مرحله بعد انجام می‌شود.
+                }}
+              >
+                <span className="list-icon">
+                  <Icon name="calendar" size={22} />
+                </span>
+
+                <span className="list-copy">
+                  <strong>دریافت نوبت</strong>
+                  <span>انتخاب زمان و ثبت درخواست نوبت</span>
+                </span>
+
+                <span className="list-arrow">‹</span>
+              </button>
             </div>
           </div>
         )}
@@ -433,7 +686,11 @@ function App() {
 
             <div className="more-list">
               {moreItems.map((item) => (
-                <button className="glass-list-card" key={item.title}>
+                <button
+                  className="glass-list-card"
+                  key={item.title}
+                  type="button"
+                >
                   <span className="list-icon">
                     <Icon name={item.icon} size={22} />
                   </span>
@@ -454,7 +711,10 @@ function App() {
       <nav className="bottom-nav" aria-label="ناوبری اصلی">
         <button
           className={section === "home" ? "nav-item active" : "nav-item"}
-          onClick={() => setSection("home")}
+          onClick={() => {
+            setSection("home");
+            setSelectedService(null);
+          }}
           type="button"
         >
           <span className="nav-icon">
@@ -467,7 +727,10 @@ function App() {
           className={
             section === "services" ? "nav-item active" : "nav-item"
           }
-          onClick={() => setSection("services")}
+          onClick={() => {
+            setSection("services");
+            setSelectedService(null);
+          }}
           type="button"
         >
           <span className="nav-icon">
@@ -478,7 +741,10 @@ function App() {
 
         <button
           className={section === "more" ? "nav-item active" : "nav-item"}
-          onClick={() => setSection("more")}
+          onClick={() => {
+            setSection("more");
+            setSelectedService(null);
+          }}
           type="button"
         >
           <span className="nav-icon">
