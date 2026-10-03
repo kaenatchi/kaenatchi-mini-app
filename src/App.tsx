@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+
 type Section = "home" | "services" | "more";
+
 type IconName =
   | "home"
   | "spark"
@@ -21,7 +23,12 @@ type IconName =
   | "user"
   | "check"
   | "search";
-type ServiceCategory = "energy" | "candle" | "psychotherapy";
+
+type ServiceCategory =
+  | "energy"
+  | "candle"
+  | "psychotherapy";
+
 type Service = {
   id: string;
   title: string;
@@ -30,6 +37,7 @@ type Service = {
   duration: string;
   description: string;
 };
+
 type SearchItem = {
   id: string;
   title: string;
@@ -38,6 +46,7 @@ type SearchItem = {
   icon: IconName;
   service?: Service;
 };
+
 type VipCustomer = {
   id?: string;
   telegram_id?: number;
@@ -48,13 +57,25 @@ type VipCustomer = {
   joined_at?: string | null;
   bookings_count?: number;
 };
+
 type VipApiResponse = {
   success: boolean;
   message?: string;
   customer?: VipCustomer;
 };
+
 const VIP_API_URL =
   "https://pfcxcvwtvpgtzushmnlc.supabase.co/functions/v1/vip-api";
+
+const TELEGRAM_WEBAPP_SCRIPT =
+  "https://telegram.org/js/telegram-web-app.js";
+
+const MAIN_APP_URL =
+  "https://kaenatchi.github.io/kaenatchi-mini-app/";
+
+const BOOKING_APP_URL =
+  "https://kaenatchi.github.io/booking/";
+
 const energyServices: Service[] = [
   {
     id: "coffee",
@@ -147,6 +168,7 @@ const energyServices: Service[] = [
       "خوانش اوراکل با تمرکز بر پیام‌ها و انرژی‌های مرتبط با موضوع شما.",
   },
 ];
+
 const mainServices: Service[] = [
   {
     id: "energy-reading",
@@ -176,6 +198,7 @@ const mainServices: Service[] = [
       "جلسه گفت‌وگومحور تلفنی برای صحبت درباره موضوع مورد نظر شما. این خدمت به‌عنوان روان‌درمانی یا خدمات درمانی بالینی ارائه نمی‌شود.",
   },
 ];
+
 const moreItems = [
   {
     id: "vip",
@@ -214,9 +237,11 @@ const moreItems = [
     description: "راه‌های ارتباطی کائنات‌چی",
   },
 ];
+
 const publishedClasses: SearchItem[] = [];
 const publishedEvents: SearchItem[] = [];
 const publishedFaq: SearchItem[] = [];
+
 function Icon({ name }: { name: IconName }) {
   const common = {
     width: 24,
@@ -228,6 +253,7 @@ function Icon({ name }: { name: IconName }) {
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
   };
+
   switch (name) {
     case "home":
       return (
@@ -237,6 +263,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="M9.5 20.2v-6h5v6" />
         </svg>
       );
+
     case "spark":
       return (
         <svg {...common}>
@@ -244,6 +271,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="m19 4 .5 2 1.7.8-1.7.8-.5-2-1.7-.8 1.7-.8Z" />
         </svg>
       );
+
     case "menu":
       return (
         <svg {...common}>
@@ -252,6 +280,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="M5 17h14" />
         </svg>
       );
+
     case "search":
       return (
         <svg {...common}>
@@ -259,6 +288,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="m15.5 15.5 4.2 4.2" />
         </svg>
       );
+
     case "energy":
       return (
         <svg {...common}>
@@ -266,6 +296,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="M12 7.2c1.8 2.1 2.6 3.7 2.6 5.2 0 1.9-1.2 3.2-2.6 3.2s-2.6-1.3-2.6-3.2c0-1.5.8-3.1 2.6-5.2Z" />
         </svg>
       );
+
     case "candle":
       return (
         <svg {...common}>
@@ -274,6 +305,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="M6.5 19h11" />
         </svg>
       );
+
     case "conversation":
       return (
         <svg {...common}>
@@ -282,6 +314,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="M8 12.5h5" />
         </svg>
       );
+
     case "crown":
       return (
         <svg {...common}>
@@ -289,6 +322,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="M6 20h12" />
         </svg>
       );
+
     case "class":
       return (
         <svg {...common}>
@@ -298,6 +332,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="M8 15h3" />
         </svg>
       );
+
     case "event":
       return (
         <svg {...common}>
@@ -310,6 +345,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="M16 13h.01" />
         </svg>
       );
+
     case "faq":
       return (
         <svg {...common}>
@@ -318,6 +354,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="M12 17h.01" />
         </svg>
       );
+
     case "clock":
       return (
         <svg {...common}>
@@ -325,6 +362,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="M12 7.5v4.8l3.2 2" />
         </svg>
       );
+
     case "contact":
     case "user":
       return (
@@ -333,6 +371,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="M5.5 20c.7-3.2 2.9-5 6.5-5s5.8 1.8 6.5 5" />
         </svg>
       );
+
     case "arrow":
       return (
         <svg {...common}>
@@ -340,6 +379,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="m13 6 6 6-6 6" />
         </svg>
       );
+
     case "calendar":
       return (
         <svg {...common}>
@@ -349,12 +389,14 @@ function Icon({ name }: { name: IconName }) {
           <path d="M4 9h16" />
         </svg>
       );
+
     case "phone":
       return (
         <svg {...common}>
           <path d="M7 4.5 9.5 4l1.5 4-2 1.5a13 13 0 0 0 5.5 5.5l1.5-2 4 1.5-.5 2.5c-.3 1.5-1.7 2.5-3.2 2.2C10.8 18.3 5.7 13.2 4.3 7.7 4 6.2 5.5 4.8 7 4.5Z" />
         </svg>
       );
+
     case "card":
       return (
         <svg {...common}>
@@ -363,6 +405,7 @@ function Icon({ name }: { name: IconName }) {
           <path d="M7 14h4" />
         </svg>
       );
+
     case "ticket":
       return (
         <svg {...common}>
@@ -372,16 +415,19 @@ function Icon({ name }: { name: IconName }) {
           <path d="M12 15.5v1" />
         </svg>
       );
+
     case "check":
       return (
         <svg {...common}>
           <path d="m5.5 12.5 4 4 9-9" />
         </svg>
       );
+
     default:
       return null;
   }
 }
+
 function getTodayJalali() {
   try {
     return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
@@ -394,6 +440,7 @@ function getTodayJalali() {
     return "امروز";
   }
 }
+
 function SectionHeaderCard({
   kicker,
   title,
@@ -433,6 +480,7 @@ function SectionHeaderCard({
           pointerEvents: "none",
         }}
       />
+
       <div
         style={{
           position: "absolute",
@@ -445,6 +493,7 @@ function SectionHeaderCard({
           pointerEvents: "none",
         }}
       />
+
       <div
         style={{
           position: "relative",
@@ -469,6 +518,7 @@ function SectionHeaderCard({
             <Icon name={icon} />
           </div>
         )}
+
         <div>
           <div
             style={{
@@ -480,6 +530,7 @@ function SectionHeaderCard({
           >
             {kicker}
           </div>
+
           <h1
             style={{
               margin: 0,
@@ -492,6 +543,7 @@ function SectionHeaderCard({
           </h1>
         </div>
       </div>
+
       <p
         style={{
           position: "relative",
@@ -503,6 +555,7 @@ function SectionHeaderCard({
       >
         {description}
       </p>
+
       {status && (
         <div
           style={{
@@ -521,35 +574,47 @@ function SectionHeaderCard({
               height: "8px",
               borderRadius: "50%",
               background: "#d8c59b",
-              boxShadow: "0 0 0 4px rgba(216,197,155,0.08)",
+              boxShadow:
+                "0 0 0 4px rgba(216,197,155,0.08)",
             }}
           />
+
           {status}
         </div>
       )}
     </div>
   );
 }
+
 function HomePage({
   onSearch,
 }: {
   onSearch: () => void;
 }) {
   const today = getTodayJalali();
+
   return (
     <>
       <header className="topbar">
         <div className="brand-area">
-          <div className="logo-placeholder" aria-hidden="true">
+          <div
+            className="logo-placeholder"
+            aria-hidden="true"
+          >
             <Icon name="spark" />
           </div>
+
           <div className="brand-copy">
-            <div className="brand-name">کائنات‌چی</div>
+            <div className="brand-name">
+              کائنات‌چی
+            </div>
+
             <div className="brand-tagline">
               رزرو نوبت و مشاهده خدمات
             </div>
           </div>
         </div>
+
         <div
           className="date-pill"
           style={{
@@ -562,6 +627,7 @@ function HomePage({
           {today}
         </div>
       </header>
+
       <main className="main-content">
         <button
           type="button"
@@ -571,45 +637,55 @@ function HomePage({
             display: "flex",
             alignItems: "center",
             gap: "10px",
-            border: "1px solid rgba(53,59,50,0.1)",
+            border:
+              "1px solid rgba(53,59,50,0.1)",
             borderRadius: "18px",
             padding: "13px 15px",
             marginBottom: "16px",
-            background: "rgba(255,255,255,0.62)",
+            background:
+              "rgba(255,255,255,0.62)",
             color: "#73786f",
             fontFamily: "inherit",
             fontSize: "13px",
             cursor: "pointer",
-            boxShadow: "0 7px 20px rgba(53,59,50,0.07)",
+            boxShadow:
+              "0 7px 20px rgba(53,59,50,0.07)",
             textAlign: "right",
           }}
         >
           <Icon name="search" />
           <span>جست‌وجو در کائنات‌چی...</span>
         </button>
+
         <section className="hero">
           <div className="hero-glow" />
+
           <div className="hero-art">
             <div className="orb orb-large" />
             <div className="orb orb-small" />
             <div className="botanical botanical-left" />
             <div className="botanical botanical-right" />
+
             <div className="hero-symbol">
               <Icon name="spark" />
             </div>
+
             <div className="hero-ring ring-one" />
             <div className="hero-ring ring-two" />
           </div>
+
           <div className="hero-content">
             <div className="eyebrow">
               <Icon name="spark" />
               <span>KAENATCHI</span>
             </div>
+
             <h1>
               جایی برای
               <br />
               دیدن نشانه‌ها
             </h1>
+
             <p>
               خدمات، تجربه‌ها و مسیرهای کائنات‌چی
               <br />
@@ -617,33 +693,46 @@ function HomePage({
             </p>
           </div>
         </section>
+
         <section className="today-section">
           <div className="section-heading-row">
             <div>
-              <div className="section-kicker">TODAY</div>
+              <div className="section-kicker">
+                TODAY
+              </div>
+
               <h2>حال‌وهوای امروز</h2>
             </div>
+
             <Icon name="spark" />
           </div>
+
           <div className="today-card">
             <div className="today-decoration">
               <Icon name="spark" />
             </div>
+
             <div className="today-content">
               <strong>آرام‌تر نگاه کن.</strong>
+
               <span>
                 گاهی یک نشانه کوچک، شروع یک نگاه تازه است.
               </span>
             </div>
           </div>
         </section>
+
         <section className="featured-section">
           <div className="section-heading-row">
             <div>
-              <div className="section-kicker">FEATURED</div>
+              <div className="section-kicker">
+                FEATURED
+              </div>
+
               <h2>پیشنهاد امروز</h2>
             </div>
           </div>
+
           <div className="featured-card">
             <div className="featured-art">
               <div className="featured-circle">
@@ -653,11 +742,14 @@ function HomePage({
                 <Icon name="spark" />
               </div>
             </div>
+
             <div className="featured-copy">
               <div className="featured-label">
                 KAENATCHI MOMENT
               </div>
+
               <h3>برای خودت یک مکث بساز.</h3>
+
               <p>
                 فضای کائنات‌چی برای تجربه‌ای آرام، شخصی و متفاوت
                 طراحی شده است.
@@ -665,8 +757,10 @@ function HomePage({
             </div>
           </div>
         </section>
+
         <section className="welcome-section">
           <h2>به کائنات‌چی خوش آمدی 🌿</h2>
+
           <p>
             از خدمات و انرژی‌خوانی تا کلاس‌ها، ایونت‌ها و باشگاه
             VIP؛ مسیرت را از منوی پایین پیدا کن.
@@ -676,22 +770,35 @@ function HomePage({
     </>
   );
 }
+
 function ServiceTabs({
   active,
   onChange,
 }: {
   active: "all" | ServiceCategory;
-  onChange: (value: "all" | ServiceCategory) => void;
+  onChange: (
+    value: "all" | ServiceCategory
+  ) => void;
 }) {
   const tabs: {
     id: "all" | ServiceCategory;
     title: string;
   }[] = [
     { id: "all", title: "همه" },
-    { id: "energy", title: "انرژی‌خوانی" },
-    { id: "candle", title: "شمع‌تراپی" },
-    { id: "psychotherapy", title: "سایکوتراپی" },
+    {
+      id: "energy",
+      title: "انرژی‌خوانی",
+    },
+    {
+      id: "candle",
+      title: "شمع‌تراپی",
+    },
+    {
+      id: "psychotherapy",
+      title: "سایکوتراپی",
+    },
   ];
+
   return (
     <div
       style={{
@@ -703,12 +810,16 @@ function ServiceTabs({
       }}
     >
       {tabs.map((tab) => {
-        const selected = active === tab.id;
+        const selected =
+          active === tab.id;
+
         return (
           <button
             key={tab.id}
             type="button"
-            onClick={() => onChange(tab.id)}
+            onClick={() =>
+              onChange(tab.id)
+            }
             style={{
               flex: "0 0 auto",
               border: selected
@@ -717,7 +828,9 @@ function ServiceTabs({
               background: selected
                 ? "rgba(36, 99, 71, 0.1)"
                 : "rgba(255,255,255,0.55)",
-              color: selected ? "#246347" : "#353B32",
+              color: selected
+                ? "#246347"
+                : "#353B32",
               borderRadius: "999px",
               padding: "10px 16px",
               minHeight: "42px",
@@ -736,6 +849,7 @@ function ServiceTabs({
     </div>
   );
 }
+
 function ServiceCard({
   service,
   onClick,
@@ -749,6 +863,7 @@ function ServiceCard({
       : service.category === "candle"
         ? "candle"
         : "conversation";
+
   return (
     <button
       type="button"
@@ -765,10 +880,14 @@ function ServiceCard({
       <div className="list-icon">
         <Icon name={icon} />
       </div>
+
       <div className="list-copy">
         <strong>{service.title}</strong>
+
         <span>{service.description}</span>
-        {(service.price || service.duration) && (
+
+        {(service.price ||
+          service.duration) && (
           <small
             style={{
               display: "block",
@@ -778,17 +897,24 @@ function ServiceCard({
             }}
           >
             {service.duration}
-            {service.duration && service.price ? "  •  " : ""}
+
+            {service.duration &&
+              service.price
+              ? "  •  "
+              : ""}
+
             {service.price}
           </small>
         )}
       </div>
+
       <div className="list-arrow">
         <Icon name="arrow" />
       </div>
     </button>
   );
 }
+
 function ServiceDetail({
   service,
   onBack,
@@ -802,6 +928,7 @@ function ServiceDetail({
       : service.category === "candle"
         ? "candle"
         : "conversation";
+
   return (
     <div className="inner-page">
       <button
@@ -811,28 +938,40 @@ function ServiceDetail({
       >
         ← بازگشت
       </button>
+
       <SectionHeaderCard
         kicker="SERVICE"
         title={service.title}
         description={service.description}
         icon={icon}
       />
+
       <div className="glass-list-card">
         <div className="list-copy">
           {service.duration && (
-            <div style={{ marginBottom: "10px" }}>
+            <div
+              style={{
+                marginBottom: "10px",
+              }}
+            >
               <strong>مدت زمان</strong>
-              <span>{service.duration}</span>
+              <span>
+                {service.duration}
+              </span>
             </div>
           )}
+
           {service.price && (
             <div>
               <strong>هزینه</strong>
-              <span>{service.price}</span>
+              <span>
+                {service.price}
+              </span>
             </div>
           )}
         </div>
       </div>
+
       <button
         type="button"
         style={{
@@ -852,7 +991,7 @@ function ServiceDetail({
         }}
         onClick={() => {
           window.open(
-            "https://kaenatchi.github.io/booking/",
+            BOOKING_APP_URL,
             "_blank"
           );
         }}
@@ -862,30 +1001,46 @@ function ServiceDetail({
     </div>
   );
 }
+
 function ServicesPage() {
-  const [activeTab, setActiveTab] = useState<
-    "all" | ServiceCategory
-  >("all");
-  const [selectedService, setSelectedService] =
-    useState<Service | null>(null);
+  const [activeTab, setActiveTab] =
+    useState<"all" | ServiceCategory>(
+      "all"
+    );
+
+  const [
+    selectedService,
+    setSelectedService,
+  ] = useState<Service | null>(null);
+
   if (selectedService) {
     return (
       <ServiceDetail
         service={selectedService}
-        onBack={() => setSelectedService(null)}
+        onBack={() =>
+          setSelectedService(null)
+        }
       />
     );
   }
+
   let visibleServices: Service[];
+
   if (activeTab === "all") {
     visibleServices = mainServices;
-  } else if (activeTab === "energy") {
+  } else if (
+    activeTab === "energy"
+  ) {
     visibleServices = energyServices;
   } else {
-    visibleServices = mainServices.filter(
-      (service) => service.category === activeTab
-    );
+    visibleServices =
+      mainServices.filter(
+        (service) =>
+          service.category ===
+          activeTab
+      );
   }
+
   return (
     <div className="inner-page">
       <SectionHeaderCard
@@ -894,66 +1049,98 @@ function ServicesPage() {
         description="هر بخش را انتخاب کن تا جزئیات آن را ببینی."
         icon="spark"
       />
+
       <ServiceTabs
         active={activeTab}
         onChange={setActiveTab}
       />
+
       <div className="service-list">
-        {visibleServices.map((service) => (
-          <ServiceCard
-            key={service.id}
-            service={service}
-            onClick={() => {
-              if (service.id === "energy-reading") {
-                setActiveTab("energy");
-                return;
-              }
-              setSelectedService(service);
-            }}
-          />
-        ))}
+        {visibleServices.map(
+          (service) => (
+            <ServiceCard
+              key={service.id}
+              service={service}
+              onClick={() => {
+                if (
+                  service.id ===
+                  "energy-reading"
+                ) {
+                  setActiveTab(
+                    "energy"
+                  );
+                  return;
+                }
+
+                setSelectedService(
+                  service
+                );
+              }}
+            />
+          )
+        )}
       </div>
     </div>
   );
 }
+
 function SearchPage({
   onBack,
   onOpenService,
 }: {
   onBack: () => void;
-  onOpenService: (service: Service) => void;
+  onOpenService: (
+    service: Service
+  ) => void;
 }) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] =
+    useState("");
+
   const serviceItems: SearchItem[] = [
-    ...mainServices.map((service) => ({
-      id: service.id,
-      title: service.title,
-      description: service.description,
-      type: "service" as const,
-      icon:
-        service.category === "energy"
-          ? ("energy" as IconName)
-          : service.category === "candle"
-            ? ("candle" as IconName)
-            : ("conversation" as IconName),
-      service,
-    })),
-    ...energyServices.map((service) => ({
-      id: service.id,
-      title: service.title,
-      description: service.description,
-      type: "service" as const,
-      icon: "energy" as IconName,
-      service,
-    })),
+    ...mainServices.map(
+      (service) => ({
+        id: service.id,
+        title: service.title,
+        description:
+          service.description,
+        type: "service" as const,
+        icon:
+          service.category ===
+          "energy"
+            ? ("energy" as IconName)
+            : service.category ===
+                "candle"
+              ? ("candle" as IconName)
+              : ("conversation" as IconName),
+        service,
+      })
+    ),
+
+    ...energyServices.map(
+      (service) => ({
+        id: service.id,
+        title: service.title,
+        description:
+          service.description,
+        type: "service" as const,
+        icon: "energy" as IconName,
+        service,
+      })
+    ),
   ];
+
   const allItems: SearchItem[] = [
     ...serviceItems,
     ...publishedClasses,
     ...publishedEvents,
     ...publishedFaq,
   ];
-  const normalizedQuery = query.trim().toLocaleLowerCase("fa");
+
+  const normalizedQuery =
+    query
+      .trim()
+      .toLocaleLowerCase("fa");
+
   const results =
     normalizedQuery.length === 0
       ? []
@@ -962,8 +1149,12 @@ function SearchPage({
             `${item.title} ${item.description}`.toLocaleLowerCase(
               "fa"
             );
-          return searchableText.includes(normalizedQuery);
+
+          return searchableText.includes(
+            normalizedQuery
+          );
         });
+
   return (
     <div className="inner-page">
       <button
@@ -973,12 +1164,14 @@ function SearchPage({
       >
         ← بازگشت
       </button>
+
       <SectionHeaderCard
         kicker="SEARCH"
         title="جست‌وجو"
         description="خدمات، کلاس‌ها، ایونت‌ها و سوالات متداول را پیدا کن."
         icon="search"
       />
+
       <div
         style={{
           display: "flex",
@@ -986,7 +1179,8 @@ function SearchPage({
           gap: "10px",
           padding: "13px 15px",
           borderRadius: "18px",
-          background: "rgba(255,255,255,0.72)",
+          background:
+            "rgba(255,255,255,0.72)",
           border:
             "1px solid rgba(53,59,50,0.12)",
           boxShadow:
@@ -995,9 +1189,14 @@ function SearchPage({
         }}
       >
         <Icon name="search" />
+
         <input
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) =>
+            setQuery(
+              event.target.value
+            )
+          }
           autoFocus
           type="search"
           placeholder="چی می‌خوای پیدا کنی؟"
@@ -1007,23 +1206,29 @@ function SearchPage({
             minWidth: 0,
             border: "none",
             outline: "none",
-            background: "transparent",
+            background:
+              "transparent",
             fontFamily: "inherit",
             fontSize: "14px",
             color: "#353B32",
             direction: "rtl",
           }}
         />
+
         {query && (
           <button
             type="button"
-            onClick={() => setQuery("")}
+            onClick={() =>
+              setQuery("")
+            }
             aria-label="پاک کردن جست‌وجو"
             style={{
               border: "none",
-              background: "transparent",
+              background:
+                "transparent",
               color: "#7b8178",
-              fontFamily: "inherit",
+              fontFamily:
+                "inherit",
               fontSize: "18px",
               cursor: "pointer",
               padding: "3px 5px",
@@ -1033,6 +1238,7 @@ function SearchPage({
           </button>
         )}
       </div>
+
       {query.trim().length === 0 ? (
         <div
           className="glass-list-card"
@@ -1045,10 +1251,12 @@ function SearchPage({
             style={{
               width: "58px",
               height: "58px",
-              margin: "0 auto 13px",
+              margin:
+                "0 auto 13px",
               borderRadius: "20px",
               display: "grid",
-              placeItems: "center",
+              placeItems:
+                "center",
               background:
                 "rgba(36,99,71,0.08)",
               color: "#246347",
@@ -1056,8 +1264,12 @@ function SearchPage({
           >
             <Icon name="search" />
           </div>
+
           <div className="list-copy">
-            <strong>دنبال چه چیزی می‌گردی؟</strong>
+            <strong>
+              دنبال چه چیزی می‌گردی؟
+            </strong>
+
             <span>
               نام خدمت، انرژی‌خوانی، کلاس، ایونت یا سوال مورد
               نظرت را جست‌وجو کن.
@@ -1073,47 +1285,71 @@ function SearchPage({
               className="glass-list-card"
               onClick={() => {
                 if (
-                  item.type === "service" &&
+                  item.type ===
+                    "service" &&
                   item.service
                 ) {
-                  onOpenService(item.service);
+                  onOpenService(
+                    item.service
+                  );
                 }
               }}
               style={{
                 width: "100%",
                 border: "none",
-                textAlign: "right",
+                textAlign:
+                  "right",
                 cursor:
-                  item.type === "service"
+                  item.type ===
+                  "service"
                     ? "pointer"
                     : "default",
-                fontFamily: "inherit",
+                fontFamily:
+                  "inherit",
               }}
             >
               <div className="list-icon">
-                <Icon name={item.icon} />
+                <Icon
+                  name={item.icon}
+                />
               </div>
+
               <div className="list-copy">
                 <small
                   style={{
-                    display: "block",
-                    color: "#8a7348",
-                    fontSize: "10px",
-                    marginBottom: "4px",
+                    display:
+                      "block",
+                    color:
+                      "#8a7348",
+                    fontSize:
+                      "10px",
+                    marginBottom:
+                      "4px",
                   }}
                 >
-                  {item.type === "service"
+                  {item.type ===
+                  "service"
                     ? "خدمت"
-                    : item.type === "class"
+                    : item.type ===
+                        "class"
                       ? "کلاس"
-                      : item.type === "event"
+                      : item.type ===
+                          "event"
                         ? "ایونت"
                         : "سوال متداول"}
                 </small>
-                <strong>{item.title}</strong>
-                <span>{item.description}</span>
+
+                <strong>
+                  {item.title}
+                </strong>
+
+                <span>
+                  {item.description}
+                </span>
               </div>
-              {item.type === "service" && (
+
+              {item.type ===
+                "service" && (
                 <div className="list-arrow">
                   <Icon name="arrow" />
                 </div>
@@ -1126,26 +1362,35 @@ function SearchPage({
           className="glass-list-card"
           style={{
             display: "block",
-            textAlign: "center",
+            textAlign:
+              "center",
           }}
         >
           <div
             style={{
               width: "58px",
               height: "58px",
-              margin: "0 auto 13px",
-              borderRadius: "20px",
+              margin:
+                "0 auto 13px",
+              borderRadius:
+                "20px",
               display: "grid",
-              placeItems: "center",
+              placeItems:
+                "center",
               background:
                 "rgba(53,59,50,0.07)",
-              color: "#353B32",
+              color:
+                "#353B32",
             }}
           >
             <Icon name="search" />
           </div>
+
           <div className="list-copy">
-            <strong>چیزی پیدا نشد</strong>
+            <strong>
+              چیزی پیدا نشد
+            </strong>
+
             <span>
               عبارت دیگری را امتحان کن یا نام بخش مورد نظرت را
               کوتاه‌تر بنویس.
@@ -1156,14 +1401,17 @@ function SearchPage({
     </div>
   );
 }
+
 /* =========================================================
    TELEGRAM VIP
    ========================================================= */
+
 type TelegramWebApp = {
   initData: string;
   ready?: () => void;
   expand?: () => void;
 };
+
 declare global {
   interface Window {
     Telegram?: {
@@ -1171,8 +1419,127 @@ declare global {
     };
   }
 }
+
+/*
+ * Telegram WebApp SDK را در صورت نیاز بارگذاری می‌کند.
+ * این کار باعث می‌شود window.Telegram.WebApp
+ * قبل از درخواست VIP آماده باشد.
+ */
+function loadTelegramWebAppScript(): Promise<void> {
+  if (
+    window.Telegram?.WebApp
+  ) {
+    return Promise.resolve();
+  }
+
+  const existingScript =
+    document.querySelector(
+      `script[src="${TELEGRAM_WEBAPP_SCRIPT}"]`
+    ) as HTMLScriptElement | null;
+
+  if (existingScript) {
+    return new Promise(
+      (resolve, reject) => {
+        if (
+          window.Telegram?.WebApp
+        ) {
+          resolve();
+          return;
+        }
+
+        const timeout =
+          window.setTimeout(() => {
+            reject(
+              new Error(
+                "Telegram WebApp SDK timeout"
+              )
+            );
+          }, 8000);
+
+        existingScript.addEventListener(
+          "load",
+          () => {
+            window.clearTimeout(
+              timeout
+            );
+            resolve();
+          },
+          { once: true }
+        );
+
+        existingScript.addEventListener(
+          "error",
+          () => {
+            window.clearTimeout(
+              timeout
+            );
+            reject(
+              new Error(
+                "Telegram WebApp SDK load error"
+              )
+            );
+          },
+          { once: true }
+        );
+      }
+    );
+  }
+
+  return new Promise(
+    (resolve, reject) => {
+      const script =
+        document.createElement(
+          "script"
+        );
+
+      script.src =
+        TELEGRAM_WEBAPP_SCRIPT;
+
+      script.async = true;
+
+      script.onload = () => {
+        if (
+          window.Telegram?.WebApp
+        ) {
+          resolve();
+        } else {
+          reject(
+            new Error(
+              "Telegram WebApp API unavailable"
+            )
+          );
+        }
+      };
+
+      script.onerror = () => {
+        reject(
+          new Error(
+            "Telegram WebApp SDK load error"
+          )
+        );
+      };
+
+      document.head.appendChild(
+        script
+      );
+    }
+  );
+}
+
 async function loadTelegramIdentity(): Promise<VipApiResponse> {
-  const telegramWebApp = window.Telegram?.WebApp;
+  try {
+    await loadTelegramWebAppScript();
+  } catch {
+    return {
+      success: false,
+      message:
+        "اتصال به محیط تلگرام برقرار نشد. لطفاً VIP را از داخل تلگرام باز کن.",
+    };
+  }
+
+  const telegramWebApp =
+    window.Telegram?.WebApp;
+
   if (!telegramWebApp) {
     return {
       success: false,
@@ -1180,25 +1547,51 @@ async function loadTelegramIdentity(): Promise<VipApiResponse> {
         "این بخش باید از داخل تلگرام باز شود.",
     };
   }
-  const initData = telegramWebApp.initData;
+
+  try {
+    telegramWebApp.ready?.();
+    telegramWebApp.expand?.();
+  } catch {
+    // Optional Telegram methods.
+  }
+
+  const initData =
+    telegramWebApp.initData;
+
   if (!initData) {
     return {
       success: false,
       message:
-        "اطلاعات ورود تلگرام دریافت نشد. لطفاً VIP را از داخل تلگرام باز کن.",
+        "اطلاعات ورود تلگرام دریافت نشد. لطفاً VIP را مستقیماً از داخل تلگرام باز کن.",
     };
   }
+
   try {
-    const response = await fetch(VIP_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        initData,
-      }),
-    });
-    const data = (await response.json()) as VipApiResponse;
+    const response =
+      await fetch(VIP_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          initData,
+        }),
+      });
+
+    let data: VipApiResponse;
+
+    try {
+      data =
+        (await response.json()) as VipApiResponse;
+    } catch {
+      return {
+        success: false,
+        message:
+          "پاسخ نامعتبر از سامانه VIP دریافت شد.",
+      };
+    }
+
     if (!response.ok) {
       return {
         success: false,
@@ -1207,6 +1600,7 @@ async function loadTelegramIdentity(): Promise<VipApiResponse> {
           "امکان دریافت اطلاعات VIP وجود ندارد.",
       };
     }
+
     return data;
   } catch {
     return {
@@ -1216,49 +1610,80 @@ async function loadTelegramIdentity(): Promise<VipApiResponse> {
     };
   }
 }
-function VipPage({ onBack }: { onBack: () => void }) {
-  const [activePanel, setActivePanel] = useState<
-    "dashboard" | "bookings" | "payments" | "tokens" | "profile"
-  >("dashboard");
-  const [loading, setLoading] = useState(true);
+
+function VipPage({
+  onBack,
+}: {
+  onBack: () => void;
+}) {
+  const [activePanel, setActivePanel] =
+    useState<
+      | "dashboard"
+      | "bookings"
+      | "payments"
+      | "tokens"
+      | "profile"
+    >("dashboard");
+
+  const [loading, setLoading] =
+    useState(true);
+
   const [vipCustomer, setVipCustomer] =
-    useState<VipCustomer | null>(null);
-  const [vipError, setVipError] = useState("");
+    useState<VipCustomer | null>(
+      null
+    );
+
+  const [vipError, setVipError] =
+    useState("");
+
   useEffect(() => {
     let mounted = true;
-    const initializeVip = async () => {
-      try {
-        window.Telegram?.WebApp?.ready?.();
-        window.Telegram?.WebApp?.expand?.();
-      } catch {
-        // Telegram methods are optional.
-      }
-      const result = await loadTelegramIdentity();
-      if (!mounted) {
-        return;
-      }
-      setLoading(false);
-      if (result.success && result.customer) {
-        setVipCustomer(result.customer);
-        setVipError("");
-        return;
-      }
-      setVipCustomer(null);
-      setVipError(
-        result.message ||
-          "عضویت VIP شما فعال نیست."
-      );
-    };
+
+    const initializeVip =
+      async () => {
+        const result =
+          await loadTelegramIdentity();
+
+        if (!mounted) {
+          return;
+        }
+
+        setLoading(false);
+
+        if (
+          result.success &&
+          result.customer
+        ) {
+          setVipCustomer(
+            result.customer
+          );
+          setVipError("");
+          return;
+        }
+
+        setVipCustomer(null);
+
+        setVipError(
+          result.message ||
+            "عضویت VIP شما فعال نیست."
+        );
+      };
+
     initializeVip();
+
     return () => {
       mounted = false;
     };
   }, []);
+
   const displayName =
     `${vipCustomer?.first_name || ""} ${vipCustomer?.last_name || ""}`.trim() ||
     "عضو VIP";
+
   const vipActive =
-    vipCustomer?.vip_status === "active";
+    vipCustomer?.vip_status ===
+    "active";
+
   if (loading) {
     return (
       <div className="inner-page">
@@ -1269,37 +1694,49 @@ function VipPage({ onBack }: { onBack: () => void }) {
         >
           ← بازگشت
         </button>
+
         <SectionHeaderCard
           kicker="KAENATCHI"
           title="پنل VIP"
           description="در حال بررسی عضویت VIP شما..."
           icon="crown"
         />
+
         <div
           className="glass-list-card"
           style={{
             display: "block",
-            textAlign: "center",
-            padding: "28px 20px",
+            textAlign:
+              "center",
+            padding:
+              "28px 20px",
           }}
         >
           <div
             style={{
               width: "52px",
               height: "52px",
-              margin: "0 auto 14px",
-              borderRadius: "18px",
+              margin:
+                "0 auto 14px",
+              borderRadius:
+                "18px",
               display: "grid",
-              placeItems: "center",
+              placeItems:
+                "center",
               background:
                 "rgba(36,99,71,0.08)",
-              color: "#246347",
+              color:
+                "#246347",
             }}
           >
             <Icon name="crown" />
           </div>
+
           <div className="list-copy">
-            <strong>در حال بررسی عضویت...</strong>
+            <strong>
+              در حال بررسی عضویت...
+            </strong>
+
             <span>
               لطفاً چند لحظه صبر کن.
             </span>
@@ -1308,7 +1745,11 @@ function VipPage({ onBack }: { onBack: () => void }) {
       </div>
     );
   }
-  if (!vipCustomer || !vipActive) {
+
+  if (
+    !vipCustomer ||
+    !vipActive
+  ) {
     return (
       <div className="inner-page">
         <button
@@ -1318,6 +1759,7 @@ function VipPage({ onBack }: { onBack: () => void }) {
         >
           ← بازگشت
         </button>
+
         <SectionHeaderCard
           kicker="KAENATCHI VIP"
           title="عضویت VIP"
@@ -1325,32 +1767,40 @@ function VipPage({ onBack }: { onBack: () => void }) {
           icon="crown"
           status="عضویت VIP فعال نیست"
         />
+
         <div
           className="glass-list-card"
           style={{
             display: "block",
-            textAlign: "center",
+            textAlign:
+              "center",
           }}
         >
           <div
             style={{
               width: "58px",
               height: "58px",
-              margin: "0 auto 14px",
-              borderRadius: "20px",
+              margin:
+                "0 auto 14px",
+              borderRadius:
+                "20px",
               display: "grid",
-              placeItems: "center",
+              placeItems:
+                "center",
               background:
                 "rgba(53,59,50,0.07)",
-              color: "#353B32",
+              color:
+                "#353B32",
             }}
           >
             <Icon name="crown" />
           </div>
+
           <div className="list-copy">
             <strong>
               دسترسی VIP فعال نیست
             </strong>
+
             <span>
               {vipError ||
                 "در حال حاضر این حساب عضو فعال باشگاه VIP نیست."}
@@ -1360,32 +1810,44 @@ function VipPage({ onBack }: { onBack: () => void }) {
       </div>
     );
   }
-  if (activePanel === "bookings") {
+
+  if (
+    activePanel ===
+    "bookings"
+  ) {
     return (
       <div className="inner-page">
         <button
           type="button"
-          onClick={() => setActivePanel("dashboard")}
+          onClick={() =>
+            setActivePanel(
+              "dashboard"
+            )
+          }
           style={backButtonStyle}
         >
           ← بازگشت به VIP
         </button>
+
         <SectionHeaderCard
           kicker="VIP"
           title="نوبت‌های من"
           description="نوبت‌های ثبت‌شده شما در کائنات‌چی."
           icon="calendar"
         />
+
         <div className="glass-list-card">
           <div className="list-icon">
             <Icon name="calendar" />
           </div>
+
           <div className="list-copy">
             <strong>
               {vipCustomer.bookings_count
                 ? `${vipCustomer.bookings_count} نوبت ثبت شده`
                 : "هنوز نوبتی ثبت نشده"}
             </strong>
+
             <span>
               سوابق نوبت‌ها در مرحله بعد از اتصال کامل
               سیستم رزرو نمایش داده خواهد شد.
@@ -1395,28 +1857,42 @@ function VipPage({ onBack }: { onBack: () => void }) {
       </div>
     );
   }
-  if (activePanel === "payments") {
+
+  if (
+    activePanel ===
+    "payments"
+  ) {
     return (
       <div className="inner-page">
         <button
           type="button"
-          onClick={() => setActivePanel("dashboard")}
+          onClick={() =>
+            setActivePanel(
+              "dashboard"
+            )
+          }
           style={backButtonStyle}
         >
           ← بازگشت به VIP
         </button>
+
         <SectionHeaderCard
           kicker="VIP"
           title="پرداخت‌های من"
           description="سوابق پرداخت شما در کائنات‌چی."
           icon="card"
         />
+
         <div className="glass-list-card">
           <div className="list-icon">
             <Icon name="card" />
           </div>
+
           <div className="list-copy">
-            <strong>پرداخت‌ها</strong>
+            <strong>
+              پرداخت‌ها
+            </strong>
+
             <span>
               سوابق پرداخت VIP در مرحله بعد از تکمیل اتصال
               اطلاعات پرداخت نمایش داده خواهد شد.
@@ -1426,22 +1902,32 @@ function VipPage({ onBack }: { onBack: () => void }) {
       </div>
     );
   }
-  if (activePanel === "tokens") {
+
+  if (
+    activePanel ===
+    "tokens"
+  ) {
     return (
       <div className="inner-page">
         <button
           type="button"
-          onClick={() => setActivePanel("dashboard")}
+          onClick={() =>
+            setActivePanel(
+              "dashboard"
+            )
+          }
           style={backButtonStyle}
         >
           ← بازگشت به VIP
         </button>
+
         <SectionHeaderCard
           kicker="VIP TOKENS"
           title="توکن‌های تخفیف"
           description="توکن‌های اختصاصی شما در باشگاه VIP."
           icon="ticket"
         />
+
         <div
           className="glass-list-card"
           style={{
@@ -1452,14 +1938,19 @@ function VipPage({ onBack }: { onBack: () => void }) {
           <div className="list-icon">
             <Icon name="ticket" />
           </div>
+
           <div className="list-copy">
-            <strong>توکن‌های VIP</strong>
+            <strong>
+              توکن‌های VIP
+            </strong>
+
             <span>
               توکن‌های اختصاصی شما در مرحله بعد از تکمیل
               API توکن‌ها در این قسمت نمایش داده می‌شوند.
             </span>
           </div>
         </div>
+
         <div
           style={{
             marginTop: "14px",
@@ -1474,15 +1965,21 @@ function VipPage({ onBack }: { onBack: () => void }) {
           <div
             style={{
               display: "flex",
-              alignItems: "center",
+              alignItems:
+                "center",
               gap: "9px",
-              color: "#8a7348",
-              marginBottom: "7px",
+              color:
+                "#8a7348",
+              marginBottom:
+                "7px",
             }}
           >
             <Icon name="spark" />
-            <strong>تخفیف VIP</strong>
+            <strong>
+              تخفیف VIP
+            </strong>
           </div>
+
           <span
             style={{
               fontSize: "13px",
@@ -1497,16 +1994,25 @@ function VipPage({ onBack }: { onBack: () => void }) {
       </div>
     );
   }
-  if (activePanel === "profile") {
+
+  if (
+    activePanel ===
+    "profile"
+  ) {
     return (
       <div className="inner-page">
         <button
           type="button"
-          onClick={() => setActivePanel("dashboard")}
+          onClick={() =>
+            setActivePanel(
+              "dashboard"
+            )
+          }
           style={backButtonStyle}
         >
           ← بازگشت به VIP
         </button>
+
         <SectionHeaderCard
           kicker="PROFILE"
           title="پروفایل من"
@@ -1514,25 +2020,35 @@ function VipPage({ onBack }: { onBack: () => void }) {
           icon="user"
           status="عضویت VIP فعال است"
         />
+
         <div className="glass-list-card">
           <div className="list-icon">
             <Icon name="user" />
           </div>
+
           <div className="list-copy">
-            <strong>{displayName}</strong>
+            <strong>
+              {displayName}
+            </strong>
+
             <span>
               وضعیت عضویت: فعال
             </span>
+
             {vipCustomer.mobile && (
               <span>
-                شماره موبایل: {vipCustomer.mobile}
+                شماره موبایل:{" "}
+                {vipCustomer.mobile}
               </span>
             )}
+
             {typeof vipCustomer.bookings_count ===
               "number" && (
               <span>
                 تعداد نوبت‌ها:{" "}
-                {vipCustomer.bookings_count}
+                {
+                  vipCustomer.bookings_count
+                }
               </span>
             )}
           </div>
@@ -1540,6 +2056,7 @@ function VipPage({ onBack }: { onBack: () => void }) {
       </div>
     );
   }
+
   return (
     <div className="inner-page">
       <button
@@ -1549,6 +2066,7 @@ function VipPage({ onBack }: { onBack: () => void }) {
       >
         ← بازگشت
       </button>
+
       <SectionHeaderCard
         kicker="KAENATCHI"
         title={`سلام ${displayName} 🌿`}
@@ -1556,6 +2074,7 @@ function VipPage({ onBack }: { onBack: () => void }) {
         icon="crown"
         status="عضویت VIP فعال است"
       />
+
       <div
         style={{
           display: "grid",
@@ -1567,14 +2086,22 @@ function VipPage({ onBack }: { onBack: () => void }) {
         <button
           type="button"
           className="glass-list-card"
-          onClick={() => setActivePanel("bookings")}
+          onClick={() =>
+            setActivePanel(
+              "bookings"
+            )
+          }
           style={vipTileStyle}
         >
           <div className="list-icon">
             <Icon name="calendar" />
           </div>
+
           <div className="list-copy">
-            <strong>نوبت‌های من</strong>
+            <strong>
+              نوبت‌های من
+            </strong>
+
             <span>
               {vipCustomer.bookings_count
                 ? `${vipCustomer.bookings_count} نوبت`
@@ -1582,49 +2109,83 @@ function VipPage({ onBack }: { onBack: () => void }) {
             </span>
           </div>
         </button>
+
         <button
           type="button"
           className="glass-list-card"
-          onClick={() => setActivePanel("payments")}
+          onClick={() =>
+            setActivePanel(
+              "payments"
+            )
+          }
           style={vipTileStyle}
         >
           <div className="list-icon">
             <Icon name="card" />
           </div>
+
           <div className="list-copy">
-            <strong>پرداخت‌ها</strong>
-            <span>سوابق پرداخت</span>
+            <strong>
+              پرداخت‌ها
+            </strong>
+
+            <span>
+              سوابق پرداخت
+            </span>
           </div>
         </button>
+
         <button
           type="button"
           className="glass-list-card"
-          onClick={() => setActivePanel("tokens")}
+          onClick={() =>
+            setActivePanel(
+              "tokens"
+            )
+          }
           style={vipTileStyle}
         >
           <div className="list-icon">
             <Icon name="ticket" />
           </div>
+
           <div className="list-copy">
-            <strong>توکن‌ها</strong>
-            <span>تخفیف‌های VIP</span>
+            <strong>
+              توکن‌ها
+            </strong>
+
+            <span>
+              تخفیف‌های VIP
+            </span>
           </div>
         </button>
+
         <button
           type="button"
           className="glass-list-card"
-          onClick={() => setActivePanel("profile")}
+          onClick={() =>
+            setActivePanel(
+              "profile"
+            )
+          }
           style={vipTileStyle}
         >
           <div className="list-icon">
             <Icon name="user" />
           </div>
+
           <div className="list-copy">
-            <strong>پروفایل</strong>
-            <span>اطلاعات حساب</span>
+            <strong>
+              پروفایل
+            </strong>
+
+            <span>
+              اطلاعات حساب
+            </span>
           </div>
         </button>
       </div>
+
       <div
         style={{
           marginTop: "14px",
@@ -1639,15 +2200,21 @@ function VipPage({ onBack }: { onBack: () => void }) {
         <div
           style={{
             display: "flex",
-            alignItems: "center",
+            alignItems:
+              "center",
             gap: "9px",
-            color: "#8a7348",
-            marginBottom: "8px",
+            color:
+              "#8a7348",
+            marginBottom:
+              "8px",
           }}
         >
           <Icon name="check" />
-          <strong>عضویت فعال</strong>
+          <strong>
+            عضویت فعال
+          </strong>
         </div>
+
         <p
           style={{
             margin: 0,
@@ -1663,6 +2230,7 @@ function VipPage({ onBack }: { onBack: () => void }) {
     </div>
   );
 }
+
 const backButtonStyle = {
   border: "none",
   background: "transparent",
@@ -1672,17 +2240,22 @@ const backButtonStyle = {
   padding: "8px 0",
   marginBottom: "12px",
 };
+
 const vipTileStyle = {
   width: "100%",
   minHeight: "135px",
   border: "none",
-  textAlign: "right" as const,
+  textAlign:
+    "right" as const,
   cursor: "pointer",
   fontFamily: "inherit",
   display: "flex",
-  flexDirection: "column" as const,
-  alignItems: "flex-start",
+  flexDirection:
+    "column" as const,
+  alignItems:
+    "flex-start",
 };
+
 function MoreDetail({
   title,
   icon,
@@ -1703,25 +2276,35 @@ function MoreDetail({
       >
         ← بازگشت
       </button>
+
       <SectionHeaderCard
         kicker={
           title === "کلاس‌ها"
             ? "CLASSES"
-            : title === "ایونت‌ها"
+            : title ===
+                "ایونت‌ها"
               ? "EVENTS"
-              : title === "سوالات متداول"
+              : title ===
+                  "سوالات متداول"
                 ? "FAQ"
-                : title === "ساعات کاری"
+                : title ===
+                    "ساعات کاری"
                   ? "HOURS"
                   : "CONTACT"
         }
         title={title}
-        description={description}
+        description={
+          description
+        }
         icon={icon}
       />
+
       <div className="glass-list-card">
         <div className="list-copy">
-          <strong>{title}</strong>
+          <strong>
+            {title}
+          </strong>
+
           <span>
             این بخش به‌صورت اختصاصی برای محتوای {title}
             کائنات‌چی طراحی می‌شود.
@@ -1731,29 +2314,45 @@ function MoreDetail({
     </div>
   );
 }
+
 function MorePage({
   onSearch,
 }: {
   onSearch: () => void;
 }) {
-  const [selected, setSelected] = useState<
-    (typeof moreItems)[number] | null
-  >(null);
-  if (selected?.id === "vip") {
+  const [selected, setSelected] =
+    useState<
+      (typeof moreItems)[number] | null
+    >(null);
+
+  if (
+    selected?.id ===
+    "vip"
+  ) {
     return (
-      <VipPage onBack={() => setSelected(null)} />
+      <VipPage
+        onBack={() =>
+          setSelected(null)
+        }
+      />
     );
   }
+
   if (selected) {
     return (
       <MoreDetail
         title={selected.title}
         icon={selected.icon}
-        description={selected.description}
-        onBack={() => setSelected(null)}
+        description={
+          selected.description
+        }
+        onBack={() =>
+          setSelected(null)
+        }
       />
     );
   }
+
   return (
     <div className="inner-page">
       <SectionHeaderCard
@@ -1762,164 +2361,249 @@ function MorePage({
         description="بخش‌های دیگر کائنات‌چی را از اینجا دنبال کن."
         icon="menu"
       />
+
       <button
         type="button"
         onClick={onSearch}
         style={{
           width: "100%",
           display: "flex",
-          alignItems: "center",
+          alignItems:
+            "center",
           gap: "10px",
           border:
             "1px solid rgba(53,59,50,0.1)",
-          borderRadius: "18px",
-          padding: "13px 15px",
-          marginBottom: "14px",
+          borderRadius:
+            "18px",
+          padding:
+            "13px 15px",
+          marginBottom:
+            "14px",
           background:
             "rgba(255,255,255,0.62)",
-          color: "#73786f",
-          fontFamily: "inherit",
-          fontSize: "13px",
-          cursor: "pointer",
+          color:
+            "#73786f",
+          fontFamily:
+            "inherit",
+          fontSize:
+            "13px",
+          cursor:
+            "pointer",
           boxShadow:
             "0 7px 20px rgba(53,59,50,0.07)",
-          textAlign: "right",
+          textAlign:
+            "right",
         }}
       >
         <Icon name="search" />
-        <span>جست‌وجو در کائنات‌چی...</span>
+        <span>
+          جست‌وجو در کائنات‌چی...
+        </span>
       </button>
+
       <div className="more-list">
-        {moreItems.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className="glass-list-card"
-            onClick={() => setSelected(item)}
-            style={{
-              width: "100%",
-              border: "none",
-              textAlign: "right",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            <div className="list-icon">
-              <Icon name={item.icon} />
-            </div>
-            <div className="list-copy">
-              <strong>{item.title}</strong>
-              <span>{item.description}</span>
-            </div>
-            <div className="list-arrow">
-              <Icon name="arrow" />
-            </div>
-          </button>
-        ))}
+        {moreItems.map(
+          (item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="glass-list-card"
+              onClick={() =>
+                setSelected(
+                  item
+                )
+              }
+              style={{
+                width: "100%",
+                border: "none",
+                textAlign:
+                  "right",
+                cursor:
+                  "pointer",
+                fontFamily:
+                  "inherit",
+              }}
+            >
+              <div className="list-icon">
+                <Icon
+                  name={
+                    item.icon
+                  }
+                />
+              </div>
+
+              <div className="list-copy">
+                <strong>
+                  {item.title}
+                </strong>
+
+                <span>
+                  {item.description}
+                </span>
+              </div>
+
+              <div className="list-arrow">
+                <Icon name="arrow" />
+              </div>
+            </button>
+          )
+        )}
       </div>
     </div>
   );
 }
+
 function BottomNav({
   active,
   onChange,
 }: {
   active: Section;
-  onChange: (section: Section) => void;
+  onChange: (
+    section: Section
+  ) => void;
 }) {
   return (
     <nav className="bottom-nav">
       <button
         type="button"
         className={`nav-item ${
-          active === "home" ? "active" : ""
+          active === "home"
+            ? "active"
+            : ""
         }`}
-        onClick={() => onChange("home")}
+        onClick={() =>
+          onChange("home")
+        }
       >
         <span className="nav-icon">
           <Icon name="home" />
         </span>
+
         <span>خانه</span>
       </button>
+
       <button
         type="button"
         className={`nav-item ${
-          active === "services" ? "active" : ""
+          active === "services"
+            ? "active"
+            : ""
         }`}
-        onClick={() => onChange("services")}
+        onClick={() =>
+          onChange(
+            "services"
+          )
+        }
       >
         <span className="nav-icon">
           <Icon name="spark" />
         </span>
+
         <span>خدمات</span>
       </button>
+
       <button
         type="button"
         className={`nav-item ${
-          active === "more" ? "active" : ""
+          active === "more"
+            ? "active"
+            : ""
         }`}
-        onClick={() => onChange("more")}
+        onClick={() =>
+          onChange("more")
+        }
       >
         <span className="nav-icon">
           <Icon name="menu" />
         </span>
+
         <span>بیشتر</span>
       </button>
     </nav>
   );
 }
+
 function App() {
   const [section, setSection] =
     useState<Section>("home");
+
   const [searchOpen, setSearchOpen] =
     useState(false);
+
   const [searchService, setSearchService] =
-    useState<Service | null>(null);
+    useState<Service | null>(
+      null
+    );
+
   const openSearch = () => {
     setSearchService(null);
     setSearchOpen(true);
   };
+
   const closeSearch = () => {
     setSearchOpen(false);
     setSearchService(null);
   };
+
   if (searchOpen) {
     if (searchService) {
       return (
         <div className="app-shell">
           <div className="ambient ambient-one" />
           <div className="ambient ambient-two" />
+
           <ServiceDetail
             service={searchService}
-            onBack={() => setSearchService(null)}
+            onBack={() =>
+              setSearchService(
+                null
+              )
+            }
           />
         </div>
       );
     }
+
     return (
       <div className="app-shell">
         <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
+
         <SearchPage
           onBack={closeSearch}
-          onOpenService={(service) =>
-            setSearchService(service)
+          onOpenService={(
+            service
+          ) =>
+            setSearchService(
+              service
+            )
           }
         />
       </div>
     );
   }
+
   return (
     <div className="app-shell">
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
+
       {section === "home" && (
-        <HomePage onSearch={openSearch} />
+        <HomePage
+          onSearch={openSearch}
+        />
       )}
-      {section === "services" && <ServicesPage />}
+
+      {section === "services" && (
+        <ServicesPage />
+      )}
+
       {section === "more" && (
-        <MorePage onSearch={openSearch} />
+        <MorePage
+          onSearch={openSearch}
+        />
       )}
+
       <BottomNav
         active={section}
         onChange={setSection}
@@ -1927,4 +2611,5 @@ function App() {
     </div>
   );
 }
+
 export default App;
