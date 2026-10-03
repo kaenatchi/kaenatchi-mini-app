@@ -81,7 +81,10 @@ function App() {
       <header className="topbar">
         <div className="brand-area">
           <div className="logo-placeholder" aria-label="لوگوی کائنات‌چی">
-            ک
+            <img
+              src="https://i.ibb.co/YBNLYM0D/IMG-3857.jpg"
+              alt="لوگوی کائنات‌چی"
+            />
           </div>
 
           <div className="brand-copy">
