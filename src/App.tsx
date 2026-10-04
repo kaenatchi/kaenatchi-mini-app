@@ -652,7 +652,7 @@ function HomePage({
 
       <main className="main-content home-page">
         <section className="welcome-section home-welcome-top">
-          <h2>به کائنات‌چی خوش آمدی 🌿</h2>
+          <h2>خوش اومدی 🌿</h2>
 
         </section>
 
@@ -674,11 +674,6 @@ function HomePage({
             <div className="hero-ring ring-two" />
           </div>
           <div className="hero-content">
-            <div className="eyebrow">
-              <Icon name="spark" />
-              <span>KAENATCHI</span>
-            </div>
-
             <h1>
               جایی برای
               <br />
