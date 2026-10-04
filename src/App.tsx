@@ -2747,9 +2747,7 @@ function VipPage({
 
 
             <span>
-              {vipCustomer.bookingsCount
-                ? `${vipCustomer.bookingsCount} نوبت`
-                : "مشاهده نوبت‌ها"}
+              مشاهده و پیگیری نوبت‌های ثبت‌شده شما
             </span>
 
           </div>
@@ -2781,7 +2779,7 @@ function VipPage({
 
 
             <span>
-              سوابق پرداخت
+              مشاهده سوابق پرداخت‌های شما
             </span>
 
           </div>
@@ -2813,7 +2811,7 @@ function VipPage({
 
 
             <span>
-              تخفیف‌های VIP
+              مشاهده و استفاده از تخفیف‌های اختصاصی VIP
             </span>
 
           </div>
@@ -2832,7 +2830,7 @@ function VipPage({
           </div>
           <div className="list-copy">
             <strong>دریافت نوبت</strong>
-            <span>انتخاب خدمت، تاریخ و ساعت</span>
+            <span>انتخاب خدمت، تاریخ و ساعت نوبت</span>
           </div>
         </button>
 
@@ -2861,7 +2859,7 @@ function VipPage({
 
 
             <span>
-              اطلاعات حساب
+              مشاهده اطلاعات و وضعیت عضویت شما
             </span>
 
           </div>
