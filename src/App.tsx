@@ -1950,10 +1950,6 @@ function VipPage({
 
 
   const openBookingApp = () => {
-    try {
-      const telegramWebApp = window.Telegram?.WebApp;
-      if (telegramWebApp?.openLink) { telegramWebApp.openLink(BOOKING_APP_URL); return; }
-    } catch {}
     window.location.href = BOOKING_APP_URL;
   };
 
