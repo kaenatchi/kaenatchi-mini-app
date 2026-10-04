@@ -282,6 +282,11 @@ button:focus-visible {
   padding-top: 6px;
 }
 
+.home-page > .hero {
+  margin-top: -18px;
+  margin-bottom: 18px;
+}
+
 .home-page .section-heading-row {
   margin-bottom: 20px;
 }
@@ -741,7 +746,7 @@ button:focus-visible {
       rgba(164, 139, 93, 0.12) 72%,
       transparent
     );
-  animation: kaenatchiContentSheen 9s ease-in-out infinite;
+  animation: none;
   pointer-events: none;
 }
 
