@@ -2869,54 +2869,6 @@ function VipPage({
       </div>
 
 
-      <div
-        style={{
-          marginTop: "14px",
-          padding: "18px",
-          borderRadius: "20px",
-          background:
-            "rgba(165,139,91,0.08)",
-          border:
-            "1px solid rgba(165,139,91,0.16)",
-        }}
-      >
-
-        <div
-          style={{
-            display: "flex",
-            alignItems:
-              "center",
-            gap: "9px",
-            color:
-              "#8a7348",
-            marginBottom:
-              "8px",
-          }}
-        >
-
-          <Icon name="check" />
-
-          <strong>
-            عضویت فعال
-          </strong>
-
-        </div>
-
-
-        <p
-          style={{
-            margin: 0,
-            fontSize: "13px",
-            lineHeight: 1.9,
-          }}
-        >
-          حساب تلگرام شما با عضویت VIP فعال شناسایی شد.
-          اطلاعات این بخش بر اساس حساب واقعی شما نمایش داده
-          می‌شود.
-        </p>
-
-      </div>
-
     </div>
   );
 }
