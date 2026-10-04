@@ -2668,32 +2668,6 @@ function VipPage({
         status="عضویت VIP فعال است"
       />
 
-        <div
-          style={{
-            marginTop: "12px",
-            marginBottom: "14px",
-            padding: "14px 16px",
-            borderRadius: "18px",
-            background: "rgba(165,139,91,0.08)",
-            border: "1px solid rgba(165,139,91,0.15)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              color: "#8a7348",
-              marginBottom: "5px",
-            }}
-          >
-            <Icon name="spark" />
-            <strong>باشگاه VIP</strong>
-          </div>
-          <span style={{ fontSize: "13px", lineHeight: 1.8 }}>
-            از اینجا می‌توانید نوبت‌ها، پرداخت‌ها، توکن‌های تخفیف و اطلاعات پروفایل خود را مدیریت کنید.
-          </span>
-        </div>
 
         <div
           style={{
