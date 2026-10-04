@@ -1595,6 +1595,13 @@ function normalizeVipCustomer(
   };
 }
 
+function normalizeDiscountValue(value: unknown): string | number {
+  if (typeof value === "number" || typeof value === "string") {
+    return value;
+  }
+  return value == null ? "" : String(value);
+}
+
 function normalizeVipTokens(value: unknown): VipToken[] {
   if (!Array.isArray(value)) return [];
 
@@ -1605,8 +1612,12 @@ function normalizeVipTokens(value: unknown): VipToken[] {
         return {
           code: String(item.code ?? "").trim(),
           customerId: String(item.customerId ?? "").trim(),
-          discount: item.discount ?? item.discountPercent ?? "",
-          discountPercent: item.discountPercent ?? item.discount ?? "",
+          discount: normalizeDiscountValue(
+            item.discount ?? item.discountPercent ?? ""
+          ),
+          discountPercent: normalizeDiscountValue(
+            item.discountPercent ?? item.discount ?? ""
+          ),
           issuedAt: item.issuedAt == null ? "" : String(item.issuedAt),
           expiresAt: item.expiresAt == null ? "" : String(item.expiresAt),
           status: item.status == null ? "" : String(item.status),
@@ -1620,8 +1631,8 @@ function normalizeVipTokens(value: unknown): VipToken[] {
         return {
           code: String(token[0] ?? "").trim(),
           customerId: String(token[1] ?? "").trim(),
-          discount: token[2] ?? "",
-          discountPercent: token[2] ?? "",
+          discount: normalizeDiscountValue(token[2] ?? ""),
+          discountPercent: normalizeDiscountValue(token[2] ?? ""),
           issuedAt: token[3] == null ? "" : String(token[3]),
           expiresAt: token[4] == null ? "" : String(token[4]),
           status: token[5] == null ? "" : String(token[5]),
