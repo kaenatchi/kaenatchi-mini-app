@@ -2334,12 +2334,19 @@ function VipPage({
                   tokenRow[0] ??
                   ""
               ).trim();
-              const discount =
+              const rawDiscount =
                 item.discount ??
                 item["تخفیف"] ??
                 item.discountPercent ??
                 tokenRow[2] ??
                 "";
+              const discount =
+                String(rawDiscount).trim() !== ""
+                  ? String(rawDiscount).trim()
+                  : tokenRow
+                      .map((value) => String(value ?? "").trim())
+                      .find((value) => /^(3|5|7)\\s*%?$/.test(value)) ??
+                    "";
               const status =
                 item.status ??
                 item["وضعیت"] ??
