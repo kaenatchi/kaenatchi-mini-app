@@ -698,7 +698,6 @@ function HomePage({
             <div className="hero-ring ring-one" />
             <div className="hero-ring ring-two" />
           </div>
-
           <div className="hero-content">
             <div className="eyebrow">
               <Icon name="spark" />
@@ -1397,8 +1396,7 @@ function SearchPage({
           }}
         >
           <div
-            style={{
-              width: "58px",
+            style={{              width: "58px",
               height: "58px",
               margin:
                 "0 auto 13px",
@@ -1713,16 +1711,28 @@ function formatVipAmount(value: string): string {
 }
 
 function vipExperienceCategory(service: string): string {
-  const s = service.toLocaleLowerCase("fa");
+  const s = service
+    .trim()
+    .toLocaleLowerCase("fa")
+    .replace(/[\u200c\s]+/g, " ");
+
   if (s.includes("قهوه")) return "قهوه";
   if (s.includes("پاسور")) return "پاسور";
-  if (s.includes("رایدر")) return "رایدر";
-  if (s.includes("لنورماند")) return "لنورماند";
-  if (s.includes("تاروت")) return "تاروت";
-  if (s.includes("جم") || s.includes("اوراکل")) return "جم";
+  if (s.includes("رایدر وایت") || s.includes("رایدر-وایت")) return "تاروت رایدر وایت";
+  if (s.includes("رایدر احساسی")) return "تاروت رایدر احساسی";
+  if (s.includes("رایدر شغلی") || s.includes("رایدر مالی")) return "تاروت رایدر شغلی - مالی";
+  if (s.includes("لنورماند فرانسوی")) return "لنورماند فرانسوی";
+  if (s.includes("لنورماند احساسی")) return "لنورماند احساسی";
+  if (s.includes("تاروت یونانی") && s.includes("احساس")) return "تاروت یونانی احساسی";
+  if (s.includes("تاروت مارسی") && s.includes("احساس")) return "تاروت مارسی احساسی";
+  if (s.includes("جم") || s.includes("اوراکل")) return "جم اوراکل";
   if (s.includes("شمع")) return "شمع‌تراپی";
   if (s.includes("سایکو")) return "سایکوتراپی";
-  return "سایر";
+
+  // New services are kept as their own category instead of being
+  // collapsed into «سایر», so a newly added service can appear
+  // automatically as soon as it exists in the VIP history/API.
+  return service.trim() || "سایر";
 }
 
 function VipFilterTabs({ options, value, onChange }: {
@@ -2097,8 +2107,7 @@ async function callVipApi(
         action,
         ...(action === "connect"
           ? { connectionCode: connectionCode?.trim().toUpperCase() }
-          : {}),
-      }),
+          : {}),      }),
     });
 
     let data: VipApiResponse;
@@ -2797,8 +2806,7 @@ function VipPage({
                         background: copiedToken === code ? "rgba(36,99,71,0.08)" : "rgba(255,255,255,0.72)",
                         color: copiedToken === code ? "#246347" : "#353B32",
                         padding: "9px 11px", fontFamily: "inherit",
-                        fontSize: "11px", fontWeight: 700, cursor: "pointer",
-                        boxShadow: "0 6px 14px rgba(53,59,50,0.06)",
+                        fontSize: "11px", fontWeight: 700, cursor: "pointer",                        boxShadow: "0 6px 14px rgba(53,59,50,0.06)",
                       }}>{copiedToken === code ? "کپی شد ✓" : "کپی کد"}</button>
                     )}
                   </div>
@@ -2869,22 +2877,150 @@ function VipPage({
   ===================================================== */
 
   if (activePanel === "experiences") {
-    const categories = ["همه", "قهوه", "پاسور", "رایدر", "لنورماند", "تاروت", "جم", "شمع‌تراپی", "سایکوتراپی"];
-    const filtered = vipHistory.filter(record => experienceFilter === "همه" || vipExperienceCategory(record.service) === experienceFilter);
+    const fixedCategories = [
+      "قهوه",
+      "پاسور",
+      "تاروت رایدر وایت",
+      "تاروت رایدر احساسی",
+      "تاروت رایدر شغلی - مالی",
+      "لنورماند فرانسوی",
+      "لنورماند احساسی",
+      "تاروت یونانی احساسی",
+      "تاروت مارسی احساسی",
+      "جم اوراکل",
+      "شمع‌تراپی",
+      "سایکوتراپی",
+    ];
+
+    // Keep the agreed list first, then append any new service that
+    // already exists in the customer's VIP history/API.
+    const historyCategories = Array.from(
+      new Set(
+        vipHistory
+          .map((record) => vipExperienceCategory(record.service))
+          .filter(
+            (category) =>
+              category &&
+              category !== "سایر" &&
+              !fixedCategories.includes(category)
+          )
+      )
+    );
+
+    const categories = ["همه", ...fixedCategories, ...historyCategories];
+
+    const filtered = vipHistory.filter(
+      (record) =>
+        experienceFilter === "همه" ||
+        vipExperienceCategory(record.service) === experienceFilter
+    );
+
     return (
       <div className="inner-page">
-        <button type="button" onClick={() => setActivePanel("dashboard")} style={backButtonStyle}>← بازگشت به VIP</button>
-        <SectionHeaderCard kicker="VIP" title="تجربه‌های من" description="تجربه‌های ثبت‌شده شما به تفکیک نوع خدمت." icon="spark" />
-        <VipFilterTabs value={experienceFilter} onChange={setExperienceFilter} options={categories.map(item => ({ id: item, title: item }))} />
-        {filtered.length > 0 ? filtered.map((item, index) => (
-          <div key={item.id} className="glass-list-card" style={{ display: "block", marginBottom: "10px" }}>
-            <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-              <div style={{ width: "38px", height: "38px", borderRadius: "13px", display: "grid", placeItems: "center", background: "rgba(165,139,91,0.09)", color: "#8a7348", fontWeight: 800, fontSize: "13px", flex: "0 0 auto" }}>{String(index + 1).padStart(2, "0")}</div>
-              <div className="list-copy" style={{ flex: 1 }}><strong>{item.service}</strong><span>{item.date ? formatVipJalaliDate(item.date) : ""}{item.time ? "  •  " + item.time : ""}</span>{item.status && <span>{item.status}</span>}</div>
+        <button
+          type="button"
+          onClick={() => setActivePanel("dashboard")}
+          style={backButtonStyle}
+        >
+          ← بازگشت به VIP
+        </button>
+
+        <SectionHeaderCard
+          kicker="VIP"
+          title="تجربه‌های من"
+          description="اینجا می‌توانی مسیر تجربه‌ها و انرژی‌خوانی‌های ثبت‌شده خودت را به تفکیک نوع خدمت ببینی."
+          icon="spark"
+        />
+
+        <VipFilterTabs
+          value={experienceFilter}
+          onChange={setExperienceFilter}
+          options={categories.map((item) => ({
+            id: item,
+            title: item,
+          }))}
+        />
+
+        {filtered.length > 0 ? (
+          filtered.map((item, index) => (
+            <div
+              key={item.id}
+              className="glass-list-card"
+              style={{
+                display: "block",
+                marginBottom: "10px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  alignItems: "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    width: "38px",
+                    height: "38px",
+                    borderRadius: "13px",
+                    display: "grid",
+                    placeItems: "center",
+                    background: "rgba(165,139,91,0.09)",
+                    color: "#8a7348",
+                    fontWeight: 800,
+                    fontSize: "13px",
+                    flex: "0 0 auto",
+                  }}
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </div>
+
+                <div
+                  className="list-copy"
+                  style={{ flex: 1 }}
+                >
+                  <strong>{item.service}</strong>
+                  {item.date && (
+                    <span>
+                      {formatVipJalaliDate(item.date)}
+                      {item.time ? "  •  " + item.time : ""}
+                    </span>
+                  )}
+                  {!item.date && item.time && (
+                    <span>{item.time}</span>
+                  )}
+                  {item.status && (
+                    <span>{item.status}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div
+            className="glass-list-card"
+            style={{
+              display: "block",
+              textAlign: "center",
+            }}
+          >
+            <div
+              className="list-icon"
+              style={{ margin: "0 auto 12px" }}
+            >
+              <Icon name="spark" />
+            </div>
+            <div className="list-copy">
+              <strong>
+                هنوز تجربه‌ای در این بخش ثبت نشده
+              </strong>
+              <span>
+                {vipHistory.length
+                  ? "دسته دیگری را امتحان کن."
+                  : "سوابق تجربه‌های شما پس از ثبت نوبت در اینجا نمایش داده می‌شود."}
+              </span>
             </div>
           </div>
-        )) : (
-          <div className="glass-list-card" style={{ display: "block", textAlign: "center" }}><div className="list-icon" style={{ margin: "0 auto 12px" }}><Icon name="spark" /></div><div className="list-copy"><strong>هنوز تجربه‌ای در این بخش ثبت نشده</strong><span>{vipHistory.length ? "دسته دیگری را امتحان کن." : "سوابق تجربه‌های شما پس از ثبت نوبت در اینجا نمایش داده می‌شود."}</span></div></div>
         )}
       </div>
     );
@@ -3087,6 +3223,41 @@ function VipPage({
       </div>
 
       <div style={{ marginTop: "12px", display: "grid", gap: "10px" }}>
+        <div
+          style={{
+            display: "grid",
+            justifyItems: "center",
+            gap: "7px",
+            padding: "2px 0 3px",
+          }}
+        >
+          <div
+            aria-hidden="true"
+            style={{
+              width: "58px",
+              height: "58px",
+              borderRadius: "20px",
+              display: "grid",
+              placeItems: "center",
+              background: "linear-gradient(145deg, #174b38, #2c7658)",
+              color: "#fff",
+              boxShadow: "0 10px 22px rgba(23,75,56,0.18)",
+            }}
+          >
+            <Icon name="spark" />
+          </div>
+          <div
+            style={{
+              color: "#353B32",
+              fontSize: "16px",
+              fontWeight: 800,
+              lineHeight: 1.6,
+            }}
+          >
+            مسیر همراهی
+          </div>
+        </div>
+
         <div className="glass-list-card" style={{ display: "block", background: "linear-gradient(135deg, rgba(165,139,91,0.09), rgba(255,255,255,0.66))", border: "1px solid rgba(165,139,91,0.16)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "9px", marginBottom: "8px", color: "#353B32", fontWeight: 700, fontSize: "14px" }}><Icon name="spark" /> مسیر شما در کائنات‌چی</div>
           <div style={{ color: "#73786f", fontSize: "12px", lineHeight: 1.9 }}>نوبت‌ها، تجربه‌ها، کلاس‌ها و ایونت‌های شما در این فضای اختصاصی کنار هم قرار می‌گیرند.</div>
