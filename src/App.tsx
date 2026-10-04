@@ -1580,71 +1580,55 @@ function loadTelegramWebAppScript(): Promise<void> {
 function normalizeVipCustomer(
   customer: any
 ): VipCustomer {
+
   return {
-    id: customer?.id ?? customer?.customerId ?? undefined,
-    telegramId: customer?.telegramId ?? customer?.telegram_id ?? undefined,
-    firstName: customer?.firstName ?? customer?.first_name ?? null,
-    lastName: customer?.lastName ?? customer?.last_name ?? null,
-    mobile: customer?.mobile ?? null,
-    vipStatus: customer?.vipStatus ?? customer?.vip_status ?? null,
-    joinedAt: formatVipJalaliDate(
-      customer?.joinedAt ?? customer?.joined_at ?? null
-    ),
+
+    id:
+      customer?.id ??
+      customer?.customerId ??
+      undefined,
+
+    telegramId:
+      customer?.telegramId ??
+      customer?.telegram_id ??
+      undefined,
+
+    firstName:
+      customer?.firstName ??
+      customer?.first_name ??
+      null,
+
+    lastName:
+      customer?.lastName ??
+      customer?.last_name ??
+      null,
+
+    mobile:
+      customer?.mobile ??
+      null,
+
+    vipStatus:
+      customer?.vipStatus ??
+      customer?.vip_status ??
+      null,
+
+    joinedAt:
+      formatVipJalaliDate(
+        customer?.joinedAt ??
+          customer?.joined_at ??
+          null
+      ),
+
     bookingsCount:
-      Number(customer?.bookingsCount ?? customer?.bookings_count ?? 0) || 0,
+      Number(
+        customer?.bookingsCount ??
+          customer?.bookings_count ??
+          0
+      ) || 0,
   };
 }
 
-function normalizeDiscountValue(value: unknown): string | number {
-  if (typeof value === "number" || typeof value === "string") {
-    return value;
-  }
-  return value == null ? "" : String(value);
-}
 
-function normalizeVipTokens(value: unknown): VipToken[] {
-  if (!Array.isArray(value)) return [];
-
-  return value
-    .map((token): VipToken | null => {
-      if (token && typeof token === "object" && !Array.isArray(token)) {
-        const item = token as Record<string, unknown>;
-        return {
-          code: String(item.code ?? "").trim(),
-          customerId: String(item.customerId ?? "").trim(),
-          discount: normalizeDiscountValue(
-            item.discount ?? item.discountPercent ?? ""
-          ),
-          discountPercent: normalizeDiscountValue(
-            item.discountPercent ?? item.discount ?? ""
-          ),
-          issuedAt: item.issuedAt == null ? "" : String(item.issuedAt),
-          expiresAt: item.expiresAt == null ? "" : String(item.expiresAt),
-          status: item.status == null ? "" : String(item.status),
-          usedAt: item.usedAt == null ? "" : String(item.usedAt),
-          trackingCode: item.trackingCode == null ? "" : String(item.trackingCode),
-        };
-      }
-
-      // پشتیبانی از پاسخ قدیمی که هر ردیف توکن را به شکل آرایه می‌فرستد.
-      if (Array.isArray(token)) {
-        return {
-          code: String(token[0] ?? "").trim(),
-          customerId: String(token[1] ?? "").trim(),
-          discount: normalizeDiscountValue(token[2] ?? ""),
-          discountPercent: normalizeDiscountValue(token[2] ?? ""),
-          issuedAt: token[3] == null ? "" : String(token[3]),
-          expiresAt: token[4] == null ? "" : String(token[4]),
-          status: token[5] == null ? "" : String(token[5]),
-          usedAt: token[6] == null ? "" : String(token[6]),
-          trackingCode: token[7] == null ? "" : String(token[7]),
-        };
-      }
-
-      return null;
-    })
-    .filter((token): token is VipToken => token !== null);
-}
 
 
 function formatVipJalaliDate(value: unknown): string {
@@ -1829,7 +1813,16 @@ function VipPage({
 
         if (result.success && result.customer) {
           setVipCustomer(result.customer);
-          setVipTokens(normalizeVipTokens(result.tokens));
+          setVipTokens(
+          Array.isArray(result.tokens)
+            ? result.tokens.filter(
+                (token): token is VipToken =>
+                  !!token &&
+                  typeof token === "object" &&
+                  !Array.isArray(token)
+              )
+            : []
+        );
           setNeedsConnectionCode(false);
           setVipError("");
           return;
@@ -1970,7 +1963,16 @@ function VipPage({
 
       if (result.success && result.customer) {
         setVipCustomer(result.customer);
-        setVipTokens(normalizeVipTokens(result.tokens));
+        setVipTokens(
+          Array.isArray(result.tokens)
+            ? result.tokens.filter(
+                (token): token is VipToken =>
+                  !!token &&
+                  typeof token === "object" &&
+                  !Array.isArray(token)
+              )
+            : []
+        );
         setNeedsConnectionCode(false);
         setConnectionCode("");
         setConnectionError("");
