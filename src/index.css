@@ -282,6 +282,19 @@ button:focus-visible {
   padding-top: 6px;
 }
 
+.home-page .section-heading-row {
+  margin-bottom: 20px;
+}
+
+.home-page .section-kicker {
+  margin-bottom: 9px;
+}
+
+.home-page > .search-button {
+  margin-top: 4px;
+  margin-bottom: 20px !important;
+}
+
 /* --------------------------------------------------
    HERO
 -------------------------------------------------- */
