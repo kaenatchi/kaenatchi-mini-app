@@ -1631,6 +1631,110 @@ function normalizeVipCustomer(
 
 
 
+function normalizeVipTokens(value: unknown): VipToken[] {
+  // پاسخ VIP ممکن است به‌صورت آرایه‌ای از آبجکت‌ها، ردیف‌های Sheet
+  // یا آبجکت تو در تو برگردد. اینجا همه فرمت‌های رایج را یکدست می‌کنیم.
+  const source =
+    Array.isArray(value)
+      ? value
+      : value && typeof value === "object"
+        ? (() => {
+            const obj = value as Record<string, unknown>;
+            for (const key of ["tokens", "data", "items", "rows", "result"]) {
+              if (Array.isArray(obj[key])) return obj[key];
+            }
+            return [];
+          })()
+        : [];
+
+  const read = (obj: Record<string, unknown>, aliases: string[]) => {
+    const normalized = new Map<string, unknown>();
+    Object.entries(obj).forEach(([key, val]) => {
+      normalized.set(
+        key
+          .trim()
+          .toLowerCase()
+          .replace(/[\s_-]+/g, ""),
+        val
+      );
+    });
+
+    for (const alias of aliases) {
+      const value = normalized.get(
+        alias.toLowerCase().replace(/[\s_-]+/g, "")
+      );
+      if (value !== undefined && value !== null && String(value).trim() !== "") {
+        return value;
+      }
+    }
+    return "";
+  };
+
+  return source
+    .map((raw): VipToken | null => {
+      if (Array.isArray(raw)) {
+        // فرمت قدیمی Sheet: code, customerId, discount, issuedAt, expiresAt, status, usedAt, trackingCode
+        return {
+          code: String(raw[0] ?? "").trim(),
+          customerId: String(raw[1] ?? "").trim(),
+          discount: raw[2] ?? "",
+          discountPercent: raw[2] ?? "",
+          issuedAt: raw[3] == null ? "" : String(raw[3]),
+          expiresAt: raw[4] == null ? "" : String(raw[4]),
+          status: raw[5] == null ? "" : String(raw[5]),
+          usedAt: raw[6] == null ? "" : String(raw[6]),
+          trackingCode: raw[7] == null ? "" : String(raw[7]),
+        };
+      }
+
+      if (!raw || typeof raw !== "object") return null;
+
+      const obj = raw as Record<string, unknown>;
+      const code = read(obj, [
+        "code", "token", "tokenCode", "token_code", "coupon", "couponCode",
+        "کد", "توکن", "توکن اختصاصی"
+      ]);
+      const customerId = read(obj, [
+        "customerId", "customer_id", "customer", "vipId", "vip_id", "شناسه مشتری"
+      ]);
+      const discount = read(obj, [
+        "discount", "discountPercent", "discount_percentage", "percent",
+        "discountValue", "درصد تخفیف", "تخفیف"
+      ]);
+      const issuedAt = read(obj, [
+        "issuedAt", "issued_at", "issueDate", "issue_date", "createdAt",
+        "created_at", "dateIssued", "تاریخ صدور"
+      ]);
+      const expiresAt = read(obj, [
+        "expiresAt", "expires_at", "expiryDate", "expiry_date", "expireAt",
+        "expire_at", "تاریخ انقضا"
+      ]);
+      const status = read(obj, [
+        "status", "tokenStatus", "token_status", "وضعیت"
+      ]);
+      const usedAt = read(obj, [
+        "usedAt", "used_at", "تاریخ استفاده"
+      ]);
+      const trackingCode = read(obj, [
+        "trackingCode", "tracking_code", "کد پیگیری"
+      ]);
+
+      return {
+        code: String(code ?? "").trim(),
+        customerId: String(customerId ?? "").trim(),
+        discount,
+        discountPercent: discount,
+        issuedAt: issuedAt == null ? "" : String(issuedAt),
+        expiresAt: expiresAt == null ? "" : String(expiresAt),
+        status: status == null ? "" : String(status),
+        usedAt: usedAt == null ? "" : String(usedAt),
+        trackingCode: trackingCode == null ? "" : String(trackingCode),
+      };
+    })
+    .filter((token): token is VipToken => token !== null);
+}
+
+
 function formatVipJalaliDate(value: unknown): string {
   if (!value) return "";
   const text = String(value).trim();
@@ -1813,16 +1917,7 @@ function VipPage({
 
         if (result.success && result.customer) {
           setVipCustomer(result.customer);
-          setVipTokens(
-          Array.isArray(result.tokens)
-            ? result.tokens.filter(
-                (token): token is VipToken =>
-                  !!token &&
-                  typeof token === "object" &&
-                  !Array.isArray(token)
-              )
-            : []
-        );
+          setVipTokens(normalizeVipTokens(result.tokens));
           setNeedsConnectionCode(false);
           setVipError("");
           return;
