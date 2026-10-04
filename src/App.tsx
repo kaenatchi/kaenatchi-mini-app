@@ -1601,9 +1601,11 @@ function normalizeVipCustomer(
       null,
 
     joinedAt:
-      customer?.joinedAt ??
-      customer?.joined_at ??
-      null,
+      formatVipJalaliDate(
+        customer?.joinedAt ??
+          customer?.joined_at ??
+          null
+      ),
 
     bookingsCount:
       Number(
@@ -1614,6 +1616,21 @@ function normalizeVipCustomer(
   };
 }
 
+
+
+
+function formatVipJalaliDate(value: unknown): string {
+  if (!value) return "";
+  const text = String(value).trim();
+  const match = text.match(/^(\\d{3})[\\/-](\\d{1,2})[\\/-](\\d{1,2})(.*)$/);
+  if (match) {
+    const year = Number(match[1]);
+    if (year >= 700 && year < 900) {
+      return `1405/${String(Number(match[2])).padStart(2, "0")}/${String(Number(match[3])).padStart(2, "0")}${match[4] || ""}`;
+    }
+  }
+  return text;
+}
 
 /* =========================================================
    LOAD TELEGRAM IDENTITY
@@ -1744,6 +1761,9 @@ function VipPage({
       null
     );
 
+  const [vipTokens, setVipTokens] =
+    useState<unknown[][]>([]);
+
 
   const [vipError, setVipError] =
     useState("");
@@ -1781,6 +1801,7 @@ function VipPage({
 
         if (result.success && result.customer) {
           setVipCustomer(result.customer);
+          setVipTokens(Array.isArray(result.tokens) ? result.tokens : []);
           setNeedsConnectionCode(false);
           setVipError("");
           return;
@@ -1921,6 +1942,7 @@ function VipPage({
 
       if (result.success && result.customer) {
         setVipCustomer(result.customer);
+        setVipTokens(Array.isArray(result.tokens) ? result.tokens : []);
         setNeedsConnectionCode(false);
         setConnectionCode("");
         setConnectionError("");
@@ -2294,33 +2316,108 @@ function VipPage({
         />
 
 
-        <div
-          className="glass-list-card"
-          style={{
-            border:
-              "1px solid rgba(165, 139, 91, 0.25)",
-          }}
-        >
+        <div style={{ display: "grid", gap: "12px" }}>
+          {vipTokens.length > 0 ? (
+            vipTokens.map((row, index) => {
+              const item =
+                row && typeof row === "object" && !Array.isArray(row)
+                  ? (row as Record<string, unknown>)
+                  : {};
+              const code = String(
+                item.code ??
+                  item["کد"] ??
+                  item.token ??
+                  item["کد توکن"] ??
+                  ""
+              ).trim();
+              const discount =
+                item.discount ??
+                item["تخفیف"] ??
+                item.discountPercent ??
+                "";
+              const status = item.status ?? item["وضعیت"] ?? "";
+              const expiresAt =
+                item.expiresAt ?? item["تاریخ انقضا"] ?? "";
+              const issuedAt =
+                item.issuedAt ?? item["تاریخ صدور"] ?? item["تاریخ ایجاد"] ?? "";
 
-          <div className="list-icon">
-            <Icon name="ticket" />
-          </div>
+              return (
+                <div
+                  key={index}
+                  className="glass-list-card"
+                  style={{
+                    border: "1px solid rgba(165, 139, 91, 0.25)",
+                    display: "block",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    <div className="list-icon">
+                      <Icon name="ticket" />
+                    </div>
 
+                    <div className="list-copy">
+                      <strong>{code || "توکن VIP"}</strong>
+                      <span>
+                        {discount !== ""
+                          ? `تخفیف ${String(discount).replace(/%/g, "")}%`
+                          : "توکن اختصاصی VIP"}
+                      </span>
+                    </div>
+                  </div>
 
-          <div className="list-copy">
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: "6px",
+                      fontSize: "12px",
+                      color: "#73786f",
+                      lineHeight: 1.8,
+                    }}
+                  >
+                    {status !== "" && (
+                      <span>وضعیت: {String(status)}</span>
+                    )}
+                    {issuedAt !== "" && (
+                      <span>
+                        تاریخ صدور: {formatVipJalaliDate(issuedAt)}
+                      </span>
+                    )}
+                    {expiresAt !== "" && (
+                      <span>
+                        تاریخ انقضا: {formatVipJalaliDate(expiresAt)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div
+              className="glass-list-card"
+              style={{ display: "block", textAlign: "center" }}
+            >
+              <div
+                className="list-icon"
+                style={{ margin: "0 auto 12px" }}
+              >
+                <Icon name="ticket" />
+              </div>
 
-            <strong>
-              توکن‌های VIP
-            </strong>
-
-
-            <span>
-              توکن‌های اختصاصی شما در مرحله بعد از تکمیل
-              API توکن‌ها در این قسمت نمایش داده می‌شوند.
-            </span>
-
-          </div>
-
+              <div className="list-copy">
+                <strong>هنوز توکنی برای شما ثبت نشده</strong>
+                <span>
+                  هر توکن تخفیف اختصاصی پس از صدور در این قسمت نمایش داده می‌شود.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
 
