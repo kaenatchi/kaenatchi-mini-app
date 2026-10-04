@@ -1086,6 +1086,62 @@ button:active,
    HOME BRAND / DAILY CONTENT MOTION
 -------------------------------------------------- */
 
+.kaenatchi-wordmark {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 560px);
+  min-height: 108px;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+}
+
+.kaenatchi-wordmark-fa,
+.kaenatchi-wordmark-en {
+  position: absolute;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.kaenatchi-wordmark-fa {
+  z-index: 2;
+  color: var(--green-dark);
+  font-size: clamp(44px, 13vw, 70px);
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -3px;
+  text-shadow: 0 12px 34px rgba(36, 77, 59, 0.1);
+  transform: translateY(1px);
+}
+
+.kaenatchi-wordmark-en {
+  z-index: 1;
+  color: var(--gold);
+  opacity: 0.28;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(31px, 8vw, 46px);
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  line-height: 1;
+  transform: translate(-4px, 13px) rotate(-2.5deg) scaleX(1.06);
+  transform-origin: center;
+  filter: blur(0.1px);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
+  animation: kaenatchiWordmarkFade 8s ease-in-out infinite alternate;
+}
+
+@keyframes kaenatchiWordmarkFade {
+  0% { opacity: 0.19; transform: translate(-10px, 13px) rotate(-2.5deg) scaleX(1.04); }
+  100% { opacity: 0.34; transform: translate(8px, 10px) rotate(2deg) scaleX(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kaenatchi-wordmark-en { animation: none; }
+}
+
+
+
 .home-welcome-top {
   padding: 0;
 }
