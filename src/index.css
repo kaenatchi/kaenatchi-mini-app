@@ -265,8 +265,21 @@ button:focus-visible {
 .home-page {
   display: flex;
   flex-direction: column;
-  gap: 44px;
+  gap: 60px;
   padding-top: 4px;
+}
+
+.home-page > .welcome-section,
+.home-page > .hero,
+.home-page > .today-section,
+.home-page > .featured-section,
+.home-page > .search-button {
+  margin: 0;
+}
+
+.home-page > .today-section,
+.home-page > .featured-section {
+  padding-top: 6px;
 }
 
 /* --------------------------------------------------
