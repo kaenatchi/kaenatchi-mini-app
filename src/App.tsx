@@ -1722,8 +1722,8 @@ function normalizeVipTokens(value: unknown): VipToken[] {
       return {
         code: String(code ?? "").trim(),
         customerId: String(customerId ?? "").trim(),
-        discount,
-        discountPercent: discount,
+        discount: String(discount ?? ""),
+        discountPercent: String(discount ?? ""),
         issuedAt: issuedAt == null ? "" : String(issuedAt),
         expiresAt: expiresAt == null ? "" : String(expiresAt),
         status: status == null ? "" : String(status),
