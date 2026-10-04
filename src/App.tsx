@@ -642,8 +642,60 @@ function HomePage({
         <section className="home-brand-title" aria-label="کائنات‌چی KAENATCHI">
           <div className="home-brand-title-glow" aria-hidden="true" />
           <div className="kaenatchi-wordmark" aria-hidden="true">
-            <span className="kaenatchi-wordmark-en">KAENATCHI</span>
-            <span className="kaenatchi-wordmark-fa">کائنات‌چی</span>
+            <svg
+              className="kaenatchi-logo-type"
+              viewBox="0 0 620 180"
+              role="img"
+              aria-label="کائنات‌چی KAENATCHI"
+            >
+              <defs>
+                <linearGradient id="kaenatchiWordmarkGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#17382b" />
+                  <stop offset="55%" stopColor="#244d3b" />
+                  <stop offset="100%" stopColor="#315c48" />
+                </linearGradient>
+                <linearGradient id="kaenatchiWordmarkGold" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#a48b5d" stopOpacity="0" />
+                  <stop offset="18%" stopColor="#a48b5d" stopOpacity=".78" />
+                  <stop offset="82%" stopColor="#c6b58e" stopOpacity=".62" />
+                  <stop offset="100%" stopColor="#a48b5d" stopOpacity="0" />
+                </linearGradient>
+                <filter id="kaenatchiWordmarkShadow" x="-20%" y="-30%" width="140%" height="170%">
+                  <feDropShadow dx="0" dy="10" stdDeviation="9" floodColor="#244d3b" floodOpacity=".12" />
+                </filter>
+                <path id="kaenatchiEnglishArc" d="M 92 77 Q 310 5 528 77" />
+              </defs>
+
+              <text
+                className="kaenatchi-logo-type-en"
+                fill="url(#kaenatchiWordmarkGold)"
+              >
+                <textPath href="#kaenatchiEnglishArc" startOffset="50%" textAnchor="middle">
+                  K A E N A T C H I
+                </textPath>
+              </text>
+
+              <path
+                className="kaenatchi-logo-type-thread"
+                d="M104 108 C170 91 205 121 263 105 C319 89 349 118 408 103 C457 91 491 103 516 94"
+              />
+
+              <text
+                className="kaenatchi-logo-type-fa"
+                x="310"
+                y="125"
+                textAnchor="middle"
+                fill="url(#kaenatchiWordmarkGreen)"
+                filter="url(#kaenatchiWordmarkShadow)"
+              >
+                کائنات‌چی
+              </text>
+
+              <path
+                className="kaenatchi-logo-type-underline"
+                d="M184 143 C240 153 380 153 436 143"
+              />
+            </svg>
           </div>
         </section>
 
