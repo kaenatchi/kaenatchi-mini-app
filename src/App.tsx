@@ -639,9 +639,12 @@ function HomePage({
       </header>
 
       <main className="main-content home-page">
-        <section className="home-brand-title" aria-label="کائنات‌چی">
+        <section className="home-brand-title" aria-label="کائنات‌چی KAENATCHI">
           <div className="home-brand-title-glow" aria-hidden="true" />
-          <h1>کائنات‌چی</h1>
+          <div className="kaenatchi-wordmark" aria-hidden="true">
+            <span className="kaenatchi-wordmark-en">KAENATCHI</span>
+            <span className="kaenatchi-wordmark-fa">کائنات‌چی</span>
+          </div>
         </section>
 
 
