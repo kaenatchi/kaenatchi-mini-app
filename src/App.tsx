@@ -3219,12 +3219,12 @@ function VipPage({
 
         <div className="vip-journey-stats">
           {[
-            ["calendar", "نوبت‌ها", String(vipHistory.length)],
-            ["spark", "تجربه‌ها", String(vipHistory.length)],
-            ["class", "کلاس‌ها", String(vipClasses.length)],
-            ["event", "ایونت‌ها", String(vipEvents.length)],
-            ["card", "پرداخت‌ها", String(vipPayments.length)],
-            ["ticket", "توکن‌ها", String(vipTokens.length)],
+            ["calendar", "نوبت", String(vipHistory.length)],
+            ["spark", "تجربه", String(vipHistory.length)],
+            ["class", "کلاس", String(vipClasses.length)],
+            ["event", "ایونت", String(vipEvents.length)],
+            ["card", "پرداخت", String(vipPayments.length)],
+            ["ticket", "توکن", String(vipTokens.length)],
           ].map(([icon, label, value]) => (
             <div className="vip-journey-stat" key={label}>
               <div className="vip-journey-stat-icon">
