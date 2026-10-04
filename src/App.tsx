@@ -1730,22 +1730,38 @@ function normalizeVipTokens(value: unknown): VipToken[] {
     .filter((token): token is VipToken => token !== null);
 
   // Prevent repeated backend rows from producing repeated cards.
+  // Some backend responses duplicate the same token while changing an
+  // internal field. The customer-facing identity of a token is its
+  // customer + discount + issue/expiry window + usage state.
   const seen = new Set<string>();
   return normalized.filter((token) => {
-    const code = String(token.code ?? "").trim().toUpperCase();
-    const signature = code
-      ? `code:${code}`
-      : [
-          token.customerId,
-          token.discount,
-          token.issuedAt,
-          token.expiresAt,
-          token.status,
-          token.usedAt,
-        ].map((part) => String(part ?? "").trim().toLowerCase()).join("|");
+    const normalizePart = (part: unknown) =>
+      String(part ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/[\s\u200c]+/g, "");
 
-    if (seen.has(signature)) return false;
-    seen.add(signature);
+    const signature = [
+      normalizePart(token.customerId),
+      normalizePart(token.discount || token.discountPercent),
+      normalizePart(token.issuedAt),
+      normalizePart(token.expiresAt),
+      normalizePart(token.usedAt),
+    ].join("|");
+
+    const fallbackSignature = [
+      normalizePart(token.code),
+      normalizePart(token.discount || token.discountPercent),
+      normalizePart(token.issuedAt),
+      normalizePart(token.expiresAt),
+    ].join("|");
+
+    // Prefer the customer-facing signature. If the API omits enough fields,
+    // fall back to the actual VIP code.
+    const key = signature.replace(/\|/g, "") ? signature : fallbackSignature;
+
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }
