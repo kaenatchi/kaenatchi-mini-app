@@ -1081,6 +1081,200 @@ button:active,
   line-height: 2.05;
 }
 
+
+/* --------------------------------------------------
+   HOME BRAND / DAILY CONTENT MOTION
+-------------------------------------------------- */
+
+.home-welcome-top {
+  padding: 0;
+}
+
+.home-welcome-top h2 {
+  margin: 0;
+  color: var(--green-dark);
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.home-brand-title {
+  position: relative;
+  min-height: 88px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 4px 12px 0;
+  text-align: center;
+}
+
+.home-brand-title h1 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: var(--green-dark);
+  font-size: clamp(39px, 11vw, 58px);
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: -2.4px;
+  text-shadow: 0 10px 30px rgba(36, 77, 59, 0.09);
+}
+
+.home-brand-title-glow {
+  position: absolute;
+  width: 150px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(164, 139, 93, 0.16), transparent 70%);
+  filter: blur(12px);
+  animation: kaenatchiBrandGlow 7s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes kaenatchiBrandGlow {
+  0% { transform: translate3d(-24px, 2px, 0) scale(0.9); opacity: 0.45; }
+  100% { transform: translate3d(24px, -5px, 0) scale(1.08); opacity: 0.72; }
+}
+
+.today-card {
+  isolation: isolate;
+}
+
+.today-card::before {
+  content: "";
+  position: absolute;
+  width: 190px;
+  height: 190px;
+  top: -78px;
+  right: -46px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(164, 139, 93, 0.22), transparent 68%);
+  filter: blur(8px);
+  animation: kaenatchiTodayGlow 9s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.today-card::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  right: 24%;
+  bottom: 28px;
+  border-radius: 50%;
+  background: rgba(164, 139, 93, 0.48);
+  box-shadow:
+    0 0 0 6px rgba(164, 139, 93, 0.06),
+    42px -34px 0 -2px rgba(102, 128, 110, 0.32),
+    -54px -12px 0 -3px rgba(164, 139, 93, 0.28);
+  animation: kaenatchiTodayParticles 6s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes kaenatchiTodayGlow {
+  0% { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0.45; }
+  100% { transform: translate3d(-46px, 30px, 0) scale(1.12); opacity: 0.78; }
+}
+
+@keyframes kaenatchiTodayParticles {
+  0% { transform: translate3d(0, 10px, 0); opacity: 0.35; }
+  100% { transform: translate3d(-18px, -22px, 0); opacity: 0.8; }
+}
+
+.featured-art {
+  isolation: isolate;
+}
+
+.featured-art::before {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 28% 38%, rgba(164, 139, 93, 0.18), transparent 25%),
+    radial-gradient(circle at 72% 64%, rgba(102, 128, 110, 0.2), transparent 28%);
+  filter: blur(12px);
+  animation: kaenatchiFeaturedLight 11s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.featured-art::after {
+  content: "";
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  top: 18px;
+  right: 15%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  filter: blur(18px);
+  animation: kaenatchiFeaturedFloat 8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.featured-circle {
+  animation: kaenatchiFeaturedCircle 8s ease-in-out infinite alternate;
+}
+
+.featured-copy {
+  position: relative;
+  animation: kaenatchiFeaturedCopy 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes kaenatchiFeaturedLight {
+  0% { transform: translate3d(-12px, 6px, 0) scale(0.95); opacity: 0.52; }
+  100% { transform: translate3d(22px, -14px, 0) scale(1.08); opacity: 0.9; }
+}
+
+@keyframes kaenatchiFeaturedFloat {
+  0% { transform: translate3d(0, 10px, 0) scale(0.88); opacity: 0.25; }
+  100% { transform: translate3d(-28px, 42px, 0) scale(1.08); opacity: 0.65; }
+}
+
+@keyframes kaenatchiFeaturedCircle {
+  0% { transform: translate(50%, -50%) scale(0.98) rotate(-1deg); }
+  100% { transform: translate(50%, -50%) scale(1.04) rotate(1deg); }
+}
+
+@keyframes kaenatchiFeaturedCopy {
+  from { opacity: 0.68; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-brand-title-glow,
+  .today-card::before,
+  .today-card::after,
+  .featured-art::before,
+  .featured-art::after,
+  .featured-circle,
+  .featured-copy {
+    animation: none !important;
+  }
+}
+
+@media (min-width: 700px) {
+  .home-brand-title {
+    min-height: 104px;
+  }
+
+  .home-brand-title h1 {
+    font-size: 62px;
+  }
+}
+
+@media (max-width: 390px) {
+  .home-brand-title {
+    min-height: 78px;
+  }
+
+  .home-brand-title h1 {
+    font-size: 36px;
+  }
+}
+
 /* --------------------------------------------------
    INNER PAGES
 -------------------------------------------------- */
