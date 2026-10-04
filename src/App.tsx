@@ -58,6 +58,18 @@ type VipCustomer = {
   bookingsCount?: number;
 };
 
+type VipToken = {
+  code?: string;
+  customerId?: string;
+  discount?: number | string;
+  discountPercent?: number | string;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+  status?: string | null;
+  usedAt?: string | null;
+  trackingCode?: string | null;
+};
+
 type VipApiResponse = {
   success: boolean;
   message?: string;
@@ -68,7 +80,7 @@ type VipApiResponse = {
   customer?: VipCustomer;
   history?: unknown[][];
   payments?: unknown[][];
-  tokens?: unknown[][];
+  tokens?: VipToken[];
   needsConnectionCode?: boolean;
 };
 
@@ -1762,7 +1774,7 @@ function VipPage({
     );
 
   const [vipTokens, setVipTokens] =
-    useState<unknown[][]>([]);
+    useState<VipToken[]>([]);
 
 
   const [vipError, setVipError] =
@@ -1801,7 +1813,16 @@ function VipPage({
 
         if (result.success && result.customer) {
           setVipCustomer(result.customer);
-          setVipTokens(Array.isArray(result.tokens) ? result.tokens : []);
+          setVipTokens(
+          Array.isArray(result.tokens)
+            ? result.tokens.filter(
+                (token): token is VipToken =>
+                  !!token &&
+                  typeof token === "object" &&
+                  !Array.isArray(token)
+              )
+            : []
+        );
           setNeedsConnectionCode(false);
           setVipError("");
           return;
@@ -1942,7 +1963,16 @@ function VipPage({
 
       if (result.success && result.customer) {
         setVipCustomer(result.customer);
-        setVipTokens(Array.isArray(result.tokens) ? result.tokens : []);
+        setVipTokens(
+          Array.isArray(result.tokens)
+            ? result.tokens.filter(
+                (token): token is VipToken =>
+                  !!token &&
+                  typeof token === "object" &&
+                  !Array.isArray(token)
+              )
+            : []
+        );
         setNeedsConnectionCode(false);
         setConnectionCode("");
         setConnectionError("");
@@ -2318,51 +2348,25 @@ function VipPage({
 
         <div style={{ display: "grid", gap: "12px" }}>
           {vipTokens.length > 0 ? (
-            vipTokens.map((row, index) => {
-              const item =
-                row && typeof row === "object" && !Array.isArray(row)
-                  ? (row as Record<string, unknown>)
-                  : {};
-              const tokenRow = Array.isArray(row)
-                ? (row as unknown[])
-                : [];
-              const code = String(
-                item.code ??
-                  item["کد"] ??
-                  item.token ??
-                  item["کد توکن"] ??
-                  tokenRow[0] ??
-                  ""
-              ).trim();
+            vipTokens.map((token, index) => {
+              const code = String(token.code ?? "").trim();
               const rawDiscount =
-                item.discount ??
-                item["تخفیف"] ??
-                item.discountPercent ??
-                tokenRow[2] ??
+                token.discount ??
+                token.discountPercent ??
                 "";
+              const discountNumber = Number(
+                String(rawDiscount)
+                  .replace(/٪/g, "%")
+                  .replace("%", "")
+                  .trim()
+              );
               const discount =
-                String(rawDiscount).trim() !== ""
-                  ? String(rawDiscount).trim()
-                  : tokenRow
-                      .map((value) => String(value ?? "").trim())
-                      .find((value) => /^(3|5|7)\\s*%?$/.test(value)) ??
-                    "";
-              const status =
-                item.status ??
-                item["وضعیت"] ??
-                tokenRow[5] ??
-                "";
-              const expiresAt =
-                item.expiresAt ??
-                item["تاریخ انقضا"] ??
-                tokenRow[4] ??
-                "";
-              const issuedAt =
-                item.issuedAt ??
-                item["تاریخ صدور"] ??
-                item["تاریخ ایجاد"] ??
-                tokenRow[3] ??
-                "";
+                Number.isFinite(discountNumber) && discountNumber > 0
+                  ? String(discountNumber)
+                  : String(rawDiscount).trim();
+              const status = String(token.status ?? "").trim();
+              const expiresAt = String(token.expiresAt ?? "").trim();
+              const issuedAt = String(token.issuedAt ?? "").trim();
 
               return (
                 <div
