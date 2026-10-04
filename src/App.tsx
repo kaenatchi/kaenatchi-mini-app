@@ -78,9 +78,11 @@ type VipApiResponse = {
   detail?: string;
   error?: string;
   customer?: VipCustomer;
-  history?: unknown[][];
-  payments?: unknown[][];
+  history?: unknown[];
+  payments?: unknown[];
   tokens?: VipToken[];
+  classes?: unknown[];
+  events?: unknown[];
   needsConnectionCode?: boolean;
 };
 
@@ -1573,6 +1575,216 @@ function loadTelegramWebAppScript(): Promise<void> {
 }
 
 
+
+type VipRecord = {
+  id: string;
+  service: string;
+  date: string;
+  time: string;
+  status: string;
+  amount: string;
+  tracking: string;
+  raw: unknown;
+};
+
+type VipPayment = VipRecord;
+
+type VipClassEvent = {
+  id: string;
+  title: string;
+  status: string;
+  start: string;
+  end: string;
+  progress: string;
+  details: string;
+  raw: unknown;
+};
+
+function vipText(value: unknown): string {
+  return value == null ? "" : String(value).trim();
+}
+
+function normalizeVipKey(value: string): string {
+  return value.trim().toLowerCase().replace(/[\s_-]+/g, "");
+}
+
+function unwrapVipRows(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== "object") return [];
+  const obj = value as Record<string, unknown>;
+  for (const key of ["data", "items", "rows", "history", "payments", "classes", "events", "result"]) {
+    if (Array.isArray(obj[key])) return obj[key] as unknown[];
+  }
+  return [];
+}
+
+function readVipField(obj: Record<string, unknown>, aliases: string[]): string {
+  const map = new Map<string, unknown>();
+  Object.entries(obj).forEach(([key, value]) => map.set(normalizeVipKey(key), value));
+  for (const alias of aliases) {
+    const value = map.get(normalizeVipKey(alias));
+    if (value != null && String(value).trim() !== "") return String(value).trim();
+  }
+  return "";
+}
+
+function looksLikeVipHeader(row: unknown[]): boolean {
+  const text = row.map(v => vipText(v)).join(" ").toLocaleLowerCase("fa");
+  return /خدمت|تاریخ|ساعت|وضعیت|مبلغ|service|date|status|amount|payment|پرداخت/.test(text) &&
+    !/\d{3,4}[\/-]\d{1,2}[\/-]\d{1,2}/.test(text);
+}
+
+function normalizeVipRecordRows(value: unknown, prefix: string): VipRecord[] {
+  return unwrapVipRows(value).map((raw, index): VipRecord | null => {
+    if (Array.isArray(raw)) {
+      if (looksLikeVipHeader(raw)) return null;
+      const cells = raw.map(vipText);
+      const dateIndex = cells.findIndex(v => /^(?:1[34]\d{2}|\d{3})[\/-]\d{1,2}[\/-]\d{1,2}/.test(v));
+      const service = cells[0] || cells[1] || "خدمت کائنات‌چی";
+      const date = dateIndex >= 0 ? cells[dateIndex] : cells[1] || "";
+      const time = cells.find(v => /^\d{1,2}:\d{2}/.test(v)) || "";
+      const status = cells.find(v => /تایید|تکمیل|انجام|رزرو|لغو|در انتظار|موفق|پرداخت|فعال|confirmed|completed|pending|cancel/i.test(v)) || "";
+      const amount = cells.find(v => /(?:تومان|ریال|\d{3}[,،]\d{3})/.test(v) && v !== date) || "";
+      const tracking = cells.find(v => /پیگیری|tracking|receipt/i.test(v)) || "";
+      return { id: prefix + "-" + index, service, date, time, status, amount, tracking, raw };
+    }
+    if (!raw || typeof raw !== "object") return null;
+    const obj = raw as Record<string, unknown>;
+    const service = readVipField(obj, ["service","serviceName","title","name","نام خدمت","خدمت","نوع خدمت"]);
+    const date = readVipField(obj, ["date","bookingDate","appointmentDate","jalaliDate","تاریخ","تاریخ نوبت"]);
+    const time = readVipField(obj, ["time","bookingTime","appointmentTime","ساعت"]);
+    const status = readVipField(obj, ["status","bookingStatus","paymentStatus","وضعیت","وضعیت نوبت"]);
+    const amount = readVipField(obj, ["amount","price","total","paymentAmount","مبلغ","هزینه"]);
+    const tracking = readVipField(obj, ["tracking","trackingCode","receipt","receiptCode","کد پیگیری"]);
+    if (!service && !date && !status) return null;
+    return { id: prefix + "-" + index, service: service || "خدمت کائنات‌چی", date, time, status, amount, tracking, raw };
+  }).filter((row): row is VipRecord => row !== null);
+}
+
+function normalizeVipRowsForClassEvent(value: unknown, prefix: "class" | "event"): VipClassEvent[] {
+  return unwrapVipRows(value).map((raw, index): VipClassEvent | null => {
+    if (Array.isArray(raw)) {
+      const cells = raw.map(vipText);
+      if (looksLikeVipHeader(raw)) return null;
+      return {
+        id: prefix + "-" + index,
+        title: cells[0] || cells[1] || (prefix === "class" ? "کلاس کائنات‌چی" : "ایونت کائنات‌چی"),
+        status: cells.find(v => /درحالبرگزاری|گذرانده|شرکتکرد|ثبت|پیشرو|تکمیل|active|completed|attended|upcoming|current/i.test(v)) || "ثبت‌شده",
+        start: cells.find(v => /^(?:1[34]\d{2}|\d{3})[\/-]\d{1,2}[\/-]\d{1,2}/.test(v)) || "",
+        end: "",
+        progress: cells.find(v => /جلسه|درصد|پیشرفت|session|progress/i.test(v)) || "",
+        details: cells.slice(2).filter(Boolean).join(" • "),
+        raw,
+      };
+    }
+    if (!raw || typeof raw !== "object") return null;
+    const obj = raw as Record<string, unknown>;
+    const title = readVipField(obj, ["title","name","className","eventName","نام کلاس","نام ایونت","عنوان"]);
+    if (!title) return null;
+    return {
+      id: prefix + "-" + index,
+      title,
+      status: readVipField(obj, ["status","state","وضعیت"]) || "ثبت‌شده",
+      start: readVipField(obj, ["start","startDate","date","jalaliDate","تاریخ شروع","تاریخ"]),
+      end: readVipField(obj, ["end","endDate","تاریخ پایان"]),
+      progress: readVipField(obj, ["progress","session","sessions","پیشرفت","جلسه"]),
+      details: readVipField(obj, ["details","description","توضیحات"]),
+      raw,
+    };
+  }).filter((item): item is VipClassEvent => item !== null);
+}
+
+function normalizeVipStatus(value: string): "completed" | "upcoming" | "pending" | "successful" | "returned" | "other" {
+  const s = value.replace(/\s+/g, "").toLocaleLowerCase("fa");
+  if (/لغو|برگشت|ناموفق|cancel|refund|failed|returned/.test(s)) return "returned";
+  if (/درانتظار|انتظار|pending/.test(s)) return "pending";
+  if (/موفق|پرداختشد|success|paid/.test(s)) return "successful";
+  if (/انجامشد|تکمیل|completed|done|گذرانده|شرکتکرد|attended/.test(s)) return "completed";
+  return /تایید|رزرو|فعال|confirmed|booked|upcoming/.test(s) ? "upcoming" : "other";
+}
+
+function formatVipAmount(value: string): string {
+  const text = value.trim();
+  if (!text) return "";
+  if (/تومان|ریال/.test(text)) return text;
+  const digits = text.replace(/[^\d]/g, "");
+  if (!digits) return text;
+  return Number(digits).toLocaleString("fa-IR") + " تومان";
+}
+
+function vipExperienceCategory(service: string): string {
+  const s = service.toLocaleLowerCase("fa");
+  if (s.includes("قهوه")) return "قهوه";
+  if (s.includes("پاسور")) return "پاسور";
+  if (s.includes("رایدر")) return "رایدر";
+  if (s.includes("لنورماند")) return "لنورماند";
+  if (s.includes("تاروت")) return "تاروت";
+  if (s.includes("جم") || s.includes("اوراکل")) return "جم";
+  if (s.includes("شمع")) return "شمع‌تراپی";
+  if (s.includes("سایکو")) return "سایکوتراپی";
+  return "سایر";
+}
+
+function VipFilterTabs({ options, value, onChange }: {
+  options: Array<{ id: string; title: string }>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div style={{ display: "flex", gap: "8px", overflowX: "auto", padding: "2px 1px 13px", scrollbarWidth: "none" }}>
+      {options.map(option => {
+        const active = option.id === value;
+        return (
+          <button key={option.id} type="button" onClick={() => onChange(option.id)} style={{
+            flex: "0 0 auto", minHeight: "40px", borderRadius: "999px",
+            border: active ? "1px solid rgba(36,99,71,0.28)" : "1px solid rgba(53,59,50,0.1)",
+            background: active ? "rgba(36,99,71,0.1)" : "rgba(255,255,255,0.58)",
+            color: active ? "#246347" : "#555b53", padding: "9px 14px",
+            fontFamily: "inherit", fontSize: "12px", fontWeight: active ? 700 : 500,
+            cursor: "pointer", boxShadow: active ? "0 6px 15px rgba(36,99,71,0.09)" : "0 3px 10px rgba(53,59,50,0.05)",
+          }}>{option.title}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+function VipRecordCard({ record, kind = "booking" }: { record: VipRecord; kind?: "booking" | "payment" }) {
+  const status = normalizeVipStatus(record.status);
+  const statusLabel = status === "completed" ? "انجام‌شده" : status === "pending" ? "در انتظار" : status === "successful" ? "موفق" : status === "returned" ? "برگشت‌خورده" : status === "upcoming" ? "پیش‌رو" : (record.status || "ثبت‌شده");
+  const statusColor = status === "returned" ? "#9a5c52" : status === "pending" ? "#8a7146" : status === "completed" || status === "successful" ? "#246347" : "#5e665e";
+  return (
+    <div className="glass-list-card" style={{ display: "block", border: "1px solid " + statusColor + "22" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <strong style={{ display: "block", color: "#353B32", fontSize: "15px", marginBottom: "6px" }}>{record.service}</strong>
+          {(record.date || record.time) && <span style={{ display: "block", color: "#73786f", fontSize: "12px", lineHeight: 1.8 }}>{record.date ? formatVipJalaliDate(record.date) : ""}{record.date && record.time ? "  •  " : ""}{record.time}</span>}
+        </div>
+        <span style={{ flex: "0 0 auto", padding: "6px 9px", borderRadius: "10px", background: statusColor + "12", border: "1px solid " + statusColor + "28", color: statusColor, fontSize: "10px", fontWeight: 700 }}>{statusLabel}</span>
+      </div>
+      {kind === "payment" && record.amount && <div style={{ marginTop: "12px", paddingTop: "10px", borderTop: "1px solid rgba(53,59,50,0.08)", display: "flex", justifyContent: "space-between", gap: "10px", fontSize: "12px" }}><span style={{ color: "#73786f" }}>مبلغ</span><strong style={{ color: "#353B32" }}>{formatVipAmount(record.amount)}</strong></div>}
+      {kind === "payment" && record.tracking && <div style={{ marginTop: "7px", display: "flex", justifyContent: "space-between", gap: "10px", fontSize: "11px" }}><span style={{ color: "#73786f" }}>کد پیگیری</span><strong style={{ color: "#353B32", direction: "ltr" }}>{record.tracking}</strong></div>}
+    </div>
+  );
+}
+
+function VipClassEventCard({ item, type }: { item: VipClassEvent; type: "class" | "event" }) {
+  return (
+    <div className="glass-list-card" style={{ display: "block" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+        <div className="list-icon"><Icon name={type === "class" ? "class" : "event"} /></div>
+        <div className="list-copy" style={{ flex: 1 }}>
+          <strong>{item.title}</strong>
+          <span>{item.status || "ثبت‌شده"}</span>
+          {(item.start || item.end) && <span>{item.start ? formatVipJalaliDate(item.start) : ""}{item.end ? "  تا  " + formatVipJalaliDate(item.end) : ""}</span>}
+          {item.progress && <span>{item.progress}</span>}
+          {item.details && <span>{item.details}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* =========================================================
    VIP CUSTOMER NORMALIZER
 ========================================================= */
@@ -1953,6 +2165,9 @@ function VipPage({
       | "bookings"
       | "payments"
       | "tokens"
+      | "experiences"
+      | "classes"
+      | "events"
       | "profile"
     >("dashboard");
 
@@ -1968,6 +2183,11 @@ function VipPage({
 
   const [vipTokens, setVipTokens] =
     useState<VipToken[]>([]);
+
+  const [vipHistory, setVipHistory] = useState<VipRecord[]>([]);
+  const [vipPayments, setVipPayments] = useState<VipPayment[]>([]);
+  const [vipClasses, setVipClasses] = useState<VipClassEvent[]>([]);
+  const [vipEvents, setVipEvents] = useState<VipClassEvent[]>([]);
 
   const [copiedToken, setCopiedToken] =
     useState<string | null>(null);
@@ -2022,6 +2242,10 @@ function VipPage({
         if (result.success && result.customer) {
           setVipCustomer(result.customer);
           setVipTokens(normalizeVipTokens(result.tokens));
+          setVipHistory(normalizeVipRecordRows(result.history, "booking"));
+          setVipPayments(normalizeVipRecordRows(result.payments, "payment"));
+          setVipClasses(normalizeVipRowsForClassEvent(result.classes, "class"));
+          setVipEvents(normalizeVipRowsForClassEvent(result.events, "event"));
           setNeedsConnectionCode(false);
           setVipError("");
           return;
@@ -2167,6 +2391,10 @@ function VipPage({
       if (result.success && result.customer) {
         setVipCustomer(result.customer);
         setVipTokens(normalizeVipTokens(result.tokens));
+        setVipHistory(normalizeVipRecordRows(result.history, "booking"));
+        setVipPayments(normalizeVipRecordRows(result.payments, "payment"));
+        setVipClasses(normalizeVipRowsForClassEvent(result.classes, "class"));
+        setVipEvents(normalizeVipRowsForClassEvent(result.events, "event"));
         setNeedsConnectionCode(false);
         setConnectionCode("");
         setConnectionError("");
@@ -2387,89 +2615,24 @@ function VipPage({
      BOOKINGS
   ===================================================== */
 
-  if (
-    activePanel ===
-    "bookings"
-  ) {
-
+  if (activePanel === "bookings") {
+    const filtered = vipHistory.filter(record => {
+      const status = normalizeVipStatus(record.status);
+      if (bookingFilter === "upcoming") return status === "upcoming" || status === "other";
+      if (bookingFilter === "completed") return status === "completed";
+      return true;
+    });
     return (
       <div className="inner-page">
-
-        <button
-          type="button"
-          onClick={() =>
-            setActivePanel(
-              "dashboard"
-            )
-          }
-          style={backButtonStyle}
-        >
-          ← بازگشت به VIP
-        </button>
-
-
-        <SectionHeaderCard
-          kicker="VIP"
-          title="نوبت‌های من"
-          description="نوبت‌های ثبت‌شده شما در کائنات‌چی."
-          icon="calendar"
-        />
-
-
-
-        <div
-          style={{
-            marginBottom: "14px",
-            padding: "14px 16px",
-            borderRadius: "18px",
-            background: "rgba(165,139,91,0.08)",
-            border: "1px solid rgba(165,139,91,0.15)",
-            boxShadow: "0 10px 24px rgba(53,59,50,0.06)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              marginBottom: "6px",
-              color: "#353B32",
-              fontWeight: 700,
-              fontSize: "14px",
-            }}
-          >
-            <Icon name="calendar" />
-            <strong>راهنمای نوبت‌های من</strong>
+        <button type="button" onClick={() => setActivePanel("dashboard")} style={backButtonStyle}>← بازگشت به VIP</button>
+        <SectionHeaderCard kicker="VIP" title="نوبت‌های من" description="نوبت‌های ثبت‌شده شما در کائنات‌چی." icon="calendar" />
+        <VipFilterTabs value={bookingFilter} onChange={value => setBookingFilter(value as "all" | "upcoming" | "completed")} options={[{ id: "all", title: "همه" }, { id: "upcoming", title: "پیش‌رو" }, { id: "completed", title: "انجام‌شده" }]} />
+        {filtered.length > 0 ? filtered.map(record => <VipRecordCard key={record.id} record={record} />) : (
+          <div className="glass-list-card" style={{ display: "block", textAlign: "center" }}>
+            <div className="list-icon" style={{ margin: "0 auto 12px" }}><Icon name="calendar" /></div>
+            <div className="list-copy"><strong>هنوز نوبتی در این فیلتر نیست</strong><span>{vipHistory.length ? "فیلتر دیگری را امتحان کن." : "سوابق نوبت‌های شما پس از ثبت در سامانه رزرو اینجا نمایش داده می‌شود."}</span></div>
           </div>
-          <span style={{ fontSize: "13px", lineHeight: 1.8, color: "#73786f" }}>
-            اینجا می‌توانید نوبت‌های ثبت‌شده خود را ببینید و وضعیت آن‌ها را پیگیری کنید.
-          </span>
-        </div>
-        <div className="glass-list-card">
-
-          <div className="list-icon">
-            <Icon name="calendar" />
-          </div>
-
-
-          <div className="list-copy">
-
-            <strong>
-              {vipCustomer.bookingsCount
-                ? `${vipCustomer.bookingsCount} نوبت ثبت شده`
-                : "هنوز نوبتی ثبت نشده"}
-            </strong>
-
-
-            <span>
-              سوابق نوبت‌ها در مرحله بعد از اتصال کامل
-              سیستم رزرو نمایش داده خواهد شد.
-            </span>
-
-          </div>
-
-        </div>
-
+        )}
       </div>
     );
   }
@@ -2479,87 +2642,24 @@ function VipPage({
      PAYMENTS
   ===================================================== */
 
-  if (
-    activePanel ===
-    "payments"
-  ) {
-
+  if (activePanel === "payments") {
+    const filtered = vipPayments.filter(record => {
+      const status = normalizeVipStatus(record.status);
+      if (paymentFilter === "successful") return status === "successful";
+      if (paymentFilter === "pending") return status === "pending";
+      return true;
+    });
     return (
       <div className="inner-page">
-
-        <button
-          type="button"
-          onClick={() =>
-            setActivePanel(
-              "dashboard"
-            )
-          }
-          style={backButtonStyle}
-        >
-          ← بازگشت به VIP
-        </button>
-
-
-        <SectionHeaderCard
-          kicker="VIP"
-          title="پرداخت‌های من"
-          description="سوابق پرداخت شما در کائنات‌چی."
-          icon="card"
-        />
-
-
-
-        <div
-          style={{
-            marginBottom: "14px",
-            padding: "14px 16px",
-            borderRadius: "18px",
-            background: "rgba(165,139,91,0.08)",
-            border: "1px solid rgba(165,139,91,0.15)",
-            boxShadow: "0 10px 24px rgba(53,59,50,0.06)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              marginBottom: "6px",
-              color: "#353B32",
-              fontWeight: 700,
-              fontSize: "14px",
-            }}
-          >
-            <Icon name="card" />
-            <strong>راهنمای پرداخت‌ها</strong>
+        <button type="button" onClick={() => setActivePanel("dashboard")} style={backButtonStyle}>← بازگشت به VIP</button>
+        <SectionHeaderCard kicker="VIP" title="پرداخت‌های من" description="سوابق پرداخت شما در کائنات‌چی." icon="card" />
+        <VipFilterTabs value={paymentFilter} onChange={value => setPaymentFilter(value as "all" | "successful" | "pending")} options={[{ id: "all", title: "همه" }, { id: "successful", title: "موفق" }, { id: "pending", title: "در انتظار" }]} />
+        {filtered.length > 0 ? filtered.map(record => <VipRecordCard key={record.id} record={record} kind="payment" />) : (
+          <div className="glass-list-card" style={{ display: "block", textAlign: "center" }}>
+            <div className="list-icon" style={{ margin: "0 auto 12px" }}><Icon name="card" /></div>
+            <div className="list-copy"><strong>هنوز پرداختی در این فیلتر نیست</strong><span>{vipPayments.length ? "فیلتر دیگری را امتحان کن." : "سوابق پرداخت شما پس از اتصال داده‌های پرداخت اینجا نمایش داده می‌شود."}</span></div>
           </div>
-          <span style={{ fontSize: "13px", lineHeight: 1.8, color: "#73786f" }}>
-            اینجا سوابق پرداخت‌های شما در کائنات‌چی نمایش داده می‌شود.
-          </span>
-        </div>
-        <div className="glass-list-card">
-
-          <div className="list-icon">
-            <Icon name="card" />
-          </div>
-
-
-          <div className="list-copy">
-
-            <strong>
-              پرداخت‌ها
-            </strong>
-
-
-            <span>
-              سوابق پرداخت VIP در مرحله بعد از تکمیل اتصال
-              اطلاعات پرداخت نمایش داده خواهد شد.
-            </span>
-
-          </div>
-
-        </div>
-
+        )}
       </div>
     );
   }
@@ -2627,9 +2727,13 @@ function VipPage({
             توکن‌های VIP برای استفاده از تخفیف‌های اختصاصی انرژی‌خوانی، کلاس‌ها و ایونت‌ها هستند.
           </span>
         </div>
+        <VipFilterTabs value={tokenFilter} onChange={value => setTokenFilter(value as "all" | "active" | "used" | "expired")} options={[{ id: "all", title: "همه" }, { id: "active", title: "فعال" }, { id: "used", title: "استفاده‌شده" }, { id: "expired", title: "منقضی‌شده" }]} />
         <div style={{ display: "grid", gap: "12px" }}>
           {vipTokens.length > 0 ? (
             vipTokens.map((token, index) => {
+              const tokenDisplay = getVipTokenDisplayStatus(token);
+              const tokenStatus = tokenDisplay.label === "فعال" ? "active" : tokenDisplay.label === "استفاده شده" ? "used" : "expired";
+              if (tokenFilter !== "all" && tokenFilter !== tokenStatus) return null;
               const code = String(token.code ?? "").trim();
               const rawDiscount = token.discount ?? token.discountPercent ?? "";
               const discountNumber = Number(String(rawDiscount).replace(/٪/g, "%").replace("%", "").trim());
@@ -2755,6 +2859,69 @@ function VipPage({
           )}
         </div>
 
+      </div>
+    );
+  }
+
+
+  /* =====================================================
+     EXPERIENCES
+  ===================================================== */
+
+  if (activePanel === "experiences") {
+    const categories = ["همه", "قهوه", "پاسور", "رایدر", "لنورماند", "تاروت", "جم", "شمع‌تراپی", "سایکوتراپی"];
+    const filtered = vipHistory.filter(record => experienceFilter === "همه" || vipExperienceCategory(record.service) === experienceFilter);
+    return (
+      <div className="inner-page">
+        <button type="button" onClick={() => setActivePanel("dashboard")} style={backButtonStyle}>← بازگشت به VIP</button>
+        <SectionHeaderCard kicker="VIP" title="تجربه‌های من" description="تجربه‌های ثبت‌شده شما به تفکیک نوع خدمت." icon="spark" />
+        <VipFilterTabs value={experienceFilter} onChange={setExperienceFilter} options={categories.map(item => ({ id: item, title: item }))} />
+        {filtered.length > 0 ? filtered.map((item, index) => (
+          <div key={item.id} className="glass-list-card" style={{ display: "block", marginBottom: "10px" }}>
+            <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+              <div style={{ width: "38px", height: "38px", borderRadius: "13px", display: "grid", placeItems: "center", background: "rgba(165,139,91,0.09)", color: "#8a7348", fontWeight: 800, fontSize: "13px", flex: "0 0 auto" }}>{String(index + 1).padStart(2, "0")}</div>
+              <div className="list-copy" style={{ flex: 1 }}><strong>{item.service}</strong><span>{item.date ? formatVipJalaliDate(item.date) : ""}{item.time ? "  •  " + item.time : ""}</span>{item.status && <span>{item.status}</span>}</div>
+            </div>
+          </div>
+        )) : (
+          <div className="glass-list-card" style={{ display: "block", textAlign: "center" }}><div className="list-icon" style={{ margin: "0 auto 12px" }}><Icon name="spark" /></div><div className="list-copy"><strong>هنوز تجربه‌ای در این بخش ثبت نشده</strong><span>{vipHistory.length ? "دسته دیگری را امتحان کن." : "سوابق تجربه‌های شما پس از ثبت نوبت در اینجا نمایش داده می‌شود."}</span></div></div>
+        )}
+      </div>
+    );
+  }
+
+  /* =====================================================
+     CLASSES
+  ===================================================== */
+
+  if (activePanel === "classes") {
+    const filtered = vipClasses.filter(item => classFilter === "all" || (classFilter === "current" ? /درحال|جاری|فعال|upcoming|current/i.test(item.status.replace(/\s/g, "")) : /گذرانده|تکمیل|completed/i.test(item.status.replace(/\s/g, ""))));
+    return (
+      <div className="inner-page">
+        <button type="button" onClick={() => setActivePanel("dashboard")} style={backButtonStyle}>← بازگشت به VIP</button>
+        <SectionHeaderCard kicker="VIP" title="کلاس‌های من" description="کلاس‌ها و دوره‌هایی که در آن‌ها ثبت‌نام کرده‌ای." icon="class" />
+        <VipFilterTabs value={classFilter} onChange={value => setClassFilter(value as "all" | "current" | "completed")} options={[{ id: "all", title: "همه" }, { id: "current", title: "در حال برگزاری" }, { id: "completed", title: "گذرانده‌شده" }]} />
+        {filtered.length > 0 ? filtered.map(item => <VipClassEventCard key={item.id} item={item} type="class" />) : (
+          <div className="glass-list-card" style={{ display: "block", textAlign: "center" }}><div className="list-icon" style={{ margin: "0 auto 12px" }}><Icon name="class" /></div><div className="list-copy"><strong>هنوز کلاسی برای شما ثبت نشده</strong><span>وقتی اطلاعات ثبت‌نام کلاس‌ها به حساب VIP متصل شود، اینجا نمایش داده می‌شود.</span></div></div>
+        )}
+      </div>
+    );
+  }
+
+  /* =====================================================
+     EVENTS
+  ===================================================== */
+
+  if (activePanel === "events") {
+    const filtered = vipEvents.filter(item => eventFilter === "all" || (eventFilter === "upcoming" ? /پیشرو|ثبت|فعال|upcoming/i.test(item.status.replace(/\s/g, "")) : /شرکتکرد|حاضر|attended|completed/i.test(item.status.replace(/\s/g, ""))));
+    return (
+      <div className="inner-page">
+        <button type="button" onClick={() => setActivePanel("dashboard")} style={backButtonStyle}>← بازگشت به VIP</button>
+        <SectionHeaderCard kicker="VIP" title="ایونت‌های من" description="رویدادهایی که برای آن‌ها ثبت‌نام کرده‌ای یا در آن‌ها شرکت کرده‌ای." icon="event" />
+        <VipFilterTabs value={eventFilter} onChange={value => setEventFilter(value as "all" | "upcoming" | "attended")} options={[{ id: "all", title: "همه" }, { id: "upcoming", title: "پیش‌رو" }, { id: "attended", title: "شرکت‌کرده" }]} />
+        {filtered.length > 0 ? filtered.map(item => <VipClassEventCard key={item.id} item={item} type="event" />) : (
+          <div className="glass-list-card" style={{ display: "block", textAlign: "center" }}><div className="list-icon" style={{ margin: "0 auto 12px" }}><Icon name="event" /></div><div className="list-copy"><strong>هنوز ایونتی برای شما ثبت نشده</strong><span>وقتی اطلاعات ثبت‌نام ایونت‌ها به حساب VIP متصل شود، اینجا نمایش داده می‌شود.</span></div></div>
+        )}
       </div>
     );
   }
@@ -2902,157 +3069,35 @@ function VipPage({
       />
 
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(2, minmax(0, 1fr))",
-          gap: "10px",
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" }}>
+        {[
+          ["bookings", "calendar", "نوبت‌های من", "سوابق و وضعیت نوبت‌ها"],
+          ["payments", "card", "پرداخت‌های من", "سوابق پرداخت‌ها"],
+          ["tokens", "ticket", "توکن‌های من", "تخفیف‌های اختصاصی VIP"],
+          ["experiences", "spark", "تجربه‌های من", "تاریخچه تجربه‌های شما"],
+          ["classes", "class", "کلاس‌های من", "دوره‌ها و آموزش‌های شما"],
+          ["events", "event", "ایونت‌های من", "رویدادهای ثبت‌شده شما"],
+          ["profile", "user", "پروفایل من", "اطلاعات و وضعیت عضویت"],
+        ].map(([panel, icon, title, description]) => (
+          <button key={panel} type="button" className="glass-list-card" onClick={() => setActivePanel(panel as typeof activePanel)} style={vipTileStyle}>
+            <div className="list-icon"><Icon name={icon as IconName} /></div>
+            <div className="list-copy"><strong>{title}</strong><span>{description}</span></div>
+          </button>
+        ))}
+      </div>
 
-        <button
-          type="button"
-          className="glass-list-card"
-          onClick={() =>
-            setActivePanel(
-              "bookings"
-            )
-          }
-          style={vipTileStyle}
-        >
-
-          <div className="list-icon">
-            <Icon name="calendar" />
+      <div style={{ marginTop: "12px", display: "grid", gap: "10px" }}>
+        <div className="glass-list-card" style={{ display: "block", background: "linear-gradient(135deg, rgba(165,139,91,0.09), rgba(255,255,255,0.66))", border: "1px solid rgba(165,139,91,0.16)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "9px", marginBottom: "8px", color: "#353B32", fontWeight: 700, fontSize: "14px" }}><Icon name="spark" /> مسیر شما در کائنات‌چی</div>
+          <div style={{ color: "#73786f", fontSize: "12px", lineHeight: 1.9 }}>نوبت‌ها، تجربه‌ها، کلاس‌ها و ایونت‌های شما در این فضای اختصاصی کنار هم قرار می‌گیرند.</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "7px", marginTop: "11px" }}>
+            <span style={{ padding: "6px 9px", borderRadius: "10px", background: "rgba(36,99,71,0.07)", color: "#246347", fontSize: "11px" }}>نوبت {vipHistory.length.toLocaleString("fa-IR")}</span>
+            <span style={{ padding: "6px 9px", borderRadius: "10px", background: "rgba(165,139,91,0.09)", color: "#8a7146", fontSize: "11px" }}>تجربه {vipHistory.length.toLocaleString("fa-IR")}</span>
+            <span style={{ padding: "6px 9px", borderRadius: "10px", background: "rgba(53,59,50,0.06)", color: "#555b53", fontSize: "11px" }}>توکن {vipTokens.length.toLocaleString("fa-IR")}</span>
           </div>
-
-
-          <div className="list-copy">
-
-            <strong>
-              نوبت‌های من
-            </strong>
-
-
-            <span>
-              مشاهده و پیگیری نوبت‌های ثبت‌شده شما
-            </span>
-
-          </div>
-
-        </button>
-
-
-        <button
-          type="button"
-          className="glass-list-card"
-          onClick={() =>
-            setActivePanel(
-              "payments"
-            )
-          }
-          style={vipTileStyle}
-        >
-
-          <div className="list-icon">
-            <Icon name="card" />
-          </div>
-
-
-          <div className="list-copy">
-
-            <strong>
-              پرداخت‌ها
-            </strong>
-
-
-            <span>
-              مشاهده سوابق پرداخت‌های شما
-            </span>
-
-          </div>
-
-        </button>
-
-
-        <button
-          type="button"
-          className="glass-list-card"
-          onClick={() =>
-            setActivePanel(
-              "tokens"
-            )
-          }
-          style={vipTileStyle}
-        >
-
-          <div className="list-icon">
-            <Icon name="ticket" />
-          </div>
-
-
-          <div className="list-copy">
-
-            <strong>
-              توکن‌ها
-            </strong>
-
-
-            <span>
-              مشاهده و استفاده از تخفیف‌های اختصاصی VIP
-            </span>
-
-          </div>
-
-        </button>
-
-
-        <button
-          type="button"
-          className="glass-list-card"
-          onClick={openBookingApp}
-          style={vipTileStyle}
-        >
-          <div className="list-icon">
-            <Icon name="calendar" />
-          </div>
-          <div className="list-copy">
-            <strong>دریافت نوبت</strong>
-            <span>انتخاب خدمت، تاریخ و ساعت نوبت</span>
-          </div>
-        </button>
-
-
-        <button
-          type="button"
-          className="glass-list-card"
-          onClick={() =>
-            setActivePanel(
-              "profile"
-            )
-          }
-          style={vipTileStyle}
-        >
-
-          <div className="list-icon">
-            <Icon name="user" />
-          </div>
-
-
-          <div className="list-copy">
-
-            <strong>
-              پروفایل
-            </strong>
-
-
-            <span>
-              مشاهده اطلاعات و وضعیت عضویت شما
-            </span>
-
-          </div>
-
-        </button>
+        </div>
+        <button type="button" onClick={openBookingApp} style={{ width: "100%", border: "none", borderRadius: "18px", padding: "15px 18px", background: "linear-gradient(135deg, #174b38, #2c7658)", color: "#fff", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 10px 24px rgba(23,75,56,0.18)" }}>📅 دریافت نوبت</button>
+      </div>
 
       </div>
 
