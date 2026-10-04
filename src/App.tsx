@@ -659,33 +659,6 @@ function HomePage({
 
         </section>
 
-        <button
-          type="button"
-          onClick={onSearch}
-          style={{
-            width: "100%",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            border:
-              "1px solid rgba(53,59,50,0.1)",
-            borderRadius: "18px",
-            padding: "13px 15px",
-            marginBottom: "16px",
-            background:
-              "rgba(255,255,255,0.62)",
-            color: "#73786f",
-            fontFamily: "inherit",
-            fontSize: "13px",
-            cursor: "pointer",
-            boxShadow:
-              "0 7px 20px rgba(53,59,50,0.07)",
-            textAlign: "right",
-          }}
-        >
-          <Icon name="search" />
-          <span>جست‌وجو در کائنات‌چی...</span>
-        </button>
 
         <section className="hero">
           <div className="hero-glow" />
@@ -786,6 +759,34 @@ function HomePage({
             </div>
           </div>
         </section>
+
+        <button
+          type="button"
+          onClick={onSearch}
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            border:
+              "1px solid rgba(53,59,50,0.1)",
+            borderRadius: "18px",
+            padding: "13px 15px",
+            marginBottom: "16px",
+            background:
+              "rgba(255,255,255,0.62)",
+            color: "#73786f",
+            fontFamily: "inherit",
+            fontSize: "13px",
+            cursor: "pointer",
+            boxShadow:
+              "0 7px 20px rgba(53,59,50,0.07)",
+            textAlign: "right",
+          }}
+        >
+          <Icon name="search" />
+          <span>جست‌وجو در کائنات‌چی...</span>
+        </button>
 
       </main>
     </>
