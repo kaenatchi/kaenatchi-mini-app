@@ -394,111 +394,258 @@ button:focus-visible {
 }
 
 
+
 /* --------------------------------------------------
    HERO — LIVE AMBIENT MOTION
 -------------------------------------------------- */
 
-@keyframes kaenatchiHeroGlow {
+@keyframes kaenatchiGlowFloat {
   0%, 100% {
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(-8px, 4px, 0) scale(0.96);
+    opacity: 0.48;
+  }
+  50% {
+    transform: translate3d(24px, -18px, 0) scale(1.12);
+    opacity: 0.92;
+  }
+}
+
+@keyframes kaenatchiGlowFloatReverse {
+  0%, 100% {
+    transform: translate3d(12px, -8px, 0) scale(1);
+    opacity: 0.38;
+  }
+  50% {
+    transform: translate3d(-20px, 18px, 0) scale(1.14);
     opacity: 0.78;
   }
-
-  50% {
-    transform: translate3d(18px, 12px, 0) scale(1.08);
-    opacity: 1;
-  }
 }
 
-@keyframes kaenatchiHeroOrb {
+@keyframes kaenatchiOrbFloat {
   0%, 100% {
     transform: translate3d(50%, 0, 0) scale(1);
   }
-
   50% {
-    transform: translate3d(50%, -8px, 0) scale(1.025);
+    transform: translate3d(50%, -13px, 0) scale(1.045);
   }
 }
 
-@keyframes kaenatchiHeroOrbSmall {
+@keyframes kaenatchiOrbSmallFloat {
   0%, 100% {
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
-
   50% {
-    transform: translate3d(-8px, 7px, 0);
+    transform: translate3d(-12px, 9px, 0) scale(1.08);
   }
 }
 
-@keyframes kaenatchiHeroRings {
+@keyframes kaenatchiRingBreath {
   0%, 100% {
+    transform: translate3d(50%, 0, 0) rotate(0deg) scale(0.985);
+    opacity: 0.42;
+  }
+  50% {
+    transform: translate3d(50%, -7px, 0) rotate(8deg) scale(1.035);
+    opacity: 0.86;
+  }
+}
+
+@keyframes kaenatchiRingBreathReverse {
+  0%, 100% {
+    transform: translate3d(50%, 0, 0) rotate(0deg) scale(1.03);
+    opacity: 0.34;
+  }
+  50% {
+    transform: translate3d(50%, 9px, 0) rotate(-9deg) scale(0.98);
     opacity: 0.72;
   }
-
-  50% {
-    opacity: 1;
-  }
 }
 
-@keyframes kaenatchiHeroSymbol {
+@keyframes kaenatchiSymbolPulse {
   0%, 100% {
-    transform: translate3d(50%, 0, 0) scale(1);
-    opacity: 0.76;
+    transform: translate3d(50%, 0, 0) scale(0.92);
+    opacity: 0.5;
+    filter: drop-shadow(0 6px 16px rgba(36, 77, 59, 0.08));
   }
-
   50% {
-    transform: translate3d(50%, -5px, 0) scale(1.07);
+    transform: translate3d(50%, -5px, 0) scale(1.12);
     opacity: 1;
+    filter: drop-shadow(0 10px 28px rgba(36, 77, 59, 0.22));
   }
 }
 
-@keyframes kaenatchiHeroBotanical {
+@keyframes kaenatchiBotanicalSwayLeft {
   0%, 100% {
     transform: rotate(-12deg) translate3d(0, 0, 0);
   }
-
   50% {
-    transform: rotate(-9deg) translate3d(3px, -5px, 0);
+    transform: rotate(-7deg) translate3d(5px, -7px, 0);
+  }
+}
+
+@keyframes kaenatchiBotanicalSwayRight {
+  0%, 100% {
+    transform: scaleX(-1) rotate(-12deg) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scaleX(-1) rotate(-7deg) translate3d(5px, -7px, 0);
+  }
+}
+
+@keyframes kaenatchiDustFloatA {
+  0% {
+    transform: translate3d(0, 18px, 0) scale(0.7);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.52;
+  }
+  50% {
+    transform: translate3d(24px, -30px, 0) scale(1);
+    opacity: 0.9;
+  }
+  82% {
+    opacity: 0.38;
+  }
+  100% {
+    transform: translate3d(48px, -72px, 0) scale(0.68);
+    opacity: 0;
+  }
+}
+
+@keyframes kaenatchiDustFloatB {
+  0% {
+    transform: translate3d(0, -14px, 0) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.46;
+  }
+  55% {
+    transform: translate3d(-28px, 26px, 0) scale(1);
+    opacity: 0.78;
+  }
+  84% {
+    opacity: 0.28;
+  }
+  100% {
+    transform: translate3d(-52px, 58px, 0) scale(0.62);
+    opacity: 0;
+  }
+}
+
+@keyframes kaenatchiContentSheen {
+  0%, 100% {
+    opacity: 0.16;
+    transform: translate3d(-10px, 0, 0);
+  }
+  50% {
+    opacity: 0.46;
+    transform: translate3d(16px, 0, 0);
   }
 }
 
 .hero-glow {
-  animation: kaenatchiHeroGlow 9s ease-in-out infinite;
+  animation: kaenatchiGlowFloat 9s ease-in-out infinite;
   will-change: transform, opacity;
 }
 
+.hero::before,
+.hero::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(30px);
+}
+
+.hero::before {
+  top: 28px;
+  right: 14%;
+  background: radial-gradient(circle, rgba(164, 139, 93, 0.24), transparent 68%);
+  animation: kaenatchiGlowFloatReverse 11s ease-in-out infinite;
+}
+
+.hero::after {
+  bottom: 28px;
+  left: 8%;
+  background: radial-gradient(circle, rgba(102, 128, 110, 0.24), transparent 68%);
+  animation: kaenatchiGlowFloat 13s ease-in-out infinite reverse;
+}
+
+.hero-art {
+  z-index: 1;
+}
+
+.hero-art::before,
+.hero-art::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(164, 139, 93, 0.64);
+  box-shadow:
+    0 0 12px rgba(164, 139, 93, 0.38),
+    82px 42px 0 rgba(102, 128, 110, 0.46),
+    -70px 86px 0 rgba(164, 139, 93, 0.34),
+    118px 118px 0 rgba(102, 128, 110, 0.32);
+}
+
+.hero-art::before {
+  top: 32%;
+  left: 24%;
+  animation: kaenatchiDustFloatA 8s ease-in-out infinite;
+}
+
+.hero-art::after {
+  right: 23%;
+  bottom: 28%;
+  animation: kaenatchiDustFloatB 10s ease-in-out infinite 1.4s;
+}
+
 .orb-large {
-  animation: kaenatchiHeroOrb 8s ease-in-out infinite;
+  animation: kaenatchiOrbFloat 8s ease-in-out infinite;
   will-change: transform;
 }
 
 .orb-small {
-  animation: kaenatchiHeroOrbSmall 6s ease-in-out infinite;
+  animation: kaenatchiOrbSmallFloat 6.5s ease-in-out infinite;
   will-change: transform;
 }
 
 .hero-ring {
-  animation: kaenatchiHeroRings 7s ease-in-out infinite;
-  will-change: opacity;
-}
-
-.hero-symbol {
-  animation: kaenatchiHeroSymbol 5.5s ease-in-out infinite;
   will-change: transform, opacity;
 }
 
+.ring-one {
+  animation: kaenatchiRingBreath 10s ease-in-out infinite;
+}
+
+.ring-two {
+  animation: kaenatchiRingBreathReverse 13s ease-in-out infinite;
+}
+
+.hero-symbol {
+  animation: kaenatchiSymbolPulse 5.5s ease-in-out infinite;
+  will-change: transform, opacity, filter;
+}
+
 .botanical-left {
-  animation: kaenatchiHeroBotanical 8s ease-in-out infinite;
+  animation: kaenatchiBotanicalSwayLeft 8s ease-in-out infinite;
   will-change: transform;
 }
 
 .botanical-right {
-  animation: kaenatchiHeroBotanical 9s ease-in-out infinite reverse;
+  animation: kaenatchiBotanicalSwayRight 9.5s ease-in-out infinite reverse;
   will-change: transform;
 }
 
 .hero-content {
-  position: absolute;
   isolation: isolate;
 }
 
@@ -509,18 +656,23 @@ button:focus-visible {
   z-index: -1;
   border-radius: inherit;
   background:
-    radial-gradient(
-      circle at 20% 15%,
-      rgba(255, 255, 255, 0.34),
-      transparent 34%
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.3),
+      transparent 38%,
+      rgba(164, 139, 93, 0.12) 72%,
+      transparent
     );
-  opacity: 0.7;
-  animation: kaenatchiHeroGlow 10s ease-in-out infinite reverse;
+  animation: kaenatchiContentSheen 9s ease-in-out infinite;
   pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .hero-glow,
+  .hero::before,
+  .hero::after,
+  .hero-art::before,
+  .hero-art::after,
   .orb-large,
   .orb-small,
   .hero-ring,
@@ -530,152 +682,6 @@ button:focus-visible {
   .hero-content::before {
     animation: none !important;
   }
-}
-
-/* Botanical stems */
-
-.botanical {
-  position: absolute;
-  width: 120px;
-  height: 240px;
-}
-
-.botanical::before {
-  content: "";
-  position: absolute;
-  width: 1px;
-  height: 210px;
-  background: rgba(36, 77, 59, 0.22);
-  top: 20px;
-}
-
-.botanical span {
-  position: absolute;
-  width: 28px;
-  height: 14px;
-  border: 1px solid rgba(36, 77, 59, 0.22);
-  border-radius: 100% 0 100% 0;
-  background: rgba(220, 230, 221, 0.32);
-}
-
-.botanical-left {
-  top: 70px;
-  left: -28px;
-  transform: rotate(-12deg);
-}
-
-.botanical-left::before {
-  left: 52px;
-  transform: rotate(17deg);
-}
-
-.botanical-left span:nth-child(1) {
-  top: 44px;
-  left: 34px;
-  transform: rotate(20deg);
-}
-
-.botanical-left span:nth-child(2) {
-  top: 78px;
-  left: 10px;
-  transform: rotate(-28deg);
-}
-
-.botanical-left span:nth-child(3) {
-  top: 112px;
-  left: 35px;
-  transform: rotate(23deg);
-}
-
-.botanical-left span:nth-child(4) {
-  top: 148px;
-  left: 11px;
-  transform: rotate(-27deg);
-}
-
-.botanical-right {
-  top: 55px;
-  right: -30px;
-  transform: scaleX(-1) rotate(-12deg);
-}
-
-.botanical-right::before {
-  left: 52px;
-  transform: rotate(17deg);
-}
-
-.botanical-right span:nth-child(1) {
-  top: 42px;
-  left: 34px;
-  transform: rotate(20deg);
-}
-
-.botanical-right span:nth-child(2) {
-  top: 76px;
-  left: 10px;
-  transform: rotate(-28deg);
-}
-
-.botanical-right span:nth-child(3) {
-  top: 112px;
-  left: 35px;
-  transform: rotate(23deg);
-}
-
-.botanical-right span:nth-child(4) {
-  top: 148px;
-  left: 11px;
-  transform: rotate(-27deg);
-}
-
-.hero-content {
-  position: absolute;
-  right: 26px;
-  bottom: 30px;
-  left: 26px;
-  z-index: 2;
-
-  padding: 22px;
-
-  border: 1px solid rgba(255, 255, 255, 0.58);
-  border-radius: 25px;
-
-  background: rgba(255, 255, 255, 0.38);
-
-  box-shadow:
-    0 20px 45px rgba(36, 77, 59, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
-
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-.eyebrow {
-  margin: 0 0 9px;
-  color: var(--gold);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 3px;
-  direction: ltr;
-  text-align: right;
-}
-
-.hero h1 {
-  margin: 0;
-  color: var(--green-dark);
-  font-size: clamp(31px, 8vw, 52px);
-  line-height: 1.23;
-  letter-spacing: -1.8px;
-  font-weight: 800;
-}
-
-.hero-content p {
-  max-width: 470px;
-  margin: 14px 0 0;
-
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 2;
 }
 
 /* --------------------------------------------------
