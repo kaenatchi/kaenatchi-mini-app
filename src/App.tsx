@@ -1987,6 +1987,19 @@ function VipPage({
   const [connectionError, setConnectionError] =
     useState("");
 
+  const [bookingFilter, setBookingFilter] =
+    useState<"all" | "upcoming" | "completed">("all");
+  const [paymentFilter, setPaymentFilter] =
+    useState<"all" | "successful" | "pending">("all");
+  const [tokenFilter, setTokenFilter] =
+    useState<"all" | "active" | "used" | "expired">("all");
+  const [experienceFilter, setExperienceFilter] =
+    useState("همه");
+  const [classFilter, setClassFilter] =
+    useState<"all" | "current" | "completed">("all");
+  const [eventFilter, setEventFilter] =
+    useState<"all" | "upcoming" | "attended">("all");
+
   useEffect(() => {
 
     let mounted = true;
