@@ -1769,7 +1769,7 @@ function getVipTokenDisplayStatus(token: VipToken): {
     return { label: "فعال", color: "#246347", background: "rgba(36,99,71,0.08)", border: "rgba(36,99,71,0.18)" };
   }
 
-  if (normalizedStatus === "صادرشده" || normalizedStatus === "صادرشده" || normalizedStatus === "issued") {
+  if (normalizedStatus === "صادرشده" || normalizedStatus === "صادر شده" || normalizedStatus === "issued") {
     return { label: "صادر شده", color: "#8a7146", background: "rgba(165,139,91,0.09)", border: "rgba(165,139,91,0.20)" };
   }
 
