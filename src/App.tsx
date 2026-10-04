@@ -2230,6 +2230,13 @@ function VipPage({
     useState<"all" | "upcoming" | "attended">("all");
 
   useEffect(() => {
+    document.body.classList.add("vip-mode");
+    return () => {
+      document.body.classList.remove("vip-mode");
+    };
+  }, []);
+
+  useEffect(() => {
 
     let mounted = true;
 
@@ -3204,19 +3211,33 @@ function VipPage({
         status="عضویت VIP فعال است"
       />
 
+      <section className="vip-journey-summary" aria-label="خلاصه مسیر VIP">
+        <div className="vip-journey-heading">
+          <strong>مشاهده مسیر من ←</strong>
+          <span>آمار واقعی فعالیت‌های شما در کائنات‌چی</span>
+        </div>
 
-      <div
-        style={{
-          marginTop: "2px",
-          marginBottom: "12px",
-          color: "#353B32",
-          fontSize: "17px",
-          fontWeight: 800,
-          lineHeight: 1.6,
-        }}
-      >
-        مسیر شما در کائنات‌چی
-      </div>
+        <div className="vip-journey-stats">
+          {[
+            ["calendar", "نوبت‌ها", String(vipCustomer?.bookingsCount ?? vipHistory.length)],
+            ["spark", "تجربه‌ها", String(vipHistory.length)],
+            ["class", "کلاس‌ها", String(vipClasses.length)],
+            ["event", "ایونت‌ها", String(vipEvents.length)],
+            ["card", "پرداخت‌ها", String(vipPayments.length)],
+            ["ticket", "توکن‌ها", String(vipTokens.length)],
+          ].map(([icon, label, value]) => (
+            <div className="vip-journey-stat" key={label}>
+              <div className="vip-journey-stat-icon">
+                <Icon name={icon as IconName} />
+              </div>
+              <div className="vip-journey-stat-copy">
+                <strong>{value}</strong>
+                <span>{label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" }}>
         {[
