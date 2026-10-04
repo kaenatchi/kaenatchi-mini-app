@@ -3219,7 +3219,7 @@ function VipPage({
 
         <div className="vip-journey-stats">
           {[
-            ["calendar", "نوبت‌ها", String(vipCustomer?.bookingsCount ?? vipHistory.length)],
+            ["calendar", "نوبت‌ها", String(vipHistory.length)],
             ["spark", "تجربه‌ها", String(vipHistory.length)],
             ["class", "کلاس‌ها", String(vipClasses.length)],
             ["event", "ایونت‌ها", String(vipEvents.length)],
