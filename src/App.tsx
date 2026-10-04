@@ -1949,6 +1949,14 @@ function VipPage({
   }, []);
 
 
+  const openBookingApp = () => {
+    try {
+      const telegramWebApp = window.Telegram?.WebApp;
+      if (telegramWebApp?.openLink) { telegramWebApp.openLink(BOOKING_APP_URL); return; }
+    } catch {}
+    window.location.href = BOOKING_APP_URL;
+  };
+
   const displayName =
     `${vipCustomer?.firstName || ""} ${vipCustomer?.lastName || ""}`.trim() ||
     "عضو VIP";
@@ -2543,6 +2551,7 @@ function VipPage({
         </div>
 
 
+
         <div
           style={{
             marginTop: "14px",
@@ -2589,6 +2598,7 @@ function VipPage({
           </span>
 
         </div>
+
 
       </div>
     );
@@ -2812,6 +2822,22 @@ function VipPage({
 
           </div>
 
+        </button>
+
+
+        <button
+          type="button"
+          className="glass-list-card"
+          onClick={openBookingApp}
+          style={vipTileStyle}
+        >
+          <div className="list-icon">
+            <Icon name="calendar" />
+          </div>
+          <div className="list-copy">
+            <strong>دریافت نوبت</strong>
+            <span>انتخاب خدمت، تاریخ و ساعت</span>
+          </div>
         </button>
 
 
