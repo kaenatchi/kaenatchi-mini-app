@@ -3238,6 +3238,9 @@ function VipPage({
       <div style={{ marginTop: "12px" }}>
         <button type="button" onClick={openBookingApp} style={{ width: "100%", border: "none", borderRadius: "18px", padding: "15px 18px", background: "linear-gradient(135deg, #174b38, #2c7658)", color: "#fff", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 10px 24px rgba(23,75,56,0.18)" }}>📅 دریافت نوبت</button>
       </div>
+
+    </div>
+  );
 }
 
 
