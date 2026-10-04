@@ -654,6 +654,15 @@ function HomePage({
       </header>
 
       <main className="main-content">
+        <section className="welcome-section home-welcome-top">
+          <h2>به کائنات‌چی خوش آمدی 🌿</h2>
+
+          <p>
+            از خدمات و انرژی‌خوانی تا کلاس‌ها، ایونت‌ها و باشگاه
+            VIP؛ مسیرت را از منوی پایین پیدا کن.
+          </p>
+        </section>
+
         <button
           type="button"
           onClick={onSearch}
@@ -782,14 +791,6 @@ function HomePage({
           </div>
         </section>
 
-        <section className="welcome-section">
-          <h2>به کائنات‌چی خوش آمدی 🌿</h2>
-
-          <p>
-            از خدمات و انرژی‌خوانی تا کلاس‌ها، ایونت‌ها و باشگاه
-            VIP؛ مسیرت را از منوی پایین پیدا کن.
-          </p>
-        </section>
       </main>
     </>
   );
