@@ -697,8 +697,7 @@ function HomePage({
 
             <div className="hero-ring ring-one" />
             <div className="hero-ring ring-two" />
-          </div>
-          <div className="hero-content">
+          </div>          <div className="hero-content">
             <div className="eyebrow">
               <Icon name="spark" />
               <span>KAENATCHI</span>
@@ -1397,8 +1396,7 @@ function SearchPage({
         >
           <div
             style={{              width: "58px",
-              height: "58px",
-              margin:
+              height: "58px",              margin:
                 "0 auto 13px",
               borderRadius:
                 "20px",
@@ -2097,8 +2095,7 @@ async function callVipApi(
   }
 
   try {
-    const response = await fetch(VIP_API_URL, {
-      method: "POST",
+    const response = await fetch(VIP_API_URL, {      method: "POST",
       headers: {
         "Content-Type": "text/plain;charset=UTF-8",
       },
@@ -2797,7 +2794,6 @@ function VipPage({
                         overflowWrap: "anywhere", direction: "ltr", textAlign: "left",
                       }}>{code || "کد تخفیف"}</div>
                     </div>
-
                     {code && (
                       <button type="button" onClick={copyToken} style={{
                         flex: "0 0 auto",
@@ -3205,6 +3201,19 @@ function VipPage({
       />
 
 
+      <div
+        style={{
+          marginTop: "2px",
+          marginBottom: "12px",
+          color: "#353B32",
+          fontSize: "17px",
+          fontWeight: 800,
+          lineHeight: 1.6,
+        }}
+      >
+        مسیر شما در کائنات‌چی
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" }}>
         {[
           ["bookings", "calendar", "نوبت‌های من", "سوابق و وضعیت نوبت‌ها"],
@@ -3581,175 +3590,318 @@ function BottomNav({
 
         <span>خانه</span>
 
-      </button>
+      </button
 
-
-      <button
-        type="button"
-        className={`nav-item ${
-          active === "services"
-            ? "active"
-            : ""
-        }`}
-        onClick={() =>
-          onChange(
-            "services"
-          )
-        }
-      >
-
-        <span className="nav-icon">
-          <Icon name="spark" />
-        </span>
-
-        <span>خدمات</span>
-
-      </button>
-
-
-      <button
-        type="button"
-        className={`nav-item ${
-          active === "more"
-            ? "active"
-            : ""
-        }`}
-        onClick={() =>
-          onChange("more")
-        }
-      >
-
-        <span className="nav-icon">
-          <Icon name="menu" />
-        </span>
-
-        <span>بیشتر</span>
-
-      </button>
-
-    </nav>
-  );
+      <div style={{ marginTop: "12px" }}>
+        <button type="button" onClick={openBookingApp} style={{ width: "100%", border: "none", borderRadius: "18px", padding: "15px 18px", background: "linear-gradient(135deg, #174b38, #2c7658)", color: "#fff", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 10px 24px rgba(23,75,56,0.18)" }}>📅 دریافت نوبت</button>
+      </div>
 }
 
 
 /* =========================================================
-   APP
+   STYLES
 ========================================================= */
 
-function App() {
+const backButtonStyle = {
+  border: "none",
+  background: "transparent",
+  color: "#246347",
+  fontFamily: "inherit",
+  cursor: "pointer",
+  padding: "8px 0",
+  marginBottom: "12px",
+};
 
-  const [section, setSection] =
-    useState<Section>("home");
-
-
-  const [searchOpen, setSearchOpen] =
-    useState(false);
-
-
-  const [searchService, setSearchService] =
-    useState<Service | null>(
-      null
-    );
-
-
-  const openSearch = () => {
-
-    setSearchService(null);
-
-    setSearchOpen(true);
-  };
-
-
-  const closeSearch = () => {
-
-    setSearchOpen(false);
-
-    setSearchService(null);
-  };
+const vipTileStyle = {
+  width: "100%",
+  minHeight: "135px",
+  border: "none",
+  textAlign:
+    "right" as const,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  display: "flex",
+  flexDirection:
+    "column" as const,
+  alignItems:
+    "flex-start",
+};
 
 
-  if (searchOpen) {
+/* =========================================================
+   MORE DETAIL
+========================================================= */
 
-    if (searchService) {
-
-      return (
-        <div className="app-shell">
-
-          <div className="ambient ambient-one" />
-          <div className="ambient ambient-two" />
-
-
-          <ServiceDetail
-            service={searchService}
-            onBack={() =>
-              setSearchService(
-                null
-              )
-            }
-          />
-
-        </div>
-      );
-    }
-
-
-    return (
-      <div className="app-shell">
-
-        <div className="ambient ambient-one" />
-        <div className="ambient ambient-two" />
-
-
-        <SearchPage
-          onBack={closeSearch}
-          onOpenService={(
-            service
-          ) =>
-            setSearchService(
-              service
-            )
-          }
-        />
-
-      </div>
-    );
-  }
-
+function MoreDetail({
+  title,
+  icon,
+  description,
+  onBack,
+}: {
+  title: string;
+  icon: IconName;
+  description: string;
+  onBack: () => void;
+}) {
 
   return (
-    <div className="app-shell">
+    <div className="inner-page">
 
-      <div className="ambient ambient-one" />
-      <div className="ambient ambient-two" />
-
-
-      {section === "home" && (
-        <HomePage
-          onSearch={openSearch}
-        />
-      )}
+      <button
+        type="button"
+        onClick={onBack}
+        style={backButtonStyle}
+      >
+        ← بازگشت
+      </button>
 
 
-      {section === "services" && (
-        <ServicesPage />
-      )}
-
-
-      {section === "more" && (
-        <MorePage
-          onSearch={openSearch}
-        />
-      )}
-
-
-      <BottomNav
-        active={section}
-        onChange={setSection}
+      <SectionHeaderCard
+        kicker={
+          title === "کلاس‌ها"
+            ? "CLASSES"
+            : title ===
+                "ایونت‌ها"
+              ? "EVENTS"
+              : title ===
+                  "سوالات متداول"
+                ? "FAQ"
+                : title ===
+                    "ساعات کاری"
+                  ? "HOURS"
+                  : "CONTACT"
+        }
+        title={title}
+        description={
+          description
+        }
+        icon={icon}
       />
+
+
+      <div className="glass-list-card">
+
+        <div className="list-copy">
+
+          <strong>
+            {title}
+          </strong>
+
+
+          <span>
+            این بخش به‌صورت اختصاصی برای محتوای {title}
+            کائنات‌چی طراحی می‌شود.
+          </span>
+
+        </div>
+
+      </div>
 
     </div>
   );
 }
 
 
-export default App;
+/* =========================================================
+   MORE PAGE
+========================================================= */
+
+function MorePage({
+  onSearch,
+}: {
+  onSearch: () => void;
+}) {
+
+  const [selected, setSelected] =
+    useState<
+      (typeof moreItems)[number] | null
+    >(null);
+
+
+  if (
+    selected?.id ===
+    "vip"
+  ) {
+
+    return (
+      <VipPage
+        onBack={() =>
+          setSelected(null)
+        }
+      />
+    );
+  }
+
+
+  if (selected) {
+
+    return (
+      <MoreDetail
+        title={selected.title}
+        icon={selected.icon}
+        description={
+          selected.description
+        }
+        onBack={() =>
+          setSelected(null)
+        }
+      />
+    );
+  }
+
+
+  return (
+    <div className="inner-page">
+
+      <SectionHeaderCard
+        kicker="MORE"
+        title="بیشتر"
+        description="بخش‌های دیگر کائنات‌چی را از اینجا دنبال کن."
+        icon="menu"
+      />
+
+
+      <button
+        type="button"
+        onClick={onSearch}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems:
+            "center",
+          gap: "10px",
+          border:
+            "1px solid rgba(53,59,50,0.1)",
+          borderRadius:
+            "18px",
+          padding:
+            "13px 15px",
+          marginBottom:
+            "14px",
+          background:
+            "rgba(255,255,255,0.62)",
+          color:
+            "#73786f",
+          fontFamily:
+            "inherit",
+          fontSize:
+            "13px",
+          cursor:
+            "pointer",
+          boxShadow:
+            "0 7px 20px rgba(53,59,50,0.07)",
+          textAlign:
+            "right",
+        }}
+      >
+
+        <Icon name="search" />
+
+        <span>
+          جست‌وجو در کائنات‌چی...
+        </span>
+
+      </button>
+
+
+      <div className="more-list">
+
+        {moreItems.map(
+          (item) => (
+
+            <button
+              key={item.id}
+              type="button"
+              className="glass-list-card"
+              onClick={() =>
+                setSelected(
+                  item
+                )
+              }
+              style={{
+                width: "100%",
+                border: "none",
+                textAlign:
+                  "right",
+                cursor:
+                  "pointer",
+                fontFamily:
+                  "inherit",
+              }}
+            >
+
+              <div className="list-icon">
+                <Icon
+                  name={
+                    item.icon
+                  }
+                />
+              </div>
+
+
+              <div className="list-copy">
+
+                <strong>
+                  {item.title}
+                </strong>
+
+
+                <span>
+                  {item.description}
+                </span>
+
+              </div>
+
+
+              <div className="list-arrow">
+                <Icon name="arrow" />
+              </div>
+
+            </button>
+
+          )
+        )}
+
+      </div>
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   BOTTOM NAV
+========================================================= */
+
+function BottomNav({
+  active,
+  onChange,
+}: {
+  active: Section;
+  onChange: (
+    section: Section
+  ) => void;
+}) {
+
+  return (
+    <nav className="bottom-nav">
+
+      <button
+        type="button"
+        className={`nav-item ${
+          active === "home"
+            ? "active"
+            : ""
+        }`}
+        onClick={() =>
+          onChange("home")
+        }
+      >
+
+        <span className="nav-icon">
+          <Icon name="home" />
+        </span>
+
+        <span>خانه</span>
+
+      </button>
