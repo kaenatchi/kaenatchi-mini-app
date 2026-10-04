@@ -621,20 +621,8 @@ function HomePage({
   return (
     <>
       <header className="topbar">
-        <div className="brand-area">
-          <div
-            className="logo-placeholder"
-            aria-hidden="true"
-          >
-            <Icon name="spark" />
-          </div>
-
-          <div className="brand-copy">
-            <div className="brand-name">
-              کائنات‌چی
-            </div>
-
-          </div>
+        <div className="home-welcome-top">
+          <h2>خوش اومدی 🌿</h2>
         </div>
 
         <div
@@ -651,9 +639,9 @@ function HomePage({
       </header>
 
       <main className="main-content home-page">
-        <section className="welcome-section home-welcome-top">
-          <h2>خوش اومدی 🌿</h2>
-
+        <section className="home-brand-title" aria-label="کائنات‌چی">
+          <div className="home-brand-title-glow" aria-hidden="true" />
+          <h1>کائنات‌چی</h1>
         </section>
 
 
