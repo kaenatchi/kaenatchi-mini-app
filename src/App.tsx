@@ -634,9 +634,6 @@ function HomePage({
               کائنات‌چی
             </div>
 
-            <div className="brand-tagline">
-              رزرو نوبت و مشاهده خدمات
-            </div>
           </div>
         </div>
 
