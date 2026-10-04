@@ -2677,7 +2677,6 @@ function VipPage({
         />
 
 
-        <div 
         <div
           style={{
             marginBottom: "14px",
@@ -2706,7 +2705,8 @@ function VipPage({
             اینجا اطلاعات حساب و وضعیت عضویت VIP شما نمایش داده می‌شود.
           </span>
         </div>
-className="glass-list-card">
+
+        <div className="glass-list-card">
 
           <div className="list-icon">
             <Icon name="user" />
