@@ -2548,52 +2548,7 @@ function VipPage({
 
 
 
-        <div
-          style={{
-            marginTop: "14px",
-            padding: "16px",
-            borderRadius: "18px",
-            background:
-              "rgba(165, 139, 91, 0.08)",
-            border:
-              "1px solid rgba(165, 139, 91, 0.15)",
-          }}
-        >
 
-          <div
-            style={{
-              display: "flex",
-              alignItems:
-                "center",
-              gap: "9px",
-              color:
-                "#8a7348",
-              marginBottom:
-                "7px",
-            }}
-          >
-
-            <Icon name="spark" />
-
-            <strong>
-              تخفیف VIP
-            </strong>
-
-          </div>
-
-
-          <span
-            style={{
-              fontSize: "13px",
-              lineHeight: 1.8,
-            }}
-          >
-            تخفیف‌های VIP برای انرژی‌خوانی، کلاس‌ها و
-            ایونت‌ها در ادامه به‌صورت امن از سمت سرور مدیریت
-            خواهند شد.
-          </span>
-
-        </div>
 
 
       </div>
@@ -2712,6 +2667,141 @@ function VipPage({
         icon="crown"
         status="عضویت VIP فعال است"
       />
+
+        <div
+          style={{
+            marginTop: "12px",
+            marginBottom: "14px",
+            padding: "14px 16px",
+            borderRadius: "18px",
+            background: "rgba(165,139,91,0.08)",
+            border: "1px solid rgba(165,139,91,0.15)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              color: "#8a7348",
+              marginBottom: "5px",
+            }}
+          >
+            <Icon name="spark" />
+            <strong>باشگاه VIP</strong>
+          </div>
+          <span style={{ fontSize: "13px", lineHeight: 1.8 }}>
+            از اینجا می‌توانید نوبت‌ها، پرداخت‌ها، توکن‌های تخفیف و اطلاعات پروفایل خود را مدیریت کنید.
+          </span>
+        </div>
+
+        <div
+          style={{
+            marginTop: "12px",
+            marginBottom: "14px",
+            padding: "14px 16px",
+            borderRadius: "18px",
+            background: "rgba(165,139,91,0.08)",
+            border: "1px solid rgba(165,139,91,0.15)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              color: "#8a7348",
+              marginBottom: "5px",
+            }}
+          >
+            <Icon name="spark" />
+            <strong>پروفایل VIP</strong>
+          </div>
+          <span style={{ fontSize: "13px", lineHeight: 1.8 }}>
+            اینجا اطلاعات حساب و وضعیت عضویت VIP شما نمایش داده می‌شود.
+          </span>
+        </div>
+
+        <div
+          style={{
+            marginTop: "12px",
+            marginBottom: "14px",
+            padding: "14px 16px",
+            borderRadius: "18px",
+            background: "rgba(165,139,91,0.08)",
+            border: "1px solid rgba(165,139,91,0.15)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              color: "#8a7348",
+              marginBottom: "5px",
+            }}
+          >
+            <Icon name="spark" />
+            <strong>تخفیف VIP</strong>
+          </div>
+          <span style={{ fontSize: "13px", lineHeight: 1.8 }}>
+            توکن‌های VIP برای استفاده از تخفیف‌های اختصاصی انرژی‌خوانی، کلاس‌ها و ایونت‌ها هستند.
+          </span>
+        </div>
+
+        <div
+          style={{
+            marginTop: "12px",
+            marginBottom: "14px",
+            padding: "14px 16px",
+            borderRadius: "18px",
+            background: "rgba(165,139,91,0.08)",
+            border: "1px solid rgba(165,139,91,0.15)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              color: "#8a7348",
+              marginBottom: "5px",
+            }}
+          >
+            <Icon name="spark" />
+            <strong>پرداخت‌ها</strong>
+          </div>
+          <span style={{ fontSize: "13px", lineHeight: 1.8 }}>
+            اینجا سوابق پرداخت‌های شما در کائنات‌چی نمایش داده می‌شود.
+          </span>
+        </div>
+
+        <div
+          style={{
+            marginTop: "12px",
+            marginBottom: "14px",
+            padding: "14px 16px",
+            borderRadius: "18px",
+            background: "rgba(165,139,91,0.08)",
+            border: "1px solid rgba(165,139,91,0.15)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              color: "#8a7348",
+              marginBottom: "5px",
+            }}
+          >
+            <Icon name="spark" />
+            <strong>نوبت‌های من</strong>
+          </div>
+          <span style={{ fontSize: "13px", lineHeight: 1.8 }}>
+            اینجا می‌توانید نوبت‌های ثبت‌شده خود را ببینید و وضعیت آن‌ها را پیگیری کنید.
+          </span>
+        </div>
 
 
       <div
