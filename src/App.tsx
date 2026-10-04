@@ -2323,23 +2323,39 @@ function VipPage({
                 row && typeof row === "object" && !Array.isArray(row)
                   ? (row as Record<string, unknown>)
                   : {};
+              const tokenRow = Array.isArray(row)
+                ? (row as unknown[])
+                : [];
               const code = String(
                 item.code ??
                   item["کد"] ??
                   item.token ??
                   item["کد توکن"] ??
+                  tokenRow[0] ??
                   ""
               ).trim();
               const discount =
                 item.discount ??
                 item["تخفیف"] ??
                 item.discountPercent ??
+                tokenRow[2] ??
                 "";
-              const status = item.status ?? item["وضعیت"] ?? "";
+              const status =
+                item.status ??
+                item["وضعیت"] ??
+                tokenRow[5] ??
+                "";
               const expiresAt =
-                item.expiresAt ?? item["تاریخ انقضا"] ?? "";
+                item.expiresAt ??
+                item["تاریخ انقضا"] ??
+                tokenRow[4] ??
+                "";
               const issuedAt =
-                item.issuedAt ?? item["تاریخ صدور"] ?? item["تاریخ ایجاد"] ?? "";
+                item.issuedAt ??
+                item["تاریخ صدور"] ??
+                item["تاریخ ایجاد"] ??
+                tokenRow[3] ??
+                "";
 
               return (
                 <div
