@@ -1748,6 +1748,70 @@ function formatVipJalaliDate(value: unknown): string {
   return text;
 }
 
+function getVipTokenDisplayStatus(token: VipToken): {
+  label: string;
+  color: string;
+  background: string;
+  border: string;
+} {
+  const rawStatus = String(token.status ?? "").trim();
+  const normalizedStatus = rawStatus.replace(/\s+/g, "").toLowerCase();
+
+  if (normalizedStatus === "استفادهشده" || normalizedStatus === "used") {
+    return { label: "استفاده شده", color: "#6f746d", background: "rgba(111,116,109,0.08)", border: "rgba(111,116,109,0.18)" };
+  }
+
+  if (isVipTokenExpired(String(token.expiresAt ?? "").trim())) {
+    return { label: "منقضی شده", color: "#9a5c52", background: "rgba(154,92,82,0.08)", border: "rgba(154,92,82,0.18)" };
+  }
+
+  if (normalizedStatus === "فعال" || normalizedStatus === "active") {
+    return { label: "فعال", color: "#246347", background: "rgba(36,99,71,0.08)", border: "rgba(36,99,71,0.18)" };
+  }
+
+  if (normalizedStatus === "صادرشده" || normalizedStatus === "صادرشده" || normalizedStatus === "issued") {
+    return { label: "صادر شده", color: "#8a7146", background: "rgba(165,139,91,0.09)", border: "rgba(165,139,91,0.20)" };
+  }
+
+  return { label: rawStatus || "در انتظار فعال‌سازی", color: "#8a7146", background: "rgba(165,139,91,0.09)", border: "rgba(165,139,91,0.20)" };
+}
+
+function isVipTokenExpired(value: string): boolean {
+  if (!value) return false;
+  const match = value.match(/^(\d{3,4})[\/-](\d{1,2})[\/-](\d{1,2})(?:\s*-\s*(\d{1,2}):(\d{2}))?$/);
+  if (!match) return false;
+
+  const target = [
+    Number(match[1]), Number(match[2]), Number(match[3]),
+    match[4] == null ? 23 : Number(match[4]),
+    match[5] == null ? 59 : Number(match[5]),
+  ];
+
+  try {
+    const parts = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+      calendar: "persian", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    }).formatToParts(new Date());
+
+    const now = [
+      Number(parts.find((p) => p.type === "year")?.value ?? 0),
+      Number(parts.find((p) => p.type === "month")?.value ?? 0),
+      Number(parts.find((p) => p.type === "day")?.value ?? 0),
+      Number(parts.find((p) => p.type === "hour")?.value ?? 0),
+      Number(parts.find((p) => p.type === "minute")?.value ?? 0),
+    ];
+
+    for (let i = 0; i < target.length; i++) {
+      if (now[i] > target[i]) return true;
+      if (now[i] < target[i]) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+
 /* =========================================================
    LOAD TELEGRAM IDENTITY
 ========================================================= */
@@ -1880,6 +1944,8 @@ function VipPage({
   const [vipTokens, setVipTokens] =
     useState<VipToken[]>([]);
 
+  const [copiedToken, setCopiedToken] =
+    useState<string | null>(null);
 
   const [vipError, setVipError] =
     useState("");
@@ -2536,111 +2602,129 @@ function VipPage({
           {vipTokens.length > 0 ? (
             vipTokens.map((token, index) => {
               const code = String(token.code ?? "").trim();
-              const rawDiscount =
-                token.discount ??
-                token.discountPercent ??
-                "";
-              const discountNumber = Number(
-                String(rawDiscount)
-                  .replace(/٪/g, "%")
-                  .replace("%", "")
-                  .trim()
-              );
-              const discount =
-                Number.isFinite(discountNumber) && discountNumber > 0
-                  ? String(discountNumber)
-                  : String(rawDiscount).trim();
-              const status = String(token.status ?? "").trim();
-              const expiresAt = String(token.expiresAt ?? "").trim();
+              const rawDiscount = token.discount ?? token.discountPercent ?? "";
+              const discountNumber = Number(String(rawDiscount).replace(/٪/g, "%").replace("%", "").trim());
+              const discount = Number.isFinite(discountNumber) && discountNumber > 0
+                ? String(discountNumber)
+                : String(rawDiscount).trim();
+              const displayStatus = getVipTokenDisplayStatus(token);
               const issuedAt = String(token.issuedAt ?? "").trim();
+              const expiresAt = String(token.expiresAt ?? "").trim();
+
+              const copyToken = async () => {
+                if (!code) return;
+                try {
+                  if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(code);
+                  } else {
+                    const textarea = document.createElement("textarea");
+                    textarea.value = code;
+                    textarea.style.position = "fixed";
+                    textarea.style.opacity = "0";
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand("copy");
+                    textarea.remove();
+                  }
+                  setCopiedToken(code);
+                  window.setTimeout(() => {
+                    setCopiedToken((current) => current === code ? null : current);
+                  }, 1600);
+                } catch {
+                  setCopiedToken(null);
+                }
+              };
 
               return (
-                <div
-                  key={index}
-                  className="glass-list-card"
-                  style={{
-                    border: "1px solid rgba(165, 139, 91, 0.25)",
-                    display: "block",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    <div className="list-icon">
-                      <Icon name="ticket" />
+                <div key={index} className="glass-list-card" style={{
+                  border: `1px solid ${displayStatus.border}`,
+                  display: "block",
+                }}>
+                  <div style={{
+                    display: "flex", alignItems: "flex-start",
+                    justifyContent: "space-between", gap: "12px", marginBottom: "14px",
+                  }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{
+                        fontSize: "10px", letterSpacing: "1.5px",
+                        color: "#8a8f87", marginBottom: "6px",
+                      }}>DISCOUNT CODE</div>
+                      <div style={{
+                        fontSize: "20px", lineHeight: 1.3, fontWeight: 800,
+                        letterSpacing: "1px", color: "#353B32",
+                        overflowWrap: "anywhere", direction: "ltr", textAlign: "left",
+                      }}>{code || "کد تخفیف"}</div>
                     </div>
 
-                    <div className="list-copy">
-                      <strong>{code || "توکن VIP"}</strong>
-                      <span>
-                        {discount !== ""
-                          ? `تخفیف ${String(discount).replace(/%/g, "").trim()}٪`
-                          : "توکن اختصاصی VIP"}
-                      </span>
-                    </div>
+                    {code && (
+                      <button type="button" onClick={copyToken} style={{
+                        flex: "0 0 auto",
+                        border: `1px solid ${copiedToken === code ? "rgba(36,99,71,0.22)" : "rgba(53,59,50,0.12)"}`,
+                        borderRadius: "12px",
+                        background: copiedToken === code ? "rgba(36,99,71,0.08)" : "rgba(255,255,255,0.72)",
+                        color: copiedToken === code ? "#246347" : "#353B32",
+                        padding: "9px 11px", fontFamily: "inherit",
+                        fontSize: "11px", fontWeight: 700, cursor: "pointer",
+                        boxShadow: "0 6px 14px rgba(53,59,50,0.06)",
+                      }}>{copiedToken === code ? "کپی شد ✓" : "کپی کد"}</button>
+                    )}
                   </div>
 
-                  <div
-                    style={{
-                      display: "grid",
-                      gap: "6px",
-                      fontSize: "12px",
-                      color: "#73786f",
-                      lineHeight: 1.8,
-                    }}
-                  >
-                    {status !== "" && (
-                      <span>وضعیت: {String(status)}</span>
-                    )}
+                  <div style={{
+                    display: "flex", alignItems: "center",
+                    justifyContent: "space-between", gap: "10px",
+                    flexWrap: "wrap", marginBottom: "13px",
+                  }}>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center",
+                      padding: "6px 10px", borderRadius: "10px",
+                      background: displayStatus.background,
+                      border: `1px solid ${displayStatus.border}`,
+                      color: displayStatus.color, fontSize: "11px", fontWeight: 700,
+                    }}>{displayStatus.label}</span>
+                    <span style={{ color: "#8a7146", fontSize: "13px", fontWeight: 700 }}>
+                      {discount !== "" ? `تخفیف ${String(discount).replace(/%/g, "").trim()}٪` : "تخفیف VIP"}
+                    </span>
+                  </div>
+
+                  <div style={{
+                    display: "grid", gap: "7px", paddingTop: "11px",
+                    borderTop: "1px solid rgba(53,59,50,0.08)",
+                    fontSize: "12px", color: "#73786f", lineHeight: 1.8,
+                  }}>
                     {issuedAt !== "" && (
-                      <span>
-                        تاریخ صدور: {formatVipJalaliDate(issuedAt)}
-                      </span>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                        <span>تاریخ صدور</span>
+                        <strong style={{ color: "#353B32", fontWeight: 600, direction: "ltr" }}>
+                          {formatVipJalaliDate(issuedAt)}
+                        </strong>
+                      </div>
                     )}
                     {expiresAt !== "" && (
-                      <span>
-                        تاریخ انقضا: {formatVipJalaliDate(expiresAt)}
-                      </span>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                        <span>تاریخ انقضا</span>
+                        <strong style={{
+                          color: displayStatus.label === "منقضی شده" ? "#9a5c52" : "#353B32",
+                          fontWeight: 600, direction: "ltr",
+                        }}>{formatVipJalaliDate(expiresAt)}</strong>
+                      </div>
                     )}
                   </div>
                 </div>
               );
             })
           ) : (
-            <div
-              className="glass-list-card"
-              style={{ display: "block", textAlign: "center" }}
-            >
-              <div
-                className="list-icon"
-                style={{ margin: "0 auto 12px" }}
-              >
+            <div className="glass-list-card" style={{ display: "block", textAlign: "center" }}>
+              <div className="list-icon" style={{ margin: "0 auto 12px" }}>
                 <Icon name="ticket" />
               </div>
-
               <div className="list-copy">
                 <strong>هنوز توکنی برای شما ثبت نشده</strong>
-                <span>
-                  هر توکن تخفیف اختصاصی پس از صدور در این قسمت نمایش داده می‌شود.
-                </span>
+                <span>هر توکن تخفیف اختصاصی پس از صدور در این قسمت نمایش داده می‌شود.</span>
               </div>
             </div>
           )}
         </div>
-
-
-
-
-
-
-      </div>
-    );
-  }
 
 
   /* =====================================================
