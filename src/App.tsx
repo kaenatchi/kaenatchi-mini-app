@@ -62,6 +62,9 @@ type VipApiResponse = {
   success: boolean;
   message?: string;
   accessDenied?: boolean;
+  debug?: string;
+  detail?: string;
+  error?: string;
   customer?: VipCustomer;
   history?: unknown[][];
   payments?: unknown[][];
@@ -71,8 +74,6 @@ type VipApiResponse = {
 /*
  * VIP اصلی کائنات‌چی اکنون از Google Apps Script قدیمی
  * و همان Google Sheet مدیریت می‌شود.
- *
- * این آدرس همان Web App پروژه قدیمی VIP است.
  */
 const VIP_API_URL =
   "https://script.google.com/macros/s/AKfycbySl6RH5K7oTLBus2cjvBJuOv-ZTjIhX9OnIq93gifQng1IfMl7f2A3Bl-7pSx1nC1u/exec";
@@ -1434,9 +1435,11 @@ declare global {
   }
 }
 
-/**
- * بارگذاری Telegram WebApp SDK
- */
+
+/* =========================================================
+   TELEGRAM SDK
+========================================================= */
+
 function loadTelegramWebAppScript(): Promise<void> {
   if (
     window.Telegram?.WebApp
@@ -1452,6 +1455,7 @@ function loadTelegramWebAppScript(): Promise<void> {
   if (existingScript) {
     return new Promise(
       (resolve, reject) => {
+
         if (
           window.Telegram?.WebApp
         ) {
@@ -1471,6 +1475,7 @@ function loadTelegramWebAppScript(): Promise<void> {
         existingScript.addEventListener(
           "load",
           () => {
+
             window.clearTimeout(
               timeout
             );
@@ -1493,6 +1498,7 @@ function loadTelegramWebAppScript(): Promise<void> {
         existingScript.addEventListener(
           "error",
           () => {
+
             window.clearTimeout(
               timeout
             );
@@ -1511,6 +1517,7 @@ function loadTelegramWebAppScript(): Promise<void> {
 
   return new Promise(
     (resolve, reject) => {
+
       const script =
         document.createElement(
           "script"
@@ -1522,6 +1529,7 @@ function loadTelegramWebAppScript(): Promise<void> {
       script.async = true;
 
       script.onload = () => {
+
         if (
           window.Telegram?.WebApp
         ) {
@@ -1536,6 +1544,7 @@ function loadTelegramWebAppScript(): Promise<void> {
       };
 
       script.onerror = () => {
+
         reject(
           new Error(
             "Telegram WebApp SDK load error"
@@ -1550,16 +1559,17 @@ function loadTelegramWebAppScript(): Promise<void> {
   );
 }
 
-/**
- * نرمال‌سازی اطلاعات مشتری
- *
- * هم فرمت قدیمی Supabase و هم فرمت جدید
- * Google Apps Script را قبول می‌کند.
- */
+
+/* =========================================================
+   VIP CUSTOMER NORMALIZER
+========================================================= */
+
 function normalizeVipCustomer(
   customer: any
 ): VipCustomer {
+
   return {
+
     id:
       customer?.id ??
       customer?.customerId ??
@@ -1603,120 +1613,187 @@ function normalizeVipCustomer(
   };
 }
 
-/**
- * دریافت اطلاعات هویت تلگرام و اتصال به VIP
- */
+
+/* =========================================================
+   LOAD TELEGRAM IDENTITY
+========================================================= */
+
 async function loadTelegramIdentity(): Promise<VipApiResponse> {
+
   try {
+
     await loadTelegramWebAppScript();
-  } catch {
+
+  } catch (error) {
+
     return {
       success: false,
+      debug: "SDK_LOAD_ERROR",
+      detail:
+        error instanceof Error
+          ? error.message
+          : String(error),
       message:
         "اتصال به محیط تلگرام برقرار نشد. لطفاً VIP را از داخل تلگرام باز کن.",
     };
   }
 
+
   const telegramWebApp =
     window.Telegram?.WebApp;
 
+
   if (!telegramWebApp) {
+
     return {
       success: false,
+      debug: "WEBAPP_UNAVAILABLE",
       message:
         "این بخش باید از داخل تلگرام باز شود.",
     };
   }
 
+
   try {
+
     telegramWebApp.ready?.();
+
     telegramWebApp.expand?.();
-  } catch {
-    // Optional Telegram methods.
+
+  } catch (error) {
+
+    /*
+     * ready و expand اختیاری هستند.
+     * در صورت خطا، ادامه می‌دهیم.
+     */
   }
+
 
   const initData =
     telegramWebApp.initData;
 
+
   if (!initData) {
+
     return {
       success: false,
+      debug: "INIT_DATA_EMPTY",
       message:
         "اطلاعات ورود تلگرام دریافت نشد. لطفاً VIP را مستقیماً از داخل تلگرام باز کن.",
     };
   }
 
+
   try {
-    /*
-     * نکته مهم:
-     *
-     * به‌جای application/json از text/plain استفاده شده
-     * تا مرورگر درخواست CORS preflight از نوع OPTIONS
-     * ایجاد نکند.
-     *
-     * Apps Script در سمت doPost همچنان همین JSON را
-     * از e.postData.contents دریافت می‌کند.
-     */
+
     const response =
-      await fetch(VIP_API_URL, {
-        method: "POST",
+      await fetch(
+        VIP_API_URL,
+        {
+          method: "POST",
 
-        headers: {
-          "Content-Type":
-            "text/plain;charset=UTF-8",
-        },
+          headers: {
+            "Content-Type":
+              "text/plain;charset=UTF-8",
+          },
 
-        body: JSON.stringify({
-          initData,
-        }),
-      });
+          body: JSON.stringify({
+            initData,
+          }),
+        }
+      );
+
 
     let data: VipApiResponse;
 
+
     try {
+
       data =
         (await response.json()) as VipApiResponse;
-    } catch {
+
+    } catch (error) {
+
       return {
         success: false,
+        debug: "INVALID_SERVER_RESPONSE",
+        detail:
+          `HTTP ${response.status}`,
         message:
-          "پاسخ نامعتبر از سامانه VIP دریافت شد.",
+          "پاسخ قابل خواندن از سامانه VIP دریافت نشد.",
       };
     }
 
+
+    /*
+     * اگر customer برگشته باشد،
+     * آن را به فرمت استاندارد تبدیل می‌کنیم.
+     */
+
     if (data.customer) {
+
       data.customer =
         normalizeVipCustomer(
           data.customer
         );
     }
 
+
+    /*
+     * برای خطای HTTP هم اطلاعات debug را نگه می‌داریم.
+     */
+
     if (!response.ok) {
+
       return {
+        ...data,
+
         success: false,
-        accessDenied:
-          data.accessDenied,
+
+        debug:
+          data.debug ||
+          `HTTP_${response.status}`,
+
+        detail:
+          data.detail ||
+          data.error ||
+          `HTTP status ${response.status}`,
+
         message:
           data.message ||
           "امکان دریافت اطلاعات VIP وجود ندارد.",
       };
     }
 
+
     return data;
-  } catch {
+
+  } catch (error) {
+
     return {
       success: false,
+      debug: "FETCH_ERROR",
+      detail:
+        error instanceof Error
+          ? error.message
+          : String(error),
       message:
         "ارتباط با سامانه VIP برقرار نشد. لطفاً دوباره تلاش کن.",
     };
   }
 }
 
+
+/* =========================================================
+   VIP PAGE
+========================================================= */
+
 function VipPage({
   onBack,
 }: {
   onBack: () => void;
 }) {
+
   const [activePanel, setActivePanel] =
     useState<
       | "dashboard"
@@ -1726,35 +1803,68 @@ function VipPage({
       | "profile"
     >("dashboard");
 
+
   const [loading, setLoading] =
     useState(true);
+
 
   const [vipCustomer, setVipCustomer] =
     useState<VipCustomer | null>(
       null
     );
 
+
   const [vipError, setVipError] =
     useState("");
 
+
+  const [vipDebug, setVipDebug] =
+    useState("");
+
+
+  const [vipDetail, setVipDetail] =
+    useState("");
+
+
   useEffect(() => {
+
     let mounted = true;
+
 
     const initializeVip =
       async () => {
+
         const result =
           await loadTelegramIdentity();
+
 
         if (!mounted) {
           return;
         }
 
+
         setLoading(false);
+
+
+        /*
+         * نگه داشتن اطلاعات تشخیصی
+         */
+
+        setVipDebug(
+          result.debug || ""
+        );
+
+
+        setVipDetail(
+          result.detail || ""
+        );
+
 
         if (
           result.success &&
           result.customer
         ) {
+
           setVipCustomer(
             result.customer
           );
@@ -1764,7 +1874,9 @@ function VipPage({
           return;
         }
 
+
         setVipCustomer(null);
+
 
         setVipError(
           result.message ||
@@ -1772,16 +1884,21 @@ function VipPage({
         );
       };
 
+
     initializeVip();
+
 
     return () => {
       mounted = false;
     };
+
   }, []);
+
 
   const displayName =
     `${vipCustomer?.firstName || ""} ${vipCustomer?.lastName || ""}`.trim() ||
     "عضو VIP";
+
 
   const vipActive =
     vipCustomer?.vipStatus ===
@@ -1789,9 +1906,16 @@ function VipPage({
     vipCustomer?.vipStatus ===
       "active";
 
+
+  /* =====================================================
+     LOADING
+  ===================================================== */
+
   if (loading) {
+
     return (
       <div className="inner-page">
+
         <button
           type="button"
           onClick={onBack}
@@ -1800,12 +1924,14 @@ function VipPage({
           ← بازگشت
         </button>
 
+
         <SectionHeaderCard
           kicker="KAENATCHI"
           title="پنل VIP"
           description="در حال بررسی عضویت VIP شما..."
           icon="crown"
         />
+
 
         <div
           className="glass-list-card"
@@ -1817,6 +1943,7 @@ function VipPage({
               "28px 20px",
           }}
         >
+
           <div
             style={{
               width: "52px",
@@ -1837,7 +1964,9 @@ function VipPage({
             <Icon name="crown" />
           </div>
 
+
           <div className="list-copy">
+
             <strong>
               در حال بررسی عضویت...
             </strong>
@@ -1845,18 +1974,28 @@ function VipPage({
             <span>
               لطفاً چند لحظه صبر کن.
             </span>
+
           </div>
+
         </div>
+
       </div>
     );
   }
+
+
+  /* =====================================================
+     ACCESS DENIED
+  ===================================================== */
 
   if (
     !vipCustomer ||
     !vipActive
   ) {
+
     return (
       <div className="inner-page">
+
         <button
           type="button"
           onClick={onBack}
@@ -1864,6 +2003,7 @@ function VipPage({
         >
           ← بازگشت
         </button>
+
 
         <SectionHeaderCard
           kicker="KAENATCHI VIP"
@@ -1873,6 +2013,7 @@ function VipPage({
           status="عضویت VIP فعال نیست"
         />
 
+
         <div
           className="glass-list-card"
           style={{
@@ -1881,6 +2022,7 @@ function VipPage({
               "center",
           }}
         >
+
           <div
             style={{
               width: "58px",
@@ -1901,27 +2043,130 @@ function VipPage({
             <Icon name="crown" />
           </div>
 
+
           <div className="list-copy">
+
             <strong>
               دسترسی VIP فعال نیست
             </strong>
+
 
             <span>
               {vipError ||
                 "در حال حاضر این حساب عضو فعال باشگاه VIP نیست."}
             </span>
+
           </div>
+
+
+          {/* =================================================
+              DIAGNOSTIC AREA
+              فقط برای پیدا کردن مشکل اتصال
+          ================================================= */}
+
+          {(vipDebug ||
+            vipDetail) && (
+
+            <div
+              style={{
+                marginTop: "18px",
+                padding: "14px",
+                borderRadius:
+                  "16px",
+                textAlign:
+                  "right",
+                direction:
+                  "rtl",
+                background:
+                  "rgba(165,139,91,0.08)",
+                border:
+                  "1px solid rgba(165,139,91,0.18)",
+              }}
+            >
+
+              <div
+                style={{
+                  fontSize:
+                    "11px",
+                  color:
+                    "#8a7348",
+                  marginBottom:
+                    "7px",
+                  fontWeight:
+                    600,
+                }}
+              >
+                اطلاعات تشخیصی
+              </div>
+
+
+              {vipDebug && (
+                <div
+                  style={{
+                    fontSize:
+                      "12px",
+                    lineHeight:
+                      1.8,
+                    color:
+                      "#353B32",
+                    direction:
+                      "ltr",
+                    textAlign:
+                      "left",
+                    wordBreak:
+                      "break-word",
+                  }}
+                >
+                  DEBUG: {vipDebug}
+                </div>
+              )}
+
+
+              {vipDetail && (
+                <div
+                  style={{
+                    marginTop:
+                      "5px",
+                    fontSize:
+                      "11px",
+                    lineHeight:
+                      1.8,
+                    color:
+                      "#73786f",
+                    direction:
+                      "ltr",
+                    textAlign:
+                      "left",
+                    wordBreak:
+                      "break-word",
+                  }}
+                >
+                  DETAIL: {vipDetail}
+                </div>
+              )}
+
+            </div>
+          )}
+
         </div>
+
       </div>
     );
   }
+
+
+  /* =====================================================
+     BOOKINGS
+  ===================================================== */
 
   if (
     activePanel ===
     "bookings"
   ) {
+
     return (
       <div className="inner-page">
+
         <button
           type="button"
           onClick={() =>
@@ -1933,6 +2178,7 @@ function VipPage({
         >
           ← بازگشت به VIP
         </button>
+
 
         <SectionHeaderCard
           kicker="VIP"
@@ -1941,34 +2187,49 @@ function VipPage({
           icon="calendar"
         />
 
+
         <div className="glass-list-card">
+
           <div className="list-icon">
             <Icon name="calendar" />
           </div>
 
+
           <div className="list-copy">
+
             <strong>
               {vipCustomer.bookingsCount
                 ? `${vipCustomer.bookingsCount} نوبت ثبت شده`
                 : "هنوز نوبتی ثبت نشده"}
             </strong>
 
+
             <span>
               سوابق نوبت‌ها در مرحله بعد از اتصال کامل
               سیستم رزرو نمایش داده خواهد شد.
             </span>
+
           </div>
+
         </div>
+
       </div>
     );
   }
+
+
+  /* =====================================================
+     PAYMENTS
+  ===================================================== */
 
   if (
     activePanel ===
     "payments"
   ) {
+
     return (
       <div className="inner-page">
+
         <button
           type="button"
           onClick={() =>
@@ -1980,6 +2241,7 @@ function VipPage({
         >
           ← بازگشت به VIP
         </button>
+
 
         <SectionHeaderCard
           kicker="VIP"
@@ -1988,32 +2250,47 @@ function VipPage({
           icon="card"
         />
 
+
         <div className="glass-list-card">
+
           <div className="list-icon">
             <Icon name="card" />
           </div>
 
+
           <div className="list-copy">
+
             <strong>
               پرداخت‌ها
             </strong>
+
 
             <span>
               سوابق پرداخت VIP در مرحله بعد از تکمیل اتصال
               اطلاعات پرداخت نمایش داده خواهد شد.
             </span>
+
           </div>
+
         </div>
+
       </div>
     );
   }
+
+
+  /* =====================================================
+     TOKENS
+  ===================================================== */
 
   if (
     activePanel ===
     "tokens"
   ) {
+
     return (
       <div className="inner-page">
+
         <button
           type="button"
           onClick={() =>
@@ -2026,12 +2303,14 @@ function VipPage({
           ← بازگشت به VIP
         </button>
 
+
         <SectionHeaderCard
           kicker="VIP TOKENS"
           title="توکن‌های تخفیف"
           description="توکن‌های اختصاصی شما در باشگاه VIP."
           icon="ticket"
         />
+
 
         <div
           className="glass-list-card"
@@ -2040,21 +2319,28 @@ function VipPage({
               "1px solid rgba(165, 139, 91, 0.25)",
           }}
         >
+
           <div className="list-icon">
             <Icon name="ticket" />
           </div>
 
+
           <div className="list-copy">
+
             <strong>
               توکن‌های VIP
             </strong>
+
 
             <span>
               توکن‌های اختصاصی شما در مرحله بعد از تکمیل
               API توکن‌ها در این قسمت نمایش داده می‌شوند.
             </span>
+
           </div>
+
         </div>
+
 
         <div
           style={{
@@ -2067,6 +2353,7 @@ function VipPage({
               "1px solid rgba(165, 139, 91, 0.15)",
           }}
         >
+
           <div
             style={{
               display: "flex",
@@ -2079,12 +2366,15 @@ function VipPage({
                 "7px",
             }}
           >
+
             <Icon name="spark" />
 
             <strong>
               تخفیف VIP
             </strong>
+
           </div>
+
 
           <span
             style={{
@@ -2096,17 +2386,26 @@ function VipPage({
             ایونت‌ها در ادامه به‌صورت امن از سمت سرور مدیریت
             خواهند شد.
           </span>
+
         </div>
+
       </div>
     );
   }
+
+
+  /* =====================================================
+     PROFILE
+  ===================================================== */
 
   if (
     activePanel ===
     "profile"
   ) {
+
     return (
       <div className="inner-page">
+
         <button
           type="button"
           onClick={() =>
@@ -2119,6 +2418,7 @@ function VipPage({
           ← بازگشت به VIP
         </button>
 
+
         <SectionHeaderCard
           kicker="PROFILE"
           title="پروفایل من"
@@ -2127,19 +2427,25 @@ function VipPage({
           status="عضویت VIP فعال است"
         />
 
+
         <div className="glass-list-card">
+
           <div className="list-icon">
             <Icon name="user" />
           </div>
 
+
           <div className="list-copy">
+
             <strong>
               {displayName}
             </strong>
 
+
             <span>
               وضعیت عضویت: فعال
             </span>
+
 
             {vipCustomer.mobile && (
               <span>
@@ -2147,6 +2453,7 @@ function VipPage({
                 {vipCustomer.mobile}
               </span>
             )}
+
 
             {typeof vipCustomer.bookingsCount ===
               "number" && (
@@ -2158,20 +2465,30 @@ function VipPage({
               </span>
             )}
 
+
             {vipCustomer.joinedAt && (
               <span>
                 تاریخ عضویت:{" "}
                 {vipCustomer.joinedAt}
               </span>
             )}
+
           </div>
+
         </div>
+
       </div>
     );
   }
 
+
+  /* =====================================================
+     VIP DASHBOARD
+  ===================================================== */
+
   return (
     <div className="inner-page">
+
       <button
         type="button"
         onClick={onBack}
@@ -2179,6 +2496,7 @@ function VipPage({
       >
         ← بازگشت
       </button>
+
 
       <SectionHeaderCard
         kicker="KAENATCHI"
@@ -2188,6 +2506,7 @@ function VipPage({
         status="عضویت VIP فعال است"
       />
 
+
       <div
         style={{
           display: "grid",
@@ -2196,6 +2515,7 @@ function VipPage({
           gap: "10px",
         }}
       >
+
         <button
           type="button"
           className="glass-list-card"
@@ -2206,22 +2526,29 @@ function VipPage({
           }
           style={vipTileStyle}
         >
+
           <div className="list-icon">
             <Icon name="calendar" />
           </div>
 
+
           <div className="list-copy">
+
             <strong>
               نوبت‌های من
             </strong>
+
 
             <span>
               {vipCustomer.bookingsCount
                 ? `${vipCustomer.bookingsCount} نوبت`
                 : "مشاهده نوبت‌ها"}
             </span>
+
           </div>
+
         </button>
+
 
         <button
           type="button"
@@ -2233,20 +2560,27 @@ function VipPage({
           }
           style={vipTileStyle}
         >
+
           <div className="list-icon">
             <Icon name="card" />
           </div>
 
+
           <div className="list-copy">
+
             <strong>
               پرداخت‌ها
             </strong>
 
+
             <span>
               سوابق پرداخت
             </span>
+
           </div>
+
         </button>
+
 
         <button
           type="button"
@@ -2258,20 +2592,27 @@ function VipPage({
           }
           style={vipTileStyle}
         >
+
           <div className="list-icon">
             <Icon name="ticket" />
           </div>
 
+
           <div className="list-copy">
+
             <strong>
               توکن‌ها
             </strong>
 
+
             <span>
               تخفیف‌های VIP
             </span>
+
           </div>
+
         </button>
+
 
         <button
           type="button"
@@ -2283,21 +2624,29 @@ function VipPage({
           }
           style={vipTileStyle}
         >
+
           <div className="list-icon">
             <Icon name="user" />
           </div>
 
+
           <div className="list-copy">
+
             <strong>
               پروفایل
             </strong>
 
+
             <span>
               اطلاعات حساب
             </span>
+
           </div>
+
         </button>
+
       </div>
+
 
       <div
         style={{
@@ -2310,6 +2659,7 @@ function VipPage({
             "1px solid rgba(165,139,91,0.16)",
         }}
       >
+
         <div
           style={{
             display: "flex",
@@ -2322,12 +2672,15 @@ function VipPage({
               "8px",
           }}
         >
+
           <Icon name="check" />
 
           <strong>
             عضویت فعال
           </strong>
+
         </div>
+
 
         <p
           style={{
@@ -2340,10 +2693,17 @@ function VipPage({
           اطلاعات این بخش بر اساس حساب واقعی شما نمایش داده
           می‌شود.
         </p>
+
       </div>
+
     </div>
   );
 }
+
+
+/* =========================================================
+   STYLES
+========================================================= */
 
 const backButtonStyle = {
   border: "none",
@@ -2370,6 +2730,11 @@ const vipTileStyle = {
     "flex-start",
 };
 
+
+/* =========================================================
+   MORE DETAIL
+========================================================= */
+
 function MoreDetail({
   title,
   icon,
@@ -2381,8 +2746,10 @@ function MoreDetail({
   description: string;
   onBack: () => void;
 }) {
+
   return (
     <div className="inner-page">
+
       <button
         type="button"
         onClick={onBack}
@@ -2390,6 +2757,7 @@ function MoreDetail({
       >
         ← بازگشت
       </button>
+
 
       <SectionHeaderCard
         kicker={
@@ -2413,36 +2781,51 @@ function MoreDetail({
         icon={icon}
       />
 
+
       <div className="glass-list-card">
+
         <div className="list-copy">
+
           <strong>
             {title}
           </strong>
+
 
           <span>
             این بخش به‌صورت اختصاصی برای محتوای {title}
             کائنات‌چی طراحی می‌شود.
           </span>
+
         </div>
+
       </div>
+
     </div>
   );
 }
+
+
+/* =========================================================
+   MORE PAGE
+========================================================= */
 
 function MorePage({
   onSearch,
 }: {
   onSearch: () => void;
 }) {
+
   const [selected, setSelected] =
     useState<
       (typeof moreItems)[number] | null
     >(null);
 
+
   if (
     selected?.id ===
     "vip"
   ) {
+
     return (
       <VipPage
         onBack={() =>
@@ -2452,7 +2835,9 @@ function MorePage({
     );
   }
 
+
   if (selected) {
+
     return (
       <MoreDetail
         title={selected.title}
@@ -2467,14 +2852,17 @@ function MorePage({
     );
   }
 
+
   return (
     <div className="inner-page">
+
       <SectionHeaderCard
         kicker="MORE"
         title="بیشتر"
         description="بخش‌های دیگر کائنات‌چی را از اینجا دنبال کن."
         icon="menu"
       />
+
 
       <button
         type="button"
@@ -2509,16 +2897,21 @@ function MorePage({
             "right",
         }}
       >
+
         <Icon name="search" />
 
         <span>
           جست‌وجو در کائنات‌چی...
         </span>
+
       </button>
 
+
       <div className="more-list">
+
         {moreItems.map(
           (item) => (
+
             <button
               key={item.id}
               type="button"
@@ -2539,6 +2932,7 @@ function MorePage({
                   "inherit",
               }}
             >
+
               <div className="list-icon">
                 <Icon
                   name={
@@ -2547,26 +2941,40 @@ function MorePage({
                 />
               </div>
 
+
               <div className="list-copy">
+
                 <strong>
                   {item.title}
                 </strong>
 
+
                 <span>
                   {item.description}
                 </span>
+
               </div>
+
 
               <div className="list-arrow">
                 <Icon name="arrow" />
               </div>
+
             </button>
+
           )
         )}
+
       </div>
+
     </div>
   );
 }
+
+
+/* =========================================================
+   BOTTOM NAV
+========================================================= */
 
 function BottomNav({
   active,
@@ -2577,8 +2985,10 @@ function BottomNav({
     section: Section
   ) => void;
 }) {
+
   return (
     <nav className="bottom-nav">
+
       <button
         type="button"
         className={`nav-item ${
@@ -2590,12 +3000,15 @@ function BottomNav({
           onChange("home")
         }
       >
+
         <span className="nav-icon">
           <Icon name="home" />
         </span>
 
         <span>خانه</span>
+
       </button>
+
 
       <button
         type="button"
@@ -2610,12 +3023,15 @@ function BottomNav({
           )
         }
       >
+
         <span className="nav-icon">
           <Icon name="spark" />
         </span>
 
         <span>خدمات</span>
+
       </button>
+
 
       <button
         type="button"
@@ -2628,44 +3044,66 @@ function BottomNav({
           onChange("more")
         }
       >
+
         <span className="nav-icon">
           <Icon name="menu" />
         </span>
 
         <span>بیشتر</span>
+
       </button>
+
     </nav>
   );
 }
 
+
+/* =========================================================
+   APP
+========================================================= */
+
 function App() {
+
   const [section, setSection] =
     useState<Section>("home");
 
+
   const [searchOpen, setSearchOpen] =
     useState(false);
+
 
   const [searchService, setSearchService] =
     useState<Service | null>(
       null
     );
 
+
   const openSearch = () => {
+
     setSearchService(null);
+
     setSearchOpen(true);
   };
 
+
   const closeSearch = () => {
+
     setSearchOpen(false);
+
     setSearchService(null);
   };
 
+
   if (searchOpen) {
+
     if (searchService) {
+
       return (
         <div className="app-shell">
+
           <div className="ambient ambient-one" />
           <div className="ambient ambient-two" />
+
 
           <ServiceDetail
             service={searchService}
@@ -2675,14 +3113,18 @@ function App() {
               )
             }
           />
+
         </div>
       );
     }
 
+
     return (
       <div className="app-shell">
+
         <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
+
 
         <SearchPage
           onBack={closeSearch}
@@ -2694,14 +3136,18 @@ function App() {
             )
           }
         />
+
       </div>
     );
   }
 
+
   return (
     <div className="app-shell">
+
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
+
 
       {section === "home" && (
         <HomePage
@@ -2709,9 +3155,11 @@ function App() {
         />
       )}
 
+
       {section === "services" && (
         <ServicesPage />
       )}
+
 
       {section === "more" && (
         <MorePage
@@ -2719,12 +3167,15 @@ function App() {
         />
       )}
 
+
       <BottomNav
         active={section}
         onChange={setSection}
       />
+
     </div>
   );
 }
+
 
 export default App;
