@@ -2321,6 +2321,35 @@ function VipPage({
         />
 
 
+
+        <div
+          style={{
+            marginBottom: "14px",
+            padding: "14px 16px",
+            borderRadius: "18px",
+            background: "rgba(165,139,91,0.08)",
+            border: "1px solid rgba(165,139,91,0.15)",
+            boxShadow: "0 10px 24px rgba(53,59,50,0.06)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "6px",
+              color: "#353B32",
+              fontWeight: 700,
+              fontSize: "14px",
+            }}
+          >
+            <Icon name="calendar" />
+            <strong>راهنمای نوبت‌های من</strong>
+          </div>
+          <span style={{ fontSize: "13px", lineHeight: 1.8, color: "#73786f" }}>
+            اینجا می‌توانید نوبت‌های ثبت‌شده خود را ببینید و وضعیت آن‌ها را پیگیری کنید.
+          </span>
+        </div>
         <div className="glass-list-card">
 
           <div className="list-icon">
@@ -2384,6 +2413,35 @@ function VipPage({
         />
 
 
+
+        <div
+          style={{
+            marginBottom: "14px",
+            padding: "14px 16px",
+            borderRadius: "18px",
+            background: "rgba(165,139,91,0.08)",
+            border: "1px solid rgba(165,139,91,0.15)",
+            boxShadow: "0 10px 24px rgba(53,59,50,0.06)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "6px",
+              color: "#353B32",
+              fontWeight: 700,
+              fontSize: "14px",
+            }}
+          >
+            <Icon name="card" />
+            <strong>راهنمای پرداخت‌ها</strong>
+          </div>
+          <span style={{ fontSize: "13px", lineHeight: 1.8, color: "#73786f" }}>
+            اینجا سوابق پرداخت‌های شما در کائنات‌چی نمایش داده می‌شود.
+          </span>
+        </div>
         <div className="glass-list-card">
 
           <div className="list-icon">
@@ -2445,6 +2503,35 @@ function VipPage({
         />
 
 
+
+        <div
+          style={{
+            marginBottom: "14px",
+            padding: "14px 16px",
+            borderRadius: "18px",
+            background: "rgba(165,139,91,0.08)",
+            border: "1px solid rgba(165,139,91,0.15)",
+            boxShadow: "0 10px 24px rgba(53,59,50,0.06)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "6px",
+              color: "#353B32",
+              fontWeight: 700,
+              fontSize: "14px",
+            }}
+          >
+            <Icon name="ticket" />
+            <strong>تخفیف VIP</strong>
+          </div>
+          <span style={{ fontSize: "13px", lineHeight: 1.8, color: "#73786f" }}>
+            توکن‌های VIP برای استفاده از تخفیف‌های اختصاصی انرژی‌خوانی، کلاس‌ها و ایونت‌ها هستند.
+          </span>
+        </div>
         <div style={{ display: "grid", gap: "12px" }}>
           {vipTokens.length > 0 ? (
             vipTokens.map((token, index) => {
@@ -2590,7 +2677,36 @@ function VipPage({
         />
 
 
-        <div className="glass-list-card">
+        <div 
+        <div
+          style={{
+            marginBottom: "14px",
+            padding: "14px 16px",
+            borderRadius: "18px",
+            background: "rgba(165,139,91,0.08)",
+            border: "1px solid rgba(165,139,91,0.15)",
+            boxShadow: "0 10px 24px rgba(53,59,50,0.06)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "6px",
+              color: "#353B32",
+              fontWeight: 700,
+              fontSize: "14px",
+            }}
+          >
+            <Icon name="user" />
+            <strong>پروفایل VIP</strong>
+          </div>
+          <span style={{ fontSize: "13px", lineHeight: 1.8, color: "#73786f" }}>
+            اینجا اطلاعات حساب و وضعیت عضویت VIP شما نمایش داده می‌شود.
+          </span>
+        </div>
+className="glass-list-card">
 
           <div className="list-icon">
             <Icon name="user" />
