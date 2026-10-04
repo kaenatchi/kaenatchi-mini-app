@@ -646,6 +646,7 @@ button:focus-visible {
 }
 
 .hero-content {
+  position: absolute;
   isolation: isolate;
 }
 
