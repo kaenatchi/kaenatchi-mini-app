@@ -2389,7 +2389,7 @@ function VipPage({
                       <strong>{code || "توکن VIP"}</strong>
                       <span>
                         {discount !== ""
-                          ? `تخفیف ${String(discount).replace(/%/g, "")}%`
+                          ? `تخفیف ${String(discount).replace(/%/g, "").trim()}٪`
                           : "توکن اختصاصی VIP"}
                       </span>
                     </div>
