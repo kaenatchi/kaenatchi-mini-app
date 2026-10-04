@@ -69,6 +69,7 @@ type VipApiResponse = {
   history?: unknown[][];
   payments?: unknown[][];
   tokens?: unknown[][];
+  needsConnectionCode?: boolean;
 };
 
 /*
@@ -1618,171 +1619,101 @@ function normalizeVipCustomer(
    LOAD TELEGRAM IDENTITY
 ========================================================= */
 
-async function loadTelegramIdentity(): Promise<VipApiResponse> {
-
+async function getTelegramInitData(): Promise<string | null> {
   try {
-
     await loadTelegramWebAppScript();
-
-  } catch (error) {
-
-    return {
-      success: false,
-      debug: "SDK_LOAD_ERROR",
-      detail:
-        error instanceof Error
-          ? error.message
-          : String(error),
-      message:
-        "اتصال به محیط تلگرام برقرار نشد. لطفاً VIP را از داخل تلگرام باز کن.",
-    };
+  } catch {
+    return null;
   }
 
-
-  const telegramWebApp =
-    window.Telegram?.WebApp;
-
-
-  if (!telegramWebApp) {
-
-    return {
-      success: false,
-      debug: "WEBAPP_UNAVAILABLE",
-      message:
-        "این بخش باید از داخل تلگرام باز شود.",
-    };
-  }
-
+  const telegramWebApp = window.Telegram?.WebApp;
+  if (!telegramWebApp) return null;
 
   try {
-
     telegramWebApp.ready?.();
-
     telegramWebApp.expand?.();
+  } catch {}
 
-  } catch (error) {
+  return telegramWebApp.initData || null;
+}
 
-    /*
-     * ready و expand اختیاری هستند.
-     * در صورت خطا، ادامه می‌دهیم.
-     */
-  }
-
-
-  const initData =
-    telegramWebApp.initData;
-
+async function callVipApi(
+  action: "load" | "connect",
+  connectionCode?: string
+): Promise<VipApiResponse> {
+  const initData = await getTelegramInitData();
 
   if (!initData) {
-
     return {
       success: false,
-      debug: "INIT_DATA_EMPTY",
+      debug: "TELEGRAM_AUTH_UNAVAILABLE",
       message:
-        "اطلاعات ورود تلگرام دریافت نشد. لطفاً VIP را مستقیماً از داخل تلگرام باز کن.",
+        "لطفاً این بخش را مستقیماً از داخل تلگرام باز کن تا ورود امن انجام شود.",
     };
   }
 
-
   try {
-
-    const response =
-      await fetch(
-        VIP_API_URL,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "text/plain;charset=UTF-8",
-          },
-
-          body: JSON.stringify({
-            initData,
-          }),
-        }
-      );
-
+    const response = await fetch(VIP_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=UTF-8",
+      },
+      body: JSON.stringify({
+        initData,
+        action,
+        ...(action === "connect"
+          ? { connectionCode: connectionCode?.trim().toUpperCase() }
+          : {}),
+      }),
+    });
 
     let data: VipApiResponse;
 
-
     try {
-
-      data =
-        (await response.json()) as VipApiResponse;
-
-    } catch (error) {
-
+      data = (await response.json()) as VipApiResponse;
+    } catch {
       return {
         success: false,
         debug: "INVALID_SERVER_RESPONSE",
-        detail:
-          `HTTP ${response.status}`,
-        message:
-          "پاسخ قابل خواندن از سامانه VIP دریافت نشد.",
+        message: "پاسخ قابل خواندن از سامانه VIP دریافت نشد.",
       };
     }
 
-
-    /*
-     * اگر customer برگشته باشد،
-     * آن را به فرمت استاندارد تبدیل می‌کنیم.
-     */
-
     if (data.customer) {
-
-      data.customer =
-        normalizeVipCustomer(
-          data.customer
-        );
+      data.customer = normalizeVipCustomer(data.customer);
     }
 
-
-    /*
-     * برای خطای HTTP هم اطلاعات debug را نگه می‌داریم.
-     */
-
     if (!response.ok) {
-
       return {
         ...data,
-
         success: false,
-
-        debug:
-          data.debug ||
-          `HTTP_${response.status}`,
-
-        detail:
-          data.detail ||
-          data.error ||
-          `HTTP status ${response.status}`,
-
         message:
           data.message ||
+          data.error ||
           "امکان دریافت اطلاعات VIP وجود ندارد.",
       };
     }
 
-
     return data;
-
-  } catch (error) {
-
+  } catch {
     return {
       success: false,
       debug: "FETCH_ERROR",
-      detail:
-        error instanceof Error
-          ? error.message
-          : String(error),
       message:
         "ارتباط با سامانه VIP برقرار نشد. لطفاً دوباره تلاش کن.",
     };
   }
 }
 
+async function loadTelegramIdentity(): Promise<VipApiResponse> {
+  return callVipApi("load");
+}
+
+async function connectTelegramVip(
+  connectionCode: string
+): Promise<VipApiResponse> {
+  return callVipApi("connect", connectionCode);
+}
 
 /* =========================================================
    VIP PAGE
@@ -1817,14 +1748,17 @@ function VipPage({
   const [vipError, setVipError] =
     useState("");
 
+  const [needsConnectionCode, setNeedsConnectionCode] =
+    useState(false);
 
-  const [vipDebug, setVipDebug] =
+  const [connectionCode, setConnectionCode] =
     useState("");
 
+  const [connecting, setConnecting] =
+    useState(false);
 
-  const [vipDetail, setVipDetail] =
+  const [connectionError, setConnectionError] =
     useState("");
-
 
   useEffect(() => {
 
@@ -1845,39 +1779,22 @@ function VipPage({
 
         setLoading(false);
 
-
-        /*
-         * نگه داشتن اطلاعات تشخیصی
-         */
-
-        setVipDebug(
-          result.debug || ""
-        );
-
-
-        setVipDetail(
-          result.detail || ""
-        );
-
-
-        if (
-          result.success &&
-          result.customer
-        ) {
-
-          setVipCustomer(
-            result.customer
-          );
-
+        if (result.success && result.customer) {
+          setVipCustomer(result.customer);
+          setNeedsConnectionCode(false);
           setVipError("");
-
           return;
         }
 
+        if (result.needsConnectionCode) {
+          setVipCustomer(null);
+          setNeedsConnectionCode(true);
+          setVipError("");
+          return;
+        }
 
         setVipCustomer(null);
-
-
+        setNeedsConnectionCode(false);
         setVipError(
           result.message ||
             "عضویت VIP شما فعال نیست."
@@ -1985,175 +1902,240 @@ function VipPage({
 
 
   /* =====================================================
-     ACCESS DENIED
+     CONNECTION CODE / ACCESS DENIED
   ===================================================== */
 
-  if (
-    !vipCustomer ||
-    !vipActive
-  ) {
+  if (needsConnectionCode) {
+    const submitConnectionCode = async () => {
+      const normalizedCode = connectionCode.trim().toUpperCase();
+
+      if (!normalizedCode) {
+        setConnectionError("لطفاً کد اتصال VIP را وارد کن.");
+        return;
+      }
+
+      setConnecting(true);
+      setConnectionError("");
+
+      const result = await connectTelegramVip(normalizedCode);
+
+      if (result.success && result.customer) {
+        setVipCustomer(result.customer);
+        setNeedsConnectionCode(false);
+        setConnectionCode("");
+        setConnectionError("");
+        setConnecting(false);
+        return;
+      }
+
+      setConnectionError(
+        result.message ||
+          "این کد اتصال معتبر نیست یا قبلاً استفاده شده است."
+      );
+      setConnecting(false);
+    };
 
     return (
       <div className="inner-page">
-
-        <button
-          type="button"
-          onClick={onBack}
-          style={backButtonStyle}
-        >
+        <button type="button" onClick={onBack} style={backButtonStyle}>
           ← بازگشت
         </button>
 
+        <SectionHeaderCard
+          kicker="KAENATCHI VIP"
+          title="ورود به باشگاه VIP"
+          description="برای اتصال حساب تلگرام شما به عضویت VIP، کد اتصال یک‌بارمصرف خود را وارد کنید."
+          icon="crown"
+          status="یک بار اتصال؛ ورودهای بعدی خودکار است"
+        />
+
+        <div
+          className="glass-list-card"
+          style={{ display: "block", padding: "20px" }}
+        >
+          <div
+            style={{
+              width: "58px",
+              height: "58px",
+              margin: "0 auto 16px",
+              borderRadius: "20px",
+              display: "grid",
+              placeItems: "center",
+              background: "rgba(165,139,91,0.10)",
+              color: "#8a7348",
+            }}
+          >
+            <Icon name="ticket" />
+          </div>
+
+          <div style={{ textAlign: "center", marginBottom: "18px" }}>
+            <strong
+              style={{
+                display: "block",
+                fontSize: "16px",
+                color: "#353B32",
+                marginBottom: "8px",
+              }}
+            >
+              کد اتصال VIP
+            </strong>
+
+            <span
+              style={{
+                display: "block",
+                fontSize: "12px",
+                lineHeight: 1.9,
+                color: "#73786f",
+              }}
+            >
+              این کد را از مدیریت کائنات‌چی دریافت کن.
+              <br />
+              نیازی به وارد کردن Telegram ID یا username نیست.
+            </span>
+          </div>
+
+          <input
+            value={connectionCode}
+            onChange={(event) => {
+              setConnectionCode(
+                event.target.value.replace(/\s/g, "").toUpperCase()
+              );
+              setConnectionError("");
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void submitConnectionCode();
+              }
+            }}
+            inputMode="text"
+            autoCapitalize="characters"
+            autoComplete="one-time-code"
+            placeholder="مثلاً VIP-CON-7K4P2M"
+            aria-label="کد اتصال VIP"
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              border: "1px solid rgba(53,59,50,0.13)",
+              borderRadius: "16px",
+              padding: "15px",
+              background: "rgba(255,255,255,0.78)",
+              color: "#353B32",
+              fontFamily: "inherit",
+              fontSize: "15px",
+              textAlign: "center",
+              direction: "ltr",
+              outline: "none",
+              boxShadow: "0 7px 20px rgba(53,59,50,0.06)",
+            }}
+          />
+
+          {connectionError && (
+            <div
+              style={{
+                marginTop: "10px",
+                padding: "10px 12px",
+                borderRadius: "13px",
+                background: "rgba(150,70,60,0.07)",
+                color: "#8d5149",
+                fontSize: "12px",
+                lineHeight: 1.8,
+                textAlign: "center",
+              }}
+            >
+              {connectionError}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => void submitConnectionCode()}
+            disabled={connecting}
+            style={{
+              width: "100%",
+              marginTop: "13px",
+              border: "none",
+              borderRadius: "16px",
+              padding: "14px 16px",
+              background:
+                connecting
+                  ? "rgba(36,99,71,0.55)"
+                  : "linear-gradient(135deg,#174b38,#2c7658)",
+              color: "#fff",
+              fontFamily: "inherit",
+              fontSize: "14px",
+              fontWeight: 600,
+              cursor: connecting ? "default" : "pointer",
+              boxShadow: "0 10px 24px rgba(23,75,56,0.16)",
+            }}
+          >
+            {connecting ? "در حال اتصال..." : "🔗 اتصال و ورود"}
+          </button>
+
+          <div
+            style={{
+              marginTop: "14px",
+              padding: "12px 13px",
+              borderRadius: "14px",
+              background: "rgba(53,59,50,0.045)",
+              color: "#73786f",
+              fontSize: "11px",
+              lineHeight: 1.9,
+              textAlign: "center",
+            }}
+          >
+            کد اتصال فقط برای اولین اتصال این حساب لازم است و پس از استفاده دیگر قابل استفاده نخواهد بود.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!vipCustomer || !vipActive) {
+    return (
+      <div className="inner-page">
+        <button type="button" onClick={onBack} style={backButtonStyle}>
+          ← بازگشت
+        </button>
 
         <SectionHeaderCard
           kicker="KAENATCHI VIP"
-          title="عضویت VIP"
+          title="دسترسی VIP"
           description="دسترسی این بخش فقط برای اعضای فعال VIP کائنات‌چی امکان‌پذیر است."
           icon="crown"
           status="عضویت VIP فعال نیست"
         />
 
-
         <div
           className="glass-list-card"
-          style={{
-            display: "block",
-            textAlign:
-              "center",
-          }}
+          style={{ display: "block", textAlign: "center" }}
         >
-
           <div
             style={{
               width: "58px",
               height: "58px",
-              margin:
-                "0 auto 14px",
-              borderRadius:
-                "20px",
+              margin: "0 auto 14px",
+              borderRadius: "20px",
               display: "grid",
-              placeItems:
-                "center",
-              background:
-                "rgba(53,59,50,0.07)",
-              color:
-                "#353B32",
+              placeItems: "center",
+              background: "rgba(53,59,50,0.07)",
+              color: "#353B32",
             }}
           >
             <Icon name="crown" />
           </div>
 
-
           <div className="list-copy">
-
-            <strong>
-              دسترسی VIP فعال نیست
-            </strong>
-
-
+            <strong>دسترسی VIP فعال نیست</strong>
             <span>
               {vipError ||
                 "در حال حاضر این حساب عضو فعال باشگاه VIP نیست."}
             </span>
-
           </div>
-
-
-          {/* =================================================
-              DIAGNOSTIC AREA
-              فقط برای پیدا کردن مشکل اتصال
-          ================================================= */}
-
-          {(vipDebug ||
-            vipDetail) && (
-
-            <div
-              style={{
-                marginTop: "18px",
-                padding: "14px",
-                borderRadius:
-                  "16px",
-                textAlign:
-                  "right",
-                direction:
-                  "rtl",
-                background:
-                  "rgba(165,139,91,0.08)",
-                border:
-                  "1px solid rgba(165,139,91,0.18)",
-              }}
-            >
-
-              <div
-                style={{
-                  fontSize:
-                    "11px",
-                  color:
-                    "#8a7348",
-                  marginBottom:
-                    "7px",
-                  fontWeight:
-                    600,
-                }}
-              >
-                اطلاعات تشخیصی
-              </div>
-
-
-              {vipDebug && (
-                <div
-                  style={{
-                    fontSize:
-                      "12px",
-                    lineHeight:
-                      1.8,
-                    color:
-                      "#353B32",
-                    direction:
-                      "ltr",
-                    textAlign:
-                      "left",
-                    wordBreak:
-                      "break-word",
-                  }}
-                >
-                  DEBUG: {vipDebug}
-                </div>
-              )}
-
-
-              {vipDetail && (
-                <div
-                  style={{
-                    marginTop:
-                      "5px",
-                    fontSize:
-                      "11px",
-                    lineHeight:
-                      1.8,
-                    color:
-                      "#73786f",
-                    direction:
-                      "ltr",
-                    textAlign:
-                      "left",
-                    wordBreak:
-                      "break-word",
-                  }}
-                >
-                  DETAIL: {vipDetail}
-                </div>
-              )}
-
-            </div>
-          )}
-
         </div>
-
       </div>
     );
   }
-
 
   /* =====================================================
      BOOKINGS
