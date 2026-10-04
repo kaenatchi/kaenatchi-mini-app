@@ -657,10 +657,6 @@ function HomePage({
         <section className="welcome-section home-welcome-top">
           <h2>به کائنات‌چی خوش آمدی 🌿</h2>
 
-          <p>
-            از خدمات و انرژی‌خوانی تا کلاس‌ها، ایونت‌ها و باشگاه
-            VIP؛ مسیرت را از منوی پایین پیدا کن.
-          </p>
         </section>
 
         <button
