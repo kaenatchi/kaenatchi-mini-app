@@ -650,7 +650,7 @@ function HomePage({
         </div>
       </header>
 
-      <main className="main-content">
+      <main className="main-content home-page">
         <section className="welcome-section home-welcome-top">
           <h2>به کائنات‌چی خوش آمدی 🌿</h2>
 
