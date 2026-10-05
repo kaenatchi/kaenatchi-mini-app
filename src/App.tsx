@@ -3801,167 +3801,199 @@ function MorePage({
 }: {
   onSearch: () => void;
 }) {
-
   const [selected, setSelected] =
-    useState<
-      (typeof moreItems)[number] | null
-    >(null);
+    useState<(typeof moreItems)[number] | null>(null);
+  const [vipData, setVipData] = useState<VipApiResponse | null>(null);
+  const [clock, setClock] = useState(new Date());
 
+  useEffect(() => {
+    let active = true;
+    loadTelegramIdentity()
+      .then((data) => {
+        if (active) setVipData(data);
+      })
+      .catch(() => {
+        if (active) setVipData(null);
+      });
 
-  if (
-    selected?.id ===
-    "vip"
-  ) {
+    const timer = window.setInterval(() => {
+      if (active) setClock(new Date());
+    }, 30000);
 
-    return (
-      <VipPage
-        onBack={() =>
-          setSelected(null)
-        }
-      />
-    );
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  if (selected?.id === "vip") {
+    return <VipPage onBack={() => setSelected(null)} />;
   }
 
-
   if (selected) {
-
     return (
       <MoreDetail
         title={selected.title}
         icon={selected.icon}
-        description={
-          selected.description
-        }
-        onBack={() =>
-          setSelected(null)
-        }
+        description={selected.description}
+        onBack={() => setSelected(null)}
       />
     );
   }
 
+  const customer = vipData?.customer;
+  const isVip =
+    customer?.vipStatus?.trim().toLowerCase() === "active" ||
+    customer?.vipStatus?.trim() === "فعال";
+
+  const displayName = isVip
+    ? [customer?.firstName, customer?.lastName].filter(Boolean).join(" ") || "عضو VIP"
+    : "کاربر مهمان";
+
+  const time = new Intl.DateTimeFormat("fa-IR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(clock);
+
+  const jalaliDate = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(clock);
+
+  const requestVip = () => {
+    const message = encodeURIComponent(
+      "سلام، برای عضویت در باشگاه VIP کائنات‌چی درخواست عضویت دارم."
+    );
+    window.location.href = "https://t.me/AD_Kaenatchi?text=" + message;
+  };
+
+  const openVip = () =>
+    setSelected({
+      id: "vip",
+      title: "VIP کائنات‌چی",
+      icon: "crown",
+      description: "باشگاه ویژه کائنات‌چی",
+    });
 
   return (
-    <div className="inner-page">
+    <div className="inner-page more-dashboard">
+      <section className={"more-welcome-card " + (isVip ? "is-vip" : "is-guest")}>
+        <div className="more-welcome-orbit orbit-one" />
+        <div className="more-welcome-orbit orbit-two" />
 
-      <SectionHeaderCard
-        kicker="MORE"
-        title="بیشتر"
-        description="بخش‌های دیگر کائنات‌چی را از اینجا دنبال کن."
-        icon="dots"
-      />
+        <div className="more-welcome-top">
+          <div className="more-welcome-copy">
+            <span className="more-welcome-kicker">
+              {isVip ? "VIP MEMBER" : "KAENATCHI"}
+            </span>
+            <strong>
+              {"خوش اومدی" + (isVip ? "، " + displayName : " 🌿")}
+            </strong>
+            <div className="more-status-line">
+              <span className={"more-status-dot " + (isVip ? "vip" : "guest")} />
+              <span>{isVip ? "عضو باشگاه VIP" : "کاربر مهمان"}</span>
+            </div>
+          </div>
 
+          <button
+            type="button"
+            className={"more-status-button " + (isVip ? "vip" : "guest")}
+            onClick={openVip}
+            aria-label={isVip ? "وضعیت عضویت VIP" : "وضعیت عضویت مهمان"}
+          >
+            <span />
+          </button>
+        </div>
 
-      <button
-        type="button"
-        onClick={onSearch}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems:
-            "center",
-          gap: "10px",
-          border:
-            "1px solid rgba(53,59,50,0.1)",
-          borderRadius:
-            "18px",
-          padding:
-            "13px 15px",
-          marginBottom:
-            "14px",
-          background:
-            "rgba(255,255,255,0.62)",
-          color:
-            "#73786f",
-          fontFamily:
-            "inherit",
-          fontSize:
-            "13px",
-          cursor:
-            "pointer",
-          boxShadow:
-            "0 7px 20px rgba(53,59,50,0.07)",
-          textAlign:
-            "right",
-        }}
-      >
+        <div className="more-welcome-info">
+          <div>
+            <span>ساعت</span>
+            <strong>{time}</strong>
+          </div>
+          <div>
+            <span>امروز</span>
+            <strong>{jalaliDate}</strong>
+          </div>
+          {isVip && customer?.joinedAt && (
+            <div>
+              <span>عضو از</span>
+              <strong>{customer.joinedAt}</strong>
+            </div>
+          )}
+        </div>
+      </section>
 
+      {!isVip && (
+        <section className="more-vip-invite">
+          <div className="more-vip-invite-icon">✦</div>
+          <div className="more-vip-invite-copy">
+            <span>باشگاه اختصاصی کائنات‌چی</span>
+            <strong>یک قدم تا دنیای VIP</strong>
+            <p>
+              برای آشنایی و درخواست عضویت، درخواستت را از طریق تلگرام برای کائنات‌چی ارسال کن.
+            </p>
+          </div>
+          <button type="button" onClick={requestVip}>
+            <span>⭐ درخواست عضویت VIP</span>
+            <Icon name="arrow" />
+          </button>
+        </section>
+      )}
+
+      {isVip && (
+        <button type="button" className="more-vip-active-card" onClick={openVip}>
+          <div className="more-vip-active-symbol">✦</div>
+          <div>
+            <span>عضویت فعال</span>
+            <strong>ورود به باشگاه VIP</strong>
+          </div>
+          <Icon name="arrow" />
+        </button>
+      )}
+
+      <button type="button" className="more-search-card" onClick={onSearch}>
         <Icon name="search" />
-
-        <span>
-          جست‌وجو در کائنات‌چی...
-        </span>
-
+        <span>جست‌وجو در کائنات‌چی...</span>
       </button>
 
-
-      <div className="more-list">
-
-        {moreItems.map(
-          (item) => (
-
-            <button
-              key={item.id}
-              type="button"
-              className="glass-list-card"
-              onClick={() =>
-                setSelected(
-                  item
-                )
-              }
-              style={{
-                width: "100%",
-                border: "none",
-                textAlign:
-                  "right",
-                cursor:
-                  "pointer",
-                fontFamily:
-                  "inherit",
-              }}
-            >
-
-              <div className="list-icon">
-                <Icon
-                  name={
-                    item.icon
-                  }
-                />
-              </div>
-
-
-              <div className="list-copy">
-
-                <strong>
-                  {item.title}
-                </strong>
-
-
-                <span>
-                  {item.description}
-                </span>
-
-              </div>
-
-
-              <div className="list-arrow">
-                <Icon name="arrow" />
-              </div>
-
-            </button>
-
-          )
-        )}
-
+      <div className="more-dashboard-heading">
+        <span>KAENATCHI</span>
+        <strong>همه‌چیز در یک نگاه</strong>
       </div>
 
+      <div className="more-list">
+        {moreItems.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className="glass-list-card"
+            onClick={() => setSelected(item)}
+            style={{
+              width: "100%",
+              border: "none",
+              textAlign: "right",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            <div className="list-icon">
+              <Icon name={item.icon} />
+            </div>
+            <div className="list-copy">
+              <strong>{item.title}</strong>
+              <span>{item.description}</span>
+            </div>
+            <div className="list-arrow">
+              <Icon name="arrow" />
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
-
-
-/* =========================================================
-   BOTTOM NAV
-========================================================= */
 
 function BottomNav({
   active,
