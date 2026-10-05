@@ -464,6 +464,18 @@ function Icon({ name }: { name: IconName }) {
   }
 }
 
+function getCurrentJalaliYear() {
+  try {
+    const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+      year: "numeric",
+    }).formatToParts(new Date());
+
+    return parts.find((part) => part.type === "year")?.value ?? "۱۴۰۵";
+  } catch {
+    return "۱۴۰۵";
+  }
+}
+
 function getTodayJalali() {
   try {
     const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
@@ -628,6 +640,17 @@ function SectionHeaderCard({
   );
 }
 
+function AppFooter() {
+  const year = getCurrentJalaliYear();
+
+  return (
+    <footer className="app-footer" aria-label="پاورقی کائنات‌چی">
+      <span>کائنات‌چی · © {year}</span>
+      <span>تمامی حقوق محفوظ است.</span>
+    </footer>
+  );
+}
+
 function HomePage({
   onSearch,
   onOpenVip,
@@ -640,17 +663,6 @@ function HomePage({
   return (
     <>
       <header className="topbar home-topbar">
-        <div className="home-date-wrap">
-          <div className="date-pill">
-            <span className="date-dot" />
-            {today}
-          </div>
-        </div>
-
-        <div className="home-brand-inline" aria-label="کائنات‌چی">
-          کائنات‌چی
-        </div>
-
         <div className="home-top-actions">
           <button
             type="button"
@@ -670,6 +682,17 @@ function HomePage({
             <span className="vip-top-symbol">✦</span>
             <span>VIP</span>
           </button>
+        </div>
+
+        <div className="home-brand-inline" aria-label="کائنات‌چی">
+          کائنات‌چی
+        </div>
+
+        <div className="home-date-wrap">
+          <div className="date-pill">
+            <span className="date-dot" />
+            {today}
+          </div>
         </div>
       </header>
 
@@ -3947,10 +3970,11 @@ function App() {
 
   if (vipOpen) {
     return (
-      <div className="app-shell">
+      <div className="app-shell app-shell-special">
         <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
         <VipPage onBack={() => setVipOpen(false)} />
+        <AppFooter />
       </div>
     );
   }
@@ -3958,25 +3982,27 @@ function App() {
   if (searchOpen) {
     if (searchService) {
       return (
-        <div className="app-shell">
+        <div className="app-shell app-shell-special">
           <div className="ambient ambient-one" />
           <div className="ambient ambient-two" />
           <ServiceDetail
             service={searchService}
             onBack={() => setSearchService(null)}
           />
+          <AppFooter />
         </div>
       );
     }
 
     return (
-      <div className="app-shell">
+      <div className="app-shell app-shell-special">
         <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
         <SearchPage
           onBack={closeSearch}
           onOpenService={(service) => setSearchService(service)}
         />
+        <AppFooter />
       </div>
     );
   }
@@ -4008,6 +4034,8 @@ function App() {
 
         {section === "more" && <MorePage onSearch={openSearch} />}
       </div>
+
+      <AppFooter />
 
       <BottomNav
         active={section}
