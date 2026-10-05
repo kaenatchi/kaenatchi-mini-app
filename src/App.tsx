@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "react";
 
 type Section = "home" | "services" | "selected" | "more";
 
@@ -3895,17 +3895,29 @@ function App() {
     const nextIndex = sectionOrder.indexOf(nextSection);
 
     setNavDirection(nextIndex > currentIndex ? "forward" : "backward");
-
-    // Every main section is a fresh navigation destination.
-    // Never carry the previous section's vertical scroll position into it.
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    }
-
     setSection(nextSection);
   };
+
+  // Reset scroll after React commits the new section. This prevents the browser
+  // from carrying the previous section's document position into the new page.
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const resetScroll = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+
+    resetScroll();
+
+    const frame = window.requestAnimationFrame(() => {
+      resetScroll();
+      window.setTimeout(resetScroll, 0);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [section]);
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     if (event.touches.length !== 1) {
