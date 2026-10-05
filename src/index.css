@@ -3542,3 +3542,62 @@ button {
     animation: none;
   }
 }
+
+
+/* --------------------------------------------------
+   MORE — PERSONAL DASHBOARD
+-------------------------------------------------- */
+.more-dashboard { padding-top: 2px; }
+.more-welcome-card {
+  position: relative; overflow: hidden; padding: 22px 19px 18px; margin-bottom: 13px;
+  border-radius: 28px; color: #fff;
+  background: radial-gradient(circle at 12% 15%, rgba(216,197,155,0.13), transparent 28%), linear-gradient(145deg, #353b32, #214c38 78%);
+  box-shadow: 0 20px 42px rgba(23,75,56,0.16), inset 0 1px 0 rgba(255,255,255,0.08); isolation: isolate;
+}
+.more-welcome-card.is-vip { background: radial-gradient(circle at 86% 16%, rgba(216,197,155,0.2), transparent 30%), linear-gradient(145deg, #353b32, #284d3b 72%); }
+.more-welcome-top { position: relative; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+.more-welcome-copy { min-width: 0; display: flex; flex-direction: column; }
+.more-welcome-kicker { margin-bottom: 5px; color: rgba(216,197,155,0.82); font-size: 8px; font-weight: 850; letter-spacing: 1.7px; }
+.more-welcome-copy > strong { color: #fff; font-size: 21px; line-height: 1.55; font-weight: 650; }
+.more-status-line { display: flex; align-items: center; gap: 7px; margin-top: 6px; color: rgba(255,255,255,0.7); font-size: 10px; }
+.more-status-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #d8c59b; box-shadow: 0 0 0 4px rgba(216,197,155,0.08), 0 0 13px rgba(216,197,155,0.32); animation: more-status-breathe 2.8s ease-in-out infinite; }
+.more-status-dot.vip { background: #d8c59b; box-shadow: 0 0 0 4px rgba(216,197,155,0.1), 0 0 17px rgba(216,197,155,0.42); }
+.more-status-button { width: 48px; height: 48px; flex: 0 0 48px; display: grid; place-items: center; border: 1px solid rgba(216,197,155,0.22); border-radius: 50%; background: rgba(255,255,255,0.055); box-shadow: inset 0 0 0 6px rgba(255,255,255,0.025), 0 8px 20px rgba(0,0,0,0.08); cursor: pointer; }
+.more-status-button span { width: 15px; height: 15px; border-radius: 50%; background: #d8c59b; box-shadow: 0 0 0 5px rgba(216,197,155,0.1), 0 0 20px rgba(216,197,155,0.5); animation: more-status-breathe 2.8s ease-in-out infinite; }
+.more-status-button:active { transform: scale(0.94); }
+.more-welcome-info { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-top: 21px; }
+.more-welcome-info > div { min-width: 0; padding: 10px 11px; border: 1px solid rgba(255,255,255,0.075); border-radius: 15px; background: rgba(255,255,255,0.055); }
+.more-welcome-info > div:last-child { grid-column: 1 / -1; }
+.more-welcome-info span { display: block; margin-bottom: 3px; color: rgba(255,255,255,0.48); font-size: 8px; }
+.more-welcome-info strong { display: block; overflow: hidden; color: rgba(255,255,255,0.92); font-size: 11px; font-weight: 650; line-height: 1.7; text-overflow: ellipsis; white-space: nowrap; }
+.more-welcome-orbit { position: absolute; z-index: 1; border: 1px solid rgba(216,197,155,0.08); border-radius: 50%; pointer-events: none; }
+.more-welcome-orbit.orbit-one { width: 190px; height: 190px; top: -118px; left: -74px; }
+.more-welcome-orbit.orbit-two { width: 112px; height: 112px; right: -46px; bottom: -63px; }
+.more-vip-invite { display: grid; grid-template-columns: 45px minmax(0,1fr); gap: 10px 12px; align-items: center; margin-bottom: 13px; padding: 16px; border: 1px solid rgba(165,139,91,0.2); border-radius: 23px; background: radial-gradient(circle at 8% 20%, rgba(216,197,155,0.12), transparent 34%), linear-gradient(145deg, rgba(255,250,239,0.82), rgba(247,241,224,0.48)); box-shadow: 0 13px 30px rgba(165,139,91,0.07), inset 0 1px 0 rgba(255,255,255,0.85); }
+.more-vip-invite-icon { width: 45px; height: 45px; display: grid; place-items: center; border-radius: 15px; color: #a58b5b; background: rgba(165,139,91,0.11); font-size: 21px; }
+.more-vip-invite-copy { min-width: 0; }
+.more-vip-invite-copy span { display: block; color: #a58b5b; font-size: 8px; font-weight: 850; letter-spacing: 0.7px; }
+.more-vip-invite-copy strong { display: block; margin-top: 2px; color: var(--green-dark); font-size: 15px; }
+.more-vip-invite-copy p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.8; }
+.more-vip-invite > button { grid-column: 1 / -1; min-height: 43px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 13px; border: 1px solid rgba(36,99,71,0.12); border-radius: 15px; background: #246347; color: #fff; font-family: inherit; font-size: 11px; font-weight: 800; box-shadow: 0 9px 20px rgba(36,99,71,0.14); cursor: pointer; }
+.more-vip-invite > button svg { width: 17px; height: 17px; }
+.more-vip-active-card { width: 100%; display: flex; align-items: center; gap: 11px; margin-bottom: 13px; padding: 13px 14px; border: 1px solid rgba(165,139,91,0.16); border-radius: 21px; background: linear-gradient(145deg, rgba(255,250,239,0.8), rgba(247,241,224,0.48)); color: var(--text); font-family: inherit; text-align: right; box-shadow: 0 11px 26px rgba(165,139,91,0.06); cursor: pointer; }
+.more-vip-active-symbol { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; border-radius: 13px; color: #a58b5b; background: rgba(165,139,91,0.1); }
+.more-vip-active-card > div:nth-child(2) { min-width: 0; flex: 1; }
+.more-vip-active-card > div:nth-child(2) span { display: block; color: #a58b5b; font-size: 8px; font-weight: 800; }
+.more-vip-active-card > div:nth-child(2) strong { display: block; margin-top: 2px; color: var(--green-dark); font-size: 13px; }
+.more-vip-active-card > svg { width: 17px; height: 17px; color: var(--green); }
+.more-search-card { width: 100%; min-height: 47px; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding: 11px 14px; border: 1px solid rgba(53,59,50,0.1); border-radius: 18px; background: rgba(255,255,255,0.62); color: #73786f; font-family: inherit; font-size: 12px; text-align: right; box-shadow: 0 7px 20px rgba(53,59,50,0.07); cursor: pointer; }
+.more-search-card svg { width: 19px; height: 19px; }
+.more-dashboard-heading { display: flex; flex-direction: column; gap: 2px; margin: 0 2px 11px; }
+.more-dashboard-heading span { color: #8a7146; font-size: 8px; font-weight: 850; letter-spacing: 1.5px; }
+.more-dashboard-heading strong { color: var(--green-dark); font-size: 15px; }
+@keyframes more-status-breathe { 0%,100% { opacity: .68; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.08); } }
+@media (max-width:370px) { .more-welcome-copy > strong { font-size: 19px; } .more-welcome-info strong { font-size: 10px; } }
+@media (prefers-reduced-motion:reduce) { .more-status-dot,.more-status-button span { animation:none; } }
+@media (prefers-color-scheme:dark) {
+  .more-vip-invite,.more-vip-active-card { border-color: rgba(201,178,126,.17); background: linear-gradient(145deg, rgba(47,64,54,.78), rgba(32,45,38,.58)); }
+  .more-vip-invite-copy strong,.more-vip-active-card > div:nth-child(2) strong,.more-dashboard-heading strong { color:#edf2ed; }
+  .more-vip-invite-copy p { color:#a9b6ad; }
+  .more-search-card { border-color:rgba(218,232,220,.1); background:rgba(39,54,46,.58); color:#a9b6ad; }
+}
