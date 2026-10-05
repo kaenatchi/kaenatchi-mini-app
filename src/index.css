@@ -2390,3 +2390,209 @@ button:active,
 @media (prefers-reduced-motion: reduce) {
   .date-dot { animation: none; opacity: 0.72; }
 }
+
+/* =========================================================
+   FINAL MOBILE / IOS POLISH
+========================================================= */
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior-x: none;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  touch-action: manipulation;
+}
+
+input,
+textarea,
+select,
+button {
+  font-size: 16px;
+}
+
+.app-shell {
+  width: 100%;
+  min-height: 100dvh;
+  touch-action: pan-y;
+}
+
+/* Header: date on one side, brand centered, search/VIP on the other. */
+.home-topbar {
+  direction: ltr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  column-gap: 18px;
+}
+
+.home-date-wrap {
+  justify-content: flex-start;
+  direction: rtl;
+  min-width: 0;
+}
+
+.home-brand-inline {
+  direction: rtl;
+}
+
+.home-top-actions {
+  direction: ltr;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.home-search-button,
+.vip-top-button {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 430px) {
+  .home-topbar {
+    column-gap: 12px;
+  }
+
+  .home-date-wrap {
+    max-width: 42vw;
+  }
+
+  .home-top-actions {
+    gap: 7px;
+  }
+
+  .date-pill {
+    max-width: 100%;
+  }
+}
+
+/* Classes / events stay separate from service category tabs. */
+.services-lobby-links {
+  display: grid;
+  gap: 10px;
+  margin: 2px 0 16px;
+}
+
+.services-lobby-card {
+  width: 100%;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  border: 1px solid rgba(53,59,50,0.09);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.78), rgba(255,255,255,0.46));
+  color: var(--text);
+  font-family: inherit;
+  text-align: right;
+  box-shadow: 0 12px 28px rgba(36,77,59,0.08), inset 0 1px 0 rgba(255,255,255,0.88);
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.services-lobby-card:active {
+  transform: scale(0.985);
+}
+
+.services-lobby-card.is-focused {
+  border-color: rgba(36,99,71,0.25);
+  box-shadow: 0 15px 32px rgba(36,99,71,0.12), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+.services-lobby-icon,
+.services-content-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  color: var(--green);
+  background: rgba(36,99,71,0.08);
+}
+
+.services-lobby-icon svg,
+.services-content-icon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.services-lobby-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.services-lobby-copy strong,
+.services-content-card .list-copy strong {
+  color: var(--green-dark);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.services-lobby-copy span,
+.services-content-card .list-copy span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.75;
+}
+
+.services-content-lobby {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.services-content-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 92px;
+  padding: 15px;
+  border: 1px solid rgba(53,59,50,0.08);
+  border-radius: 21px;
+  background: rgba(255,255,255,0.5);
+  box-shadow: 0 12px 28px rgba(36,77,59,0.06), inset 0 1px 0 rgba(255,255,255,0.82);
+  scroll-margin-top: 18px;
+}
+
+.services-content-card.is-focused {
+  border-color: rgba(36,99,71,0.24);
+  box-shadow: 0 16px 34px rgba(36,99,71,0.1), inset 0 1px 0 rgba(255,255,255,0.88);
+}
+
+.services-content-card .list-copy {
+  min-width: 0;
+}
+
+.services-content-card .list-copy span + span {
+  margin-top: 5px;
+}
+
+/* The bottom-nav labels are deliberately text-led; the More icon is dots, not hamburger. */
+.nav-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.nav-item {
+  -webkit-user-select: none;
+  user-select: none;
+}
