@@ -3855,12 +3855,25 @@ function MorePage({
     minute: "2-digit",
   }).format(clock);
 
-  const jalaliDate = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(clock);
+  const jalaliDate = (() => {
+    try {
+      const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).formatToParts(clock);
+
+      const weekday = parts.find((part) => part.type === "weekday")?.value ?? "";
+      const day = parts.find((part) => part.type === "day")?.value ?? "";
+      const month = parts.find((part) => part.type === "month")?.value ?? "";
+      const year = parts.find((part) => part.type === "year")?.value ?? "";
+
+      return `امروز ${weekday} ${day} ${month} ${year}`.replace(/\\s+/g, " ").trim();
+    } catch {
+      return "امروز";
+    }
+  })();
 
   const requestVip = () => {
     const message = encodeURIComponent(
