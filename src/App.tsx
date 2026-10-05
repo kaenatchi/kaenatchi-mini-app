@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Section = "home" | "services" | "more";
 
@@ -613,29 +613,43 @@ function SectionHeaderCard({
 
 function HomePage({
   onSearch,
+  onOpenVip,
 }: {
   onSearch: () => void;
+  onOpenVip: () => void;
 }) {
   const today = getTodayJalali();
 
   return (
     <>
-      <header className="topbar">
-        <div className="home-welcome-top">
-          <h2>خوش اومدی 🌿</h2>
+      <header className="topbar home-topbar">
+        <div className="home-topbar-left">
+          <div
+            className="date-pill"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <span className="date-dot" />
+            {today}
+          </div>
+
+          <div className="home-welcome-top">
+            <h2>خوش اومدی 🌿</h2>
+          </div>
         </div>
 
-        <div
-          className="date-pill"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
+        <button
+          type="button"
+          className="vip-top-button"
+          onClick={onOpenVip}
+          aria-label="ورود به VIP"
         >
-          <span className="date-dot" />
-          {today}
-        </div>
+          <span className="vip-top-symbol">✦</span>
+          <span>VIP</span>
+        </button>
       </header>
 
       <main className="main-content home-page">
@@ -3578,76 +3592,87 @@ function BottomNav({
   onChange,
 }: {
   active: Section;
-  onChange: (
-    section: Section
-  ) => void;
+  onChange: (section: Section) => void;
 }) {
+  const [quickOpen, setQuickOpen] = useState(false);
+
+  const openBooking = () => {
+    setQuickOpen(false);
+    window.location.assign(BOOKING_APP_URL);
+  };
+
+  const toggleQuick = () => {
+    setQuickOpen((value) => !value);
+  };
 
   return (
-    <nav className="bottom-nav">
+    <nav className={`bottom-nav ${quickOpen ? "fab-open" : ""}`} aria-label="ناوبری اصلی">
 
       <button
         type="button"
-        className={`nav-item ${
-          active === "home"
-            ? "active"
-            : ""
-        }`}
-        onClick={() =>
-          onChange("home")
-        }
+        className={`nav-item ${active === "home" ? "active" : ""}`}
+        onClick={() => {
+          setQuickOpen(false);
+          onChange("home");
+        }}
       >
-
         <span className="nav-icon">
           <Icon name="home" />
         </span>
-
         <span>خانه</span>
-
       </button>
-
 
       <button
         type="button"
-        className={`nav-item ${
-          active === "services"
-            ? "active"
-            : ""
-        }`}
-        onClick={() =>
-          onChange(
-            "services"
-          )
-        }
+        className={`nav-item ${active === "services" ? "active" : ""}`}
+        onClick={() => {
+          setQuickOpen(false);
+          onChange("services");
+        }}
       >
-
         <span className="nav-icon">
           <Icon name="spark" />
         </span>
-
         <span>خدمات</span>
-
       </button>
 
+      <div className="nav-fab-slot">
+        <button
+          type="button"
+          className={`nav-fab ${quickOpen ? "open" : ""}`}
+          onClick={toggleQuick}
+          aria-expanded={quickOpen}
+          aria-label={quickOpen ? "بستن رزرو نوبت" : "باز کردن رزرو نوبت"}
+        >
+          <span className="nav-fab-plus">{quickOpen ? "×" : "+"}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`nav-fab-action ${quickOpen ? "visible" : ""}`}
+          onClick={openBooking}
+          tabIndex={quickOpen ? 0 : -1}
+          aria-hidden={!quickOpen}
+        >
+          <span className="nav-fab-action-icon">
+            <Icon name="calendar" />
+          </span>
+          <span>رزرو نوبت</span>
+        </button>
+      </div>
 
       <button
         type="button"
-        className={`nav-item ${
-          active === "more"
-            ? "active"
-            : ""
-        }`}
-        onClick={() =>
-          onChange("more")
-        }
+        className={`nav-item ${active === "more" ? "active" : ""}`}
+        onClick={() => {
+          setQuickOpen(false);
+          onChange("more");
+        }}
       >
-
         <span className="nav-icon">
           <Icon name="menu" />
         </span>
-
         <span>بیشتر</span>
-
       </button>
 
     </nav>
@@ -3660,116 +3685,128 @@ function BottomNav({
 ========================================================= */
 
 function App() {
+  const sectionOrder: Section[] = ["home", "services", "more"];
 
-  const [section, setSection] =
-    useState<Section>("home");
+  const [section, setSection] = useState<Section>("home");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchService, setSearchService] = useState<Service | null>(null);
+  const [navDirection, setNavDirection] = useState<"forward" | "backward">("forward");
 
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
-  const [searchOpen, setSearchOpen] =
-    useState(false);
+  const changeSection = (nextSection: Section) => {
+    if (nextSection === section) return;
 
+    const currentIndex = sectionOrder.indexOf(section);
+    const nextIndex = sectionOrder.indexOf(nextSection);
 
-  const [searchService, setSearchService] =
-    useState<Service | null>(
-      null
-    );
+    setNavDirection(nextIndex > currentIndex ? "forward" : "backward");
+    setSection(nextSection);
+  };
 
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchStart.current) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - touchStart.current.x;
+    const deltaY = touch.clientY - touchStart.current.y;
+
+    touchStart.current = null;
+
+    if (Math.abs(deltaX) < 60 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.25) {
+      return;
+    }
+
+    const currentIndex = sectionOrder.indexOf(section);
+
+    if (deltaX < 0 && currentIndex < sectionOrder.length - 1) {
+      changeSection(sectionOrder[currentIndex + 1]);
+    }
+
+    if (deltaX > 0 && currentIndex > 0) {
+      changeSection(sectionOrder[currentIndex - 1]);
+    }
+  };
 
   const openSearch = () => {
-
     setSearchService(null);
-
     setSearchOpen(true);
   };
 
-
   const closeSearch = () => {
-
     setSearchOpen(false);
-
     setSearchService(null);
   };
 
-
   if (searchOpen) {
-
     if (searchService) {
-
       return (
         <div className="app-shell">
-
           <div className="ambient ambient-one" />
           <div className="ambient ambient-two" />
 
-
           <ServiceDetail
             service={searchService}
-            onBack={() =>
-              setSearchService(
-                null
-              )
-            }
+            onBack={() => setSearchService(null)}
           />
-
         </div>
       );
     }
 
-
     return (
       <div className="app-shell">
-
         <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
 
-
         <SearchPage
           onBack={closeSearch}
-          onOpenService={(
-            service
-          ) =>
-            setSearchService(
-              service
-            )
-          }
+          onOpenService={(service) => setSearchService(service)}
         />
-
       </div>
     );
   }
 
-
   return (
-    <div className="app-shell">
-
+    <div
+      className="app-shell"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
 
+      <div
+        key={section}
+        className={`section-page section-page-${navDirection}`}
+      >
+        {section === "home" && (
+          <HomePage
+            onSearch={openSearch}
+            onOpenVip={() => {
+              setNavDirection("forward");
+              setSection("more");
+            }}
+          />
+        )}
 
-      {section === "home" && (
-        <HomePage
-          onSearch={openSearch}
-        />
-      )}
+        {section === "services" && <ServicesPage />}
 
-
-      {section === "services" && (
-        <ServicesPage />
-      )}
-
-
-      {section === "more" && (
-        <MorePage
-          onSearch={openSearch}
-        />
-      )}
-
+        {section === "more" && (
+          <MorePage
+            onSearch={openSearch}
+          />
+        )}
+      </div>
 
       <BottomNav
         active={section}
-        onChange={setSection}
+        onChange={changeSection}
       />
-
     </div>
   );
 }
