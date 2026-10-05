@@ -105,6 +105,8 @@ button:focus-visible {
 -------------------------------------------------- */
 
 .app-shell {
+  touch-action: pan-y;
+  overscroll-behavior-x: contain;
   position: relative;
   isolation: isolate;
   width: 100%;
@@ -1186,6 +1188,7 @@ button:active,
 }
 
 .home-brand-title {
+  display: none;
   position: relative;
   min-height: 88px;
   display: grid;
@@ -1676,27 +1679,36 @@ button:active,
   transform: rotate(90deg);
 }
 
-.nav-fab-action {
+.nav-fab-actions {
   position: absolute;
   z-index: 3;
-
   right: 50%;
-  bottom: calc(100% - 2px);
+  bottom: calc(100% + 2px);
+  width: min(230px, 78vw);
+  height: 178px;
+  transform: translateX(50%);
+  pointer-events: none;
+}
 
-  min-width: 145px;
-  min-height: 48px;
+.nav-fab-action {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+
+  width: 100%;
+  min-height: 46px;
 
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 9px;
 
-  padding: 10px 15px;
+  padding: 9px 13px;
 
   border: 1px solid rgba(255, 255, 255, 0.76);
-  border-radius: 17px;
+  border-radius: 16px;
 
-  background: rgba(247, 245, 238, 0.92);
+  background: rgba(247, 245, 238, 0.94);
   color: var(--green-dark);
 
   font-family: inherit;
@@ -1713,7 +1725,7 @@ button:active,
   opacity: 0;
   pointer-events: none;
 
-  transform: translate(50%, 12px) scale(0.9);
+  transform: translateY(14px) scale(0.9);
   transform-origin: center bottom;
 
   transition:
@@ -1724,11 +1736,40 @@ button:active,
 .nav-fab-action.visible {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(50%, 0) scale(1);
+  transform: translateY(0) scale(1);
+}
+
+.nav-fab-action.action-booking {
+  bottom: 0;
+}
+
+.nav-fab-action.action-class {
+  bottom: 58px;
+  transition-delay: 35ms;
+}
+
+.nav-fab-action.action-event {
+  bottom: 116px;
+  transition-delay: 70ms;
 }
 
 .nav-fab-action:active {
-  transform: translate(50%, 0) scale(0.96);
+  transform: scale(0.96);
+}
+
+.nav-fab-action-icon {
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(36, 99, 71, 0.09);
+  color: var(--green);
+}
+
+.nav-fab-action-icon svg {
+  width: 17px;
+  height: 17px;
 }
 
 .nav-fab-action-icon {
@@ -1790,53 +1831,91 @@ button:active,
 -------------------------------------------------- */
 
 .home-topbar {
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
 }
 
-.home-topbar-left {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 7px;
+.home-date-wrap {
   min-width: 0;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.home-brand-inline {
+  color: var(--green-dark);
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: -0.4px;
+  white-space: nowrap;
+  text-align: center;
+  text-shadow: 0 8px 22px rgba(36,77,59,0.08);
+}
+
+.home-top-actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.home-search-button {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(53,59,50,0.1);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.62);
+  color: var(--green-dark);
+  box-shadow:
+    0 9px 24px rgba(36,77,59,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.home-search-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.home-search-button:active {
+  transform: scale(0.92);
 }
 
 .vip-top-button {
-  min-width: 62px;
+  min-width: 58px;
   min-height: 38px;
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-
+  gap: 5px;
   border: 1px solid rgba(164, 139, 93, 0.25);
   border-radius: 999px;
-
   background:
     linear-gradient(
       145deg,
       rgba(255, 255, 255, 0.7),
       rgba(247, 241, 224, 0.58)
     );
-
   color: #806b43;
   font-family: inherit;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.5px;
-
   box-shadow:
     0 9px 24px rgba(164, 139, 93, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.85);
-
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-
-  transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    filter 180ms ease;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
 }
 
 .vip-top-button:active {
@@ -1851,6 +1930,19 @@ button:active,
 }
 
 @media (max-width: 390px) {
+  .home-topbar {
+    gap: 6px;
+  }
+
+  .home-brand-inline {
+    font-size: 15px;
+  }
+
+  .home-search-button {
+    width: 34px;
+    height: 34px;
+  }
+
   .vip-top-button {
     min-width: 57px;
     min-height: 36px;
@@ -1866,8 +1958,22 @@ button:active,
     height: 60px;
   }
 
+  .nav-fab-actions {
+    width: min(205px, 78vw);
+    height: 172px;
+  }
+
   .nav-fab-action {
-    min-width: 138px;
+    min-height: 44px;
+    font-size: 11px;
+  }
+
+  .nav-fab-action.action-class {
+    bottom: 56px;
+  }
+
+  .nav-fab-action.action-event {
+    bottom: 112px;
   }
 }
 
