@@ -456,12 +456,19 @@ function Icon({ name }: { name: IconName }) {
 
 function getTodayJalali() {
   try {
-    return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+    const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
-    }).format(new Date());
+    }).formatToParts(new Date());
+
+    const weekday = parts.find((part) => part.type === "weekday")?.value ?? "";
+    const day = parts.find((part) => part.type === "day")?.value ?? "";
+    const month = parts.find((part) => part.type === "month")?.value ?? "";
+    const year = parts.find((part) => part.type === "year")?.value ?? "";
+
+    return `امروز ${weekday} ${day} ${month} ${year}`.replace(/\s+/g, " ").trim();
   } catch {
     return "امروز";
   }
@@ -623,97 +630,40 @@ function HomePage({
   return (
     <>
       <header className="topbar home-topbar">
-        <div className="home-topbar-left">
-          <div
-            className="date-pill"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
+        <div className="home-date-wrap">
+          <div className="date-pill">
             <span className="date-dot" />
             {today}
           </div>
-
-          <div className="home-welcome-top">
-            <h2>خوش اومدی 🌿</h2>
-          </div>
         </div>
 
-        <button
-          type="button"
-          className="vip-top-button"
-          onClick={onOpenVip}
-          aria-label="ورود به VIP"
-        >
-          <span className="vip-top-symbol">✦</span>
-          <span>VIP</span>
-        </button>
+        <div className="home-brand-inline" aria-label="کائنات‌چی">
+          کائنات‌چی
+        </div>
+
+        <div className="home-top-actions">
+          <button
+            type="button"
+            className="home-search-button"
+            onClick={onSearch}
+            aria-label="جست‌وجو"
+          >
+            <Icon name="search" />
+          </button>
+
+          <button
+            type="button"
+            className="vip-top-button"
+            onClick={onOpenVip}
+            aria-label="ورود به VIP"
+          >
+            <span className="vip-top-symbol">✦</span>
+            <span>VIP</span>
+          </button>
+        </div>
       </header>
 
       <main className="main-content home-page">
-        <section className="home-brand-title" aria-label="کائنات‌چی KAENATCHI">
-          <div className="home-brand-title-glow" aria-hidden="true" />
-          <div className="kaenatchi-wordmark" aria-hidden="true">
-            <svg
-              className="kaenatchi-logo-type"
-              viewBox="0 0 620 180"
-              role="img"
-              aria-label="کائنات‌چی KAENATCHI"
-            >
-              <defs>
-                <linearGradient id="kaenatchiWordmarkGreen" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#17382b" />
-                  <stop offset="55%" stopColor="#244d3b" />
-                  <stop offset="100%" stopColor="#315c48" />
-                </linearGradient>
-                <linearGradient id="kaenatchiWordmarkGold" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#a48b5d" stopOpacity="0" />
-                  <stop offset="18%" stopColor="#a48b5d" stopOpacity=".78" />
-                  <stop offset="82%" stopColor="#c6b58e" stopOpacity=".62" />
-                  <stop offset="100%" stopColor="#a48b5d" stopOpacity="0" />
-                </linearGradient>
-                <filter id="kaenatchiWordmarkShadow" x="-20%" y="-30%" width="140%" height="170%">
-                  <feDropShadow dx="0" dy="10" stdDeviation="9" floodColor="#244d3b" floodOpacity=".12" />
-                </filter>
-                <path id="kaenatchiEnglishArc" d="M 92 77 Q 310 5 528 77" />
-              </defs>
-
-              <text
-                className="kaenatchi-logo-type-en"
-                fill="url(#kaenatchiWordmarkGold)"
-              >
-                <textPath href="#kaenatchiEnglishArc" startOffset="50%" textAnchor="middle">
-                  K A E N A T C H I
-                </textPath>
-              </text>
-
-              <path
-                className="kaenatchi-logo-type-thread"
-                d="M104 108 C170 91 205 121 263 105 C319 89 349 118 408 103 C457 91 491 103 516 94"
-              />
-
-              <text
-                className="kaenatchi-logo-type-fa"
-                x="310"
-                y="125"
-                textAnchor="middle"
-                fill="url(#kaenatchiWordmarkGreen)"
-                filter="url(#kaenatchiWordmarkShadow)"
-              >
-                کائنات‌چی
-              </text>
-
-              <path
-                className="kaenatchi-logo-type-underline"
-                d="M184 143 C240 153 380 153 436 143"
-              />
-            </svg>
-          </div>
-        </section>
-
-
         <section className="hero">
           <div className="hero-glow" />
 
@@ -808,34 +758,6 @@ function HomePage({
             </div>
           </div>
         </section>
-
-        <button
-          type="button"
-          onClick={onSearch}
-          style={{
-            width: "100%",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            border:
-              "1px solid rgba(53,59,50,0.1)",
-            borderRadius: "18px",
-            padding: "13px 15px",
-            marginBottom: "16px",
-            background:
-              "rgba(255,255,255,0.62)",
-            color: "#73786f",
-            fontFamily: "inherit",
-            fontSize: "13px",
-            cursor: "pointer",
-            boxShadow:
-              "0 7px 20px rgba(53,59,50,0.07)",
-            textAlign: "right",
-          }}
-        >
-          <Icon name="search" />
-          <span>جست‌وجو در کائنات‌چی...</span>
-        </button>
 
       </main>
     </>
@@ -1131,6 +1053,40 @@ function ServicesPage() {
         onChange={setActiveTab}
       />
 
+      <div className="services-lobby-links">
+        <button
+          type="button"
+          className="services-lobby-card"
+          onClick={() => {
+            const target = document.getElementById("services-classes");
+            target?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+        >
+          <span className="services-lobby-icon"><Icon name="class" /></span>
+          <span className="services-lobby-copy">
+            <strong>کلاس‌ها</strong>
+            <span>آموزش‌ها و دوره‌های کائنات‌چی</span>
+          </span>
+          <span className="list-arrow"><Icon name="arrow" /></span>
+        </button>
+
+        <button
+          type="button"
+          className="services-lobby-card"
+          onClick={() => {
+            const target = document.getElementById("services-events");
+            target?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+        >
+          <span className="services-lobby-icon"><Icon name="event" /></span>
+          <span className="services-lobby-copy">
+            <strong>ایونت‌ها</strong>
+            <span>رویدادها و برنامه‌های پیش رو</span>
+          </span>
+          <span className="list-arrow"><Icon name="arrow" /></span>
+        </button>
+      </div>
+
       <div className="service-list">
         {visibleServices.map(
           (service) => (
@@ -1155,6 +1111,24 @@ function ServicesPage() {
             />
           )
         )}
+      </div>
+
+      <div className="services-content-lobby">
+        <div id="services-classes" className="services-content-card">
+          <div className="list-icon"><Icon name="class" /></div>
+          <div className="list-copy">
+            <strong>کلاس‌ها</strong>
+            <span>آموزش‌ها و دوره‌های کائنات‌چی در این بخش قرار می‌گیرند.</span>
+          </div>
+        </div>
+
+        <div id="services-events" className="services-content-card">
+          <div className="list-icon"><Icon name="event" /></div>
+          <div className="list-copy">
+            <strong>ایونت‌ها</strong>
+            <span>رویدادها و برنامه‌های پیش روی کائنات‌چی در این بخش قرار می‌گیرند.</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -3601,13 +3575,16 @@ function BottomNav({
     window.location.assign(BOOKING_APP_URL);
   };
 
-  const toggleQuick = () => {
-    setQuickOpen((value) => !value);
+  const openQuickSection = (section: Section) => {
+    setQuickOpen(false);
+    onChange(section);
   };
 
   return (
-    <nav className={`bottom-nav ${quickOpen ? "fab-open" : ""}`} aria-label="ناوبری اصلی">
-
+    <nav
+      className={`bottom-nav ${quickOpen ? "fab-open" : ""}`}
+      aria-label="ناوبری اصلی"
+    >
       <button
         type="button"
         className={`nav-item ${active === "home" ? "active" : ""}`}
@@ -3616,9 +3593,7 @@ function BottomNav({
           onChange("home");
         }}
       >
-        <span className="nav-icon">
-          <Icon name="home" />
-        </span>
+        <span className="nav-icon"><Icon name="home" /></span>
         <span>خانه</span>
       </button>
 
@@ -3630,9 +3605,7 @@ function BottomNav({
           onChange("services");
         }}
       >
-        <span className="nav-icon">
-          <Icon name="spark" />
-        </span>
+        <span className="nav-icon"><Icon name="spark" /></span>
         <span>خدمات</span>
       </button>
 
@@ -3640,25 +3613,44 @@ function BottomNav({
         <button
           type="button"
           className={`nav-fab ${quickOpen ? "open" : ""}`}
-          onClick={toggleQuick}
+          onClick={() => setQuickOpen((value) => !value)}
           aria-expanded={quickOpen}
-          aria-label={quickOpen ? "بستن رزرو نوبت" : "باز کردن رزرو نوبت"}
+          aria-label={quickOpen ? "بستن میانبرها" : "باز کردن میانبرها"}
         >
           <span className="nav-fab-plus">{quickOpen ? "×" : "+"}</span>
         </button>
 
-        <button
-          type="button"
-          className={`nav-fab-action ${quickOpen ? "visible" : ""}`}
-          onClick={openBooking}
-          tabIndex={quickOpen ? 0 : -1}
-          aria-hidden={!quickOpen}
-        >
-          <span className="nav-fab-action-icon">
-            <Icon name="calendar" />
-          </span>
-          <span>رزرو نوبت</span>
-        </button>
+        <div className="nav-fab-actions" aria-hidden={!quickOpen}>
+          <button
+            type="button"
+            className={`nav-fab-action action-booking ${quickOpen ? "visible" : ""}`}
+            onClick={openBooking}
+            tabIndex={quickOpen ? 0 : -1}
+          >
+            <span className="nav-fab-action-icon"><Icon name="calendar" /></span>
+            <span>رزرو نوبت</span>
+          </button>
+
+          <button
+            type="button"
+            className={`nav-fab-action action-class ${quickOpen ? "visible" : ""}`}
+            onClick={() => openQuickSection("services")}
+            tabIndex={quickOpen ? 0 : -1}
+          >
+            <span className="nav-fab-action-icon"><Icon name="class" /></span>
+            <span>کلاس‌ها</span>
+          </button>
+
+          <button
+            type="button"
+            className={`nav-fab-action action-event ${quickOpen ? "visible" : ""}`}
+            onClick={() => openQuickSection("services")}
+            tabIndex={quickOpen ? 0 : -1}
+          >
+            <span className="nav-fab-action-icon"><Icon name="event" /></span>
+            <span>ایونت‌ها</span>
+          </button>
+        </div>
       </div>
 
       <button
@@ -3669,12 +3661,9 @@ function BottomNav({
           onChange("more");
         }}
       >
-        <span className="nav-icon">
-          <Icon name="menu" />
-        </span>
+        <span className="nav-icon"><Icon name="menu" /></span>
         <span>بیشتر</span>
       </button>
-
     </nav>
   );
 }
@@ -3690,9 +3679,10 @@ function App() {
   const [section, setSection] = useState<Section>("home");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchService, setSearchService] = useState<Service | null>(null);
+  const [vipOpen, setVipOpen] = useState(false);
   const [navDirection, setNavDirection] = useState<"forward" | "backward">("forward");
 
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const touchStart = useRef<{ x: number; y: number; identifier: number } | null>(null);
 
   const changeSection = (nextSection: Section) => {
     if (nextSection === section) return;
@@ -3705,35 +3695,52 @@ function App() {
   };
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
-    const touch = event.touches[0];
-    touchStart.current = { x: touch.clientX, y: touch.clientY };
-  };
-
-  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
-    if (!touchStart.current) return;
-
-    const touch = event.changedTouches[0];
-    const deltaX = touch.clientX - touchStart.current.x;
-    const deltaY = touch.clientY - touchStart.current.y;
-
-    touchStart.current = null;
-
-    if (Math.abs(deltaX) < 60 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.25) {
+    if (event.touches.length !== 1) {
+      touchStart.current = null;
       return;
     }
+
+    const touch = event.touches[0];
+    touchStart.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      identifier: touch.identifier,
+    };
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const start = touchStart.current;
+    if (!start) return;
+
+    const touch = Array.from(event.changedTouches).find(
+      (item) => item.identifier === start.identifier
+    );
+
+    touchStart.current = null;
+    if (!touch) return;
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (absX < 45 || absX <= absY * 1.35) return;
 
     const currentIndex = sectionOrder.indexOf(section);
 
     if (deltaX < 0 && currentIndex < sectionOrder.length - 1) {
       changeSection(sectionOrder[currentIndex + 1]);
-    }
-
-    if (deltaX > 0 && currentIndex > 0) {
+    } else if (deltaX > 0 && currentIndex > 0) {
       changeSection(sectionOrder[currentIndex - 1]);
     }
   };
 
+  const handleTouchCancel = () => {
+    touchStart.current = null;
+  };
+
   const openSearch = () => {
+    setVipOpen(false);
     setSearchService(null);
     setSearchOpen(true);
   };
@@ -3743,13 +3750,28 @@ function App() {
     setSearchService(null);
   };
 
+  const openVip = () => {
+    setSearchOpen(false);
+    setSearchService(null);
+    setVipOpen(true);
+  };
+
+  if (vipOpen) {
+    return (
+      <div className="app-shell">
+        <div className="ambient ambient-one" />
+        <div className="ambient ambient-two" />
+        <VipPage onBack={() => setVipOpen(false)} />
+      </div>
+    );
+  }
+
   if (searchOpen) {
     if (searchService) {
       return (
         <div className="app-shell">
           <div className="ambient ambient-one" />
           <div className="ambient ambient-two" />
-
           <ServiceDetail
             service={searchService}
             onBack={() => setSearchService(null)}
@@ -3762,7 +3784,6 @@ function App() {
       <div className="app-shell">
         <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
-
         <SearchPage
           onBack={closeSearch}
           onOpenService={(service) => setSearchService(service)}
@@ -3776,6 +3797,7 @@ function App() {
       className="app-shell"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
     >
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
@@ -3787,20 +3809,13 @@ function App() {
         {section === "home" && (
           <HomePage
             onSearch={openSearch}
-            onOpenVip={() => {
-              setNavDirection("forward");
-              setSection("more");
-            }}
+            onOpenVip={openVip}
           />
         )}
 
         {section === "services" && <ServicesPage />}
 
-        {section === "more" && (
-          <MorePage
-            onSearch={openSearch}
-          />
-        )}
+        {section === "more" && <MorePage onSearch={openSearch} />}
       </div>
 
       <BottomNav
