@@ -4025,6 +4025,13 @@ function MorePage({
 
   return (
     <div className="inner-page more-dashboard">
+      <div className="more-dashboard-heading">
+        <strong>همه‌چیز در یک نگاه</strong>
+        <button type="button" className="more-heading-search" onClick={onSearch} aria-label="جست‌وجو در کائنات‌چی">
+          <Icon name="search" />
+        </button>
+      </div>
+
       <section className={"more-welcome-card " + (isVip ? "is-vip" : "is-guest")}>
         <div className="more-welcome-orbit orbit-one" />
         <div className="more-welcome-orbit orbit-two" />
@@ -4125,19 +4132,6 @@ function MorePage({
         </section>
       )}
 
-      <div className="more-dashboard-heading">
-        <span>KAENATCHI</span>
-        <strong>همه‌چیز در یک نگاه</strong>
-        <button
-          type="button"
-          className="more-heading-search"
-          onClick={onSearch}
-          aria-label="جست‌وجو در کائنات‌چی"
-        >
-          <Icon name="search" />
-        </button>
-      </div>
-
       <section className="more-category-section">
         <div className="more-category-title">
           <span>کائنات‌چی</span>
@@ -4232,7 +4226,7 @@ function BottomNav({
           onChange("services");
         }}
       >
-        <span className="nav-icon"><Icon name="spark" /></span>
+        <span className="nav-icon"><Icon name="energy" /></span>
         <span>خدمات</span>
       </button>
 
@@ -4261,7 +4255,7 @@ function BottomNav({
           <button
             type="button"
             className={`nav-fab-action action-class ${quickOpen ? "visible" : ""}`}
-            onClick={() => onQuickDestination("classes")}
+            onClick={() => { setQuickOpen(false); onQuickDestination("classes"); }}
             tabIndex={quickOpen ? 0 : -1}
           >
             <span className="nav-fab-action-icon"><Icon name="class" /></span>
@@ -4271,7 +4265,7 @@ function BottomNav({
           <button
             type="button"
             className={`nav-fab-action action-event ${quickOpen ? "visible" : ""}`}
-            onClick={() => onQuickDestination("events")}
+            onClick={() => { setQuickOpen(false); onQuickDestination("events"); }}
             tabIndex={quickOpen ? 0 : -1}
           >
             <span className="nav-fab-action-icon"><Icon name="event" /></span>
