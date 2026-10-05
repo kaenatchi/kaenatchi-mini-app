@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 
-type Section = "home" | "services" | "more";
+type Section = "home" | "services" | "selected" | "more";
 
 type IconName =
   | "home"
@@ -1134,6 +1134,77 @@ function ServicesPage() {
   );
 }
 
+
+function SelectedPage() {
+  const allSelected: Array<SearchItem & { badge: string }> = [
+    ...mainServices.map((service) => ({
+      id: service.id,
+      title: service.title,
+      description: service.description,
+      type: "service" as const,
+      icon: (service.category === "energy"
+        ? "energy"
+        : service.category === "candle"
+          ? "candle"
+          : "conversation") as IconName,
+      service,
+      badge: "خدمت منتخب",
+    })),
+    ...energyServices.map((service) => ({
+      id: service.id,
+      title: service.title,
+      description: service.description,
+      type: "service" as const,
+      icon: "energy" as IconName,
+      service,
+      badge: "انرژی‌خوانی",
+    })),
+    ...publishedClasses.map((item) => ({ ...item, badge: "کلاس" })),
+    ...publishedEvents.map((item) => ({ ...item, badge: "ایونت" })),
+  ];
+
+  const daySeed = new Date().getDate() + new Date().getMonth() * 31;
+  const offset = allSelected.length ? daySeed % allSelected.length : 0;
+  const rotated = allSelected.length
+    ? [...allSelected.slice(offset), ...allSelected.slice(0, offset)]
+    : [];
+  const selected = rotated.slice(0, Math.min(5, rotated.length));
+
+  return (
+    <div className="inner-page selected-page">
+      <SectionHeaderCard
+        kicker="KAENATCHI"
+        title="منتخب"
+        description="چند انتخاب از میان خدمات، کلاس‌ها و ایونت‌های کائنات‌چی؛ این بخش با تغییر روز، انتخاب‌های تازه‌ای نشان می‌دهد."
+        icon="spark"
+      />
+      {selected.length > 0 ? (
+        <div className="selected-list">
+          {selected.map((item) => (
+            <div className="selected-card" key={item.id}>
+              <div className="selected-card-icon"><Icon name={item.icon} /></div>
+              <div className="list-copy">
+                <small>{item.badge}</small>
+                <strong>{item.title}</strong>
+                <span>{item.description}</span>
+              </div>
+              <div className="list-arrow"><Icon name="arrow" /></div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="glass-list-card selected-empty" style={{ display: "block", textAlign: "center" }}>
+          <div className="list-icon" style={{ margin: "0 auto 12px" }}><Icon name="spark" /></div>
+          <div className="list-copy">
+            <strong>منتخب‌های کائنات‌چی</strong>
+            <span>با فعال شدن کلاس‌ها و ایونت‌ها، انتخاب‌های تازه به‌صورت خودکار در این بخش قرار می‌گیرند.</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SearchPage({
   onBack,
   onOpenService,
@@ -1259,7 +1330,7 @@ function SearchPage({
             background:
               "transparent",
             fontFamily: "inherit",
-            fontSize: "14px",
+            fontSize: "16px",
             color: "#353B32",
             direction: "rtl",
           }}
@@ -3655,6 +3726,18 @@ function BottomNav({
 
       <button
         type="button"
+        className={`nav-item ${active === "selected" ? "active" : ""}`}
+        onClick={() => {
+          setQuickOpen(false);
+          onChange("selected");
+        }}
+      >
+        <span className="nav-icon"><Icon name="spark" /></span>
+        <span>منتخب</span>
+      </button>
+
+      <button
+        type="button"
         className={`nav-item ${active === "more" ? "active" : ""}`}
         onClick={() => {
           setQuickOpen(false);
@@ -3674,7 +3757,7 @@ function BottomNav({
 ========================================================= */
 
 function App() {
-  const sectionOrder: Section[] = ["home", "services", "more"];
+  const sectionOrder: Section[] = ["home", "services", "selected", "more"];
 
   const [section, setSection] = useState<Section>("home");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -3814,6 +3897,8 @@ function App() {
         )}
 
         {section === "services" && <ServicesPage />}
+
+        {section === "selected" && <SelectedPage />}
 
         {section === "more" && <MorePage onSearch={openSearch} />}
       </div>
