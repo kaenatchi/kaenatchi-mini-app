@@ -6,6 +6,7 @@ type IconName =
   | "home"
   | "spark"
   | "menu"
+  | "dots"
   | "energy"
   | "candle"
   | "conversation"
@@ -304,6 +305,15 @@ function Icon({ name }: { name: IconName }) {
           <path d="M5 7h14" />
           <path d="M5 12h14" />
           <path d="M5 17h14" />
+        </svg>
+      );
+
+    case "dots":
+      return (
+        <svg {...common}>
+          <circle cx="6" cy="12" r="1.2" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+          <circle cx="18" cy="12" r="1.2" fill="currentColor" stroke="none" />
         </svg>
       );
 
@@ -1000,7 +1010,7 @@ function ServiceDetail({
   );
 }
 
-function ServicesPage() {
+function ServicesPage({ focus }: { focus?: "all" | "classes" | "events" }) {
   const [activeTab, setActiveTab] =
     useState<"all" | ServiceCategory>(
       "all"
@@ -1053,10 +1063,10 @@ function ServicesPage() {
         onChange={setActiveTab}
       />
 
-      <div className="services-lobby-links">
+      <div className="services-lobby-links" aria-label="بخش‌های آموزشی و رویدادها">
         <button
           type="button"
-          className="services-lobby-card"
+          className={`services-lobby-card ${focus === "classes" ? "is-focused" : ""}`}
           onClick={() => {
             const target = document.getElementById("services-classes");
             target?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1072,7 +1082,7 @@ function ServicesPage() {
 
         <button
           type="button"
-          className="services-lobby-card"
+          className={`services-lobby-card ${focus === "events" ? "is-focused" : ""}`}
           onClick={() => {
             const target = document.getElementById("services-events");
             target?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1114,21 +1124,25 @@ function ServicesPage() {
       </div>
 
       <div className="services-content-lobby">
-        <div id="services-classes" className="services-content-card">
-          <div className="list-icon"><Icon name="class" /></div>
+        <section id="services-classes" className={`services-content-card ${focus === "classes" ? "is-focused" : ""}`}>
+          <div className="services-content-icon"><Icon name="class" /></div>
           <div className="list-copy">
             <strong>کلاس‌ها</strong>
-            <span>آموزش‌ها و دوره‌های کائنات‌چی در این بخش قرار می‌گیرند.</span>
+            {publishedClasses.length > 0
+              ? publishedClasses.map(item => <span key={item.id}>{item.title} — {item.description}</span>)
+              : <span>آموزش‌ها و دوره‌های کائنات‌چی در این بخش قرار می‌گیرند.</span>}
           </div>
-        </div>
+        </section>
 
-        <div id="services-events" className="services-content-card">
-          <div className="list-icon"><Icon name="event" /></div>
+        <section id="services-events" className={`services-content-card ${focus === "events" ? "is-focused" : ""}`}>
+          <div className="services-content-icon"><Icon name="event" /></div>
           <div className="list-copy">
             <strong>ایونت‌ها</strong>
-            <span>رویدادها و برنامه‌های پیش روی کائنات‌چی در این بخش قرار می‌گیرند.</span>
+            {publishedEvents.length > 0
+              ? publishedEvents.map(item => <span key={item.id}>{item.title} — {item.description}</span>)
+              : <span>رویدادها و برنامه‌های پیش روی کائنات‌چی در این بخش قرار می‌گیرند.</span>}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
@@ -3516,7 +3530,7 @@ function MorePage({
         kicker="MORE"
         title="بیشتر"
         description="بخش‌های دیگر کائنات‌چی را از اینجا دنبال کن."
-        icon="menu"
+        icon="dots"
       />
 
 
@@ -3635,9 +3649,11 @@ function MorePage({
 function BottomNav({
   active,
   onChange,
+  onQuickDestination,
 }: {
   active: Section;
   onChange: (section: Section) => void;
+  onQuickDestination: (destination: "classes" | "events") => void;
 }) {
   const [quickOpen, setQuickOpen] = useState(false);
 
@@ -3705,7 +3721,7 @@ function BottomNav({
           <button
             type="button"
             className={`nav-fab-action action-class ${quickOpen ? "visible" : ""}`}
-            onClick={() => openQuickSection("services")}
+            onClick={() => onQuickDestination("classes")}
             tabIndex={quickOpen ? 0 : -1}
           >
             <span className="nav-fab-action-icon"><Icon name="class" /></span>
@@ -3715,7 +3731,7 @@ function BottomNav({
           <button
             type="button"
             className={`nav-fab-action action-event ${quickOpen ? "visible" : ""}`}
-            onClick={() => openQuickSection("services")}
+            onClick={() => onQuickDestination("events")}
             tabIndex={quickOpen ? 0 : -1}
           >
             <span className="nav-fab-action-icon"><Icon name="event" /></span>
@@ -3744,7 +3760,7 @@ function BottomNav({
           onChange("more");
         }}
       >
-        <span className="nav-icon"><Icon name="menu" /></span>
+        <span className="nav-icon"><Icon name="dots" /></span>
         <span>بیشتر</span>
       </button>
     </nav>
@@ -3763,6 +3779,7 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchService, setSearchService] = useState<Service | null>(null);
   const [vipOpen, setVipOpen] = useState(false);
+  const [serviceFocus, setServiceFocus] = useState<"all" | "classes" | "events">("all");
   const [navDirection, setNavDirection] = useState<"forward" | "backward">("forward");
 
   const touchStart = useRef<{ x: number; y: number; identifier: number } | null>(null);
@@ -3826,6 +3843,14 @@ function App() {
     setVipOpen(false);
     setSearchService(null);
     setSearchOpen(true);
+  };
+
+  const openQuickDestination = (destination: "classes" | "events") => {
+    setSearchOpen(false);
+    setSearchService(null);
+    setVipOpen(false);
+    setServiceFocus(destination);
+    changeSection("services");
   };
 
   const closeSearch = () => {
@@ -3896,7 +3921,7 @@ function App() {
           />
         )}
 
-        {section === "services" && <ServicesPage />}
+        {section === "services" && <ServicesPage focus={serviceFocus} />}
 
         {section === "selected" && <SelectedPage />}
 
@@ -3906,6 +3931,7 @@ function App() {
       <BottomNav
         active={section}
         onChange={changeSection}
+        onQuickDestination={openQuickDestination}
       />
     </div>
   );
