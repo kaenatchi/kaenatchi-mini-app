@@ -1303,7 +1303,16 @@ function ServicesPage({ focus }: { focus?: "all" | "classes" | "events" }) {
 }
 
 
-function SelectedPage() {
+function SelectedPage({
+  onNavigate,
+  onOpenService,
+}: {
+  onNavigate: (section: Section) => void;
+  onOpenService: (service: Service) => void;
+}) {
+  const [revealOpen, setRevealOpen] = useState(false);
+  const [path, setPath] = useState<"all" | "calm" | "clarity" | "learning">("all");
+
   const allSelected: Array<SearchItem & { badge: string }> = [
     ...mainServices.map((service) => ({
       id: service.id,
@@ -1316,7 +1325,7 @@ function SelectedPage() {
           ? "candle"
           : "conversation") as IconName,
       service,
-      badge: "خدمت منتخب",
+      badge: "خدمت",
     })),
     ...energyServices.map((service) => ({
       id: service.id,
@@ -1336,39 +1345,177 @@ function SelectedPage() {
   const rotated = allSelected.length
     ? [...allSelected.slice(offset), ...allSelected.slice(0, offset)]
     : [];
-  const selected = rotated.slice(0, Math.min(5, rotated.length));
+
+  const pathItems = rotated.filter((item) => {
+    if (path === "all") return true;
+    const text = (item.title + " " + item.description).toLocaleLowerCase("fa");
+    if (path === "calm") return /آرام|شمع|گفت.?وگو|احساس|عاطف/.test(text);
+    if (path === "clarity") return /مسیر|عمومی|انرژی|قهوه|پاسور|اوراکل|خوانش/.test(text);
+    return item.type === "class" || item.type === "event" || /آموزش|کلاس|دوره/.test(text);
+  });
+
+  const featured = pathItems[0] ?? rotated[0];
+  const secondary = pathItems.slice(1, 4);
+  const revealItem = rotated.length
+    ? rotated[(daySeed * 7 + 3) % rotated.length]
+    : null;
+
+  const openItem = (item: (SearchItem & { badge: string }) | undefined) => {
+    if (!item) return;
+    if (item.service) {
+      onOpenService(item.service);
+      return;
+    }
+    if (item.type === "class") {
+      onNavigate("services");
+      window.setTimeout(() => {
+        document.getElementById("services-classes")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 120);
+      return;
+    }
+    if (item.type === "event") {
+      onNavigate("services");
+      window.setTimeout(() => {
+        document.getElementById("services-events")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 120);
+    }
+  };
 
   return (
     <div className="inner-page selected-page">
-      <SectionHeaderCard
-        kicker="KAENATCHI"
-        title="منتخب"
-        description="چند انتخاب از میان خدمات، کلاس‌ها و ایونت‌های کائنات‌چی؛ این بخش با تغییر روز، انتخاب‌های تازه‌ای نشان می‌دهد."
-        icon="spark"
-      />
-      {selected.length > 0 ? (
-        <div className="selected-list">
-          {selected.map((item) => (
-            <div className="selected-card" key={item.id}>
-              <div className="selected-card-icon"><Icon name={item.icon} /></div>
-              <div className="list-copy">
-                <small>{item.badge}</small>
-                <strong>{item.title}</strong>
-                <span>{item.description}</span>
-              </div>
-              <div className="list-arrow"><Icon name="arrow" /></div>
-            </div>
-          ))}
+      <section className="selected-intro">
+        <div className="selected-intro-mark">
+          <Icon name="spark" />
         </div>
-      ) : (
-        <div className="glass-list-card selected-empty" style={{ display: "block", textAlign: "center" }}>
-          <div className="list-icon" style={{ margin: "0 auto 12px" }}><Icon name="spark" /></div>
-          <div className="list-copy">
-            <strong>منتخب‌های کائنات‌چی</strong>
-            <span>با فعال شدن کلاس‌ها و ایونت‌ها، انتخاب‌های تازه به‌صورت خودکار در این بخش قرار می‌گیرند.</span>
+        <div className="selected-intro-copy">
+          <span>KAENATCHI CURATED</span>
+          <h1>منتخب کائنات‌چی</h1>
+          <p>چیزهایی که این روزها ارزش دیدن دارند.</p>
+        </div>
+        <div className="selected-intro-line" />
+      </section>
+
+      {featured ? (
+        <button
+          type="button"
+          className="selected-feature"
+          onClick={() => openItem(featured)}
+          aria-label={`مشاهده ${featured.title}`}
+        >
+          <div className="selected-feature-orbit orbit-a" />
+          <div className="selected-feature-orbit orbit-b" />
+          <div className="selected-feature-copy">
+            <span className="selected-eyebrow">انتخاب امروز</span>
+            <strong>{featured.title}</strong>
+            <p>{featured.description}</p>
+            <span className="selected-feature-link">مشاهده <span>←</span></span>
           </div>
+          <div className="selected-feature-badge">
+            <Icon name={featured.icon} />
+            <small>{featured.badge}</small>
+          </div>
+        </button>
+      ) : (
+        <div className="selected-feature selected-empty-feature">
+          <span className="selected-eyebrow">منتخب کائنات‌چی</span>
+          <strong>هنوز چیزی برای انتخاب نداریم</strong>
+          <p>با فعال شدن محتوا در خدمات، کلاس‌ها یا ایونت‌ها، این فضا خودکار پر می‌شود.</p>
         </div>
       )}
+
+      <section className="selected-paths">
+        <div className="selected-section-heading">
+          <span>یک حال‌وهوا انتخاب کن</span>
+          <strong>برای تو</strong>
+        </div>
+
+        <div className="selected-path-grid">
+          {[
+            { id: "calm" as const, title: "آرامش", icon: "candle" as IconName, copy: "چیزهای نرم‌تر و آرام‌تر" },
+            { id: "clarity" as const, title: "وضوح", icon: "spark" as IconName, copy: "برای وقتی که دنبال جهت هستی" },
+            { id: "learning" as const, title: "یادگیری", icon: "class" as IconName, copy: "چیزهایی برای یاد گرفتن" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`selected-path-card ${path === item.id ? "active" : ""}`}
+              onClick={() => setPath(path === item.id ? "all" : item.id)}
+            >
+              <span className="selected-path-icon"><Icon name={item.icon} /></span>
+              <strong>{item.title}</strong>
+              <span>{item.copy}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {secondary.length > 0 && (
+        <section className="selected-now">
+          <div className="selected-section-heading">
+            <span>چند انتخاب کوتاه</span>
+            <strong>این روزها در کائنات‌چی</strong>
+          </div>
+
+          <div className="selected-mini-grid">
+            {secondary.map((item) => (
+              <button
+                type="button"
+                className="selected-mini-card"
+                key={item.id}
+                onClick={() => openItem(item)}
+              >
+                <span className="selected-mini-top">
+                  <small>{item.badge}</small>
+                  <span><Icon name="arrow" /></span>
+                </span>
+                <strong>{item.title}</strong>
+                <span>{item.description}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className={`selected-reveal ${revealOpen ? "is-open" : ""}`}>
+        <div className="selected-reveal-stars">✦ &nbsp; ✦ &nbsp; ✦</div>
+        <span className="selected-eyebrow">یک انتخاب برای امروز</span>
+        <h2>{revealOpen && revealItem ? revealItem.title : "امروز چی ببینم؟"}</h2>
+        <p>
+          {revealOpen && revealItem
+            ? revealItem.description
+            : "یک انتخاب از چیزهایی که همین حالا در کائنات‌چی وجود دارند؛ نه فال، فقط یک پیشنهاد خوب."}
+        </p>
+        <button
+          type="button"
+          className="selected-reveal-button"
+          onClick={() => {
+            setRevealOpen(true);
+            if (revealItem) {
+              window.setTimeout(() => openItem(revealItem), 620);
+            }
+          }}
+        >
+          {revealOpen ? "مشاهده انتخاب ←" : "✦ امروز چی ببینم؟"}
+        </button>
+      </section>
+
+      <section className="selected-discover">
+        <div>
+          <span>اگر می‌خواهی بیشتر ببینی</span>
+          <strong>کائنات‌چی را کشف کن</strong>
+        </div>
+        <div className="selected-discover-links">
+          <button type="button" onClick={() => onNavigate("services")}>خدمات <span>←</span></button>
+          <button type="button" onClick={() => {
+            onNavigate("services");
+            window.setTimeout(() => document.getElementById("services-classes")?.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
+          }}>کلاس‌ها <span>←</span></button>
+          <button type="button" onClick={() => {
+            onNavigate("services");
+            window.setTimeout(() => document.getElementById("services-events")?.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
+          }}>ایونت‌ها <span>←</span></button>
+        </div>
+      </section>
     </div>
   );
 }
@@ -4182,7 +4329,7 @@ function App() {
 
         {section === "services" && <ServicesPage focus={serviceFocus} />}
 
-        {section === "selected" && <SelectedPage />}
+        {section === "selected" && (\n          <SelectedPage\n            onNavigate={changeSection}\n            onOpenService={(service) => {\n              setSearchOpen(true);\n              setSearchService(service);\n            }}\n          />\n        )}
 
         {section === "more" && <MorePage onSearch={openSearch} />}
       </div>
