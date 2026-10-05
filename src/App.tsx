@@ -1332,6 +1332,22 @@ function SearchPage({
               event.target.value
             )
           }
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              event.currentTarget.blur();
+              window.requestAnimationFrame(() => {
+                const activeElement = document.activeElement;
+                if (
+                  activeElement instanceof HTMLInputElement ||
+                  activeElement instanceof HTMLTextAreaElement ||
+                  activeElement instanceof HTMLSelectElement
+                ) {
+                  activeElement.blur();
+                }
+              });
+            }
+          }}
           autoFocus
           type="search"
           placeholder="چی می‌خوای پیدا کنی؟"
@@ -3783,6 +3799,71 @@ function App() {
   const [navDirection, setNavDirection] = useState<"forward" | "backward">("forward");
 
   const touchStart = useRef<{ x: number; y: number; identifier: number } | null>(null);
+
+  useEffect(() => {
+    let telegramWebApp: any = null;
+    let cleanupViewportListener: (() => void) | null = null;
+
+    const applyTelegramViewport = (webApp: any) => {
+      telegramWebApp = webApp;
+
+      try {
+        webApp.ready?.();
+        webApp.expand?.();
+
+        const updateViewportHeight = () => {
+          const viewportHeight = Number(webApp.viewportHeight);
+          if (Number.isFinite(viewportHeight) && viewportHeight > 0) {
+            document.documentElement.style.setProperty(
+              "--tg-viewport-height",
+              `${viewportHeight}px`
+            );
+          }
+        };
+
+        updateViewportHeight();
+
+        if (typeof webApp.onEvent === "function") {
+          webApp.onEvent("viewportChanged", updateViewportHeight);
+          cleanupViewportListener = () => {
+            if (typeof webApp.offEvent === "function") {
+              webApp.offEvent("viewportChanged", updateViewportHeight);
+            }
+          };
+        }
+      } catch {
+        // The app also works normally when opened outside Telegram.
+      }
+    };
+
+    const existingWebApp = (window as any).Telegram?.WebApp;
+
+    if (existingWebApp) {
+      applyTelegramViewport(existingWebApp);
+    } else if (
+      typeof document !== "undefined" &&
+      !document.querySelector(
+        'script[data-kaenatchi-telegram-webapp="true"]'
+      )
+    ) {
+      const script = document.createElement("script");
+      script.src = TELEGRAM_WEBAPP_SCRIPT;
+      script.async = true;
+      script.dataset.kaenatchiTelegramWebapp = "true";
+      script.onload = () => {
+        const webApp = (window as any).Telegram?.WebApp;
+        if (webApp) {
+          applyTelegramViewport(webApp);
+        }
+      };
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      cleanupViewportListener?.();
+      telegramWebApp = null;
+    };
+  }, []);
 
   const changeSection = (nextSection: Section) => {
     if (nextSection === section) return;
