@@ -4329,7 +4329,15 @@ function App() {
 
         {section === "services" && <ServicesPage focus={serviceFocus} />}
 
-        {section === "selected" && (\n          <SelectedPage\n            onNavigate={changeSection}\n            onOpenService={(service) => {\n              setSearchOpen(true);\n              setSearchService(service);\n            }}\n          />\n        )}
+        {section === "selected" && (
+          <SelectedPage
+            onNavigate={changeSection}
+            onOpenService={(service) => {
+              setSearchOpen(true);
+              setSearchService(service);
+            }}
+          />
+        )}
 
         {section === "more" && <MorePage onSearch={openSearch} />}
       </div>
