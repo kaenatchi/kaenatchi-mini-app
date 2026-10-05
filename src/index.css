@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Vazirmatn:wght@400;500;600;700;800&display=swap");
 
 :root {
   font-family:
@@ -2477,22 +2477,29 @@ button {
 .home-topbar {
   direction: ltr;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  column-gap: 18px;
+  column-gap: clamp(18px, 5vw, 42px);
 }
 
 .home-date-wrap {
-  justify-content: flex-start;
+  justify-content: flex-end;
   direction: rtl;
   min-width: 0;
 }
 
 .home-brand-inline {
   direction: rtl;
+  font-family: "Amiri", "Vazirmatn", serif;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.2;
+  transform: translateY(-1px);
+  text-shadow: 0 8px 22px rgba(36,77,59,0.1);
 }
 
 .home-top-actions {
   direction: ltr;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 10px;
   min-width: 0;
 }
@@ -2513,6 +2520,10 @@ button {
 
   .home-top-actions {
     gap: 7px;
+  }
+
+  .home-brand-inline {
+    font-size: 19px;
   }
 
   .date-pill {
@@ -2635,4 +2646,51 @@ button {
 .nav-item {
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* --------------------------------------------------
+   SHARED FOOTER
+-------------------------------------------------- */
+
+.app-footer {
+  width: min(100% - 28px, 760px);
+  margin: 22px auto calc(116px + env(safe-area-inset-bottom));
+  padding: 16px 6px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  color: rgba(83, 94, 87, 0.72);
+  font-size: 10px;
+  line-height: 1.8;
+  text-align: center;
+  letter-spacing: 0;
+  border-top: 1px solid rgba(53,59,50,0.08);
+}
+
+.app-footer span:first-child {
+  font-weight: 700;
+  color: rgba(53,59,50,0.78);
+}
+
+.app-footer span + span::before {
+  content: "•";
+  margin-left: 7px;
+  color: rgba(164,139,93,0.68);
+}
+
+.app-shell-special {
+  padding-bottom: 28px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .app-footer {
+    color: rgba(201, 211, 204, 0.66);
+    border-top-color: rgba(218,232,220,0.09);
+  }
+
+  .app-footer span:first-child {
+    color: rgba(237,242,237,0.82);
+  }
 }
