@@ -3483,3 +3483,62 @@ button {
     border-color: #5a8068;
   }
 }
+
+
+/* Selected hero — subtle living glow */
+.selected-feature {
+  animation: selected-feature-breathe 6s ease-in-out infinite;
+  will-change: box-shadow, transform;
+}
+
+.selected-feature::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  width: 180px;
+  height: 180px;
+  top: -90px;
+  left: -60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(216,197,155,0.15) 0%, rgba(216,197,155,0.045) 38%, transparent 72%);
+  filter: blur(2px);
+  animation: selected-feature-glow 7s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.selected-feature-orbit {
+  animation: selected-feature-orbit 14s linear infinite;
+  transform-origin: center;
+}
+
+.selected-feature .orbit-b {
+  animation-duration: 10s;
+  animation-direction: reverse;
+}
+
+@keyframes selected-feature-breathe {
+  0%, 100% {
+    box-shadow: 0 24px 48px rgba(23,75,56,0.19), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+  50% {
+    box-shadow: 0 27px 55px rgba(23,75,56,0.27), 0 0 30px rgba(216,197,155,0.055), inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+}
+
+@keyframes selected-feature-glow {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0.45; }
+  50% { transform: translate3d(105px, 72px, 0) scale(1.18); opacity: 0.8; }
+}
+
+@keyframes selected-feature-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .selected-feature,
+  .selected-feature::before,
+  .selected-feature-orbit {
+    animation: none;
+  }
+}
