@@ -3976,6 +3976,100 @@ function MorePage({
         <strong>همه‌چیز در یک نگاه</strong>
       </div>
 
+      <section className="more-category-section">
+        <div className="more-category-title">
+          <span>فضای من</span>
+          <strong>مدیریت شخصی</strong>
+        </div>
+
+        <div className="more-category-grid">
+          <button type="button" className="more-category-card" onClick={() => setSelected({
+            id: "profile",
+            title: "پروفایل من",
+            icon: "user",
+            description: "اطلاعات حساب و وضعیت عضویت شما",
+          })}>
+            <span className="more-category-icon"><Icon name="user" /></span>
+            <span className="more-category-copy"><strong>پروفایل من</strong><small>اطلاعات حساب و عضویت</small></span>
+            <Icon name="arrow" />
+          </button>
+
+          <button type="button" className="more-category-card" onClick={() => setSelected({
+            id: "bookings",
+            title: "سابقه نوبت‌ها",
+            icon: "calendar",
+            description: "مشاهده نوبت‌ها و سوابق رزرو",
+          })}>
+            <span className="more-category-icon"><Icon name="calendar" /></span>
+            <span className="more-category-copy"><strong>سابقه نوبت‌ها</strong><small>نوبت‌های ثبت‌شده شما</small></span>
+            <Icon name="arrow" />
+          </button>
+
+          <button type="button" className="more-category-card" onClick={openVip}>
+            <span className="more-category-icon gold"><Icon name="crown" /></span>
+            <span className="more-category-copy"><strong>باشگاه VIP</strong><small>عضویت، توکن و مزایا</small></span>
+            <Icon name="arrow" />
+          </button>
+        </div>
+      </section>
+
+      <section className="more-category-section">
+        <div className="more-category-title">
+          <span>کائنات‌چی</span>
+          <strong>راهنما و ارتباط</strong>
+        </div>
+
+        <div className="more-category-grid">
+          {moreItems.filter((item) => ["faq", "contact", "hours"].includes(item.id)).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="more-category-card"
+              onClick={() => setSelected(item)}
+            >
+              <span className="more-category-icon"><Icon name={item.icon} /></span>
+              <span className="more-category-copy"><strong>{item.title}</strong><small>{item.description}</small></span>
+              <Icon name="arrow" />
+            </button>
+          ))}
+
+          <button type="button" className="more-category-card" onClick={() => window.open("https://t.me/KaenatChy", "_blank")}>
+            <span className="more-category-icon"><Icon name="spark" /></span>
+            <span className="more-category-copy"><strong>کانال کائنات‌چی</strong><small>مطالب و اطلاع‌رسانی‌ها</small></span>
+            <Icon name="arrow" />
+          </button>
+        </div>
+      </section>
+
+      <div className="more-list more-legacy-list">
+        {moreItems.filter((item) => ["classes", "events"].includes(item.id)).map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className="glass-list-card"
+            onClick={() => setSelected(item)}
+            style={{
+              width: "100%",
+              border: "none",
+              textAlign: "right",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            <div className="list-icon">
+              <Icon name={item.icon} />
+            </div>
+            <div className="list-copy">
+              <strong>{item.title}</strong>
+              <span>{item.description}</span>
+            </div>
+            <div className="list-arrow">
+              <Icon name="arrow" />
+            </div>
+          </button>
+        ))}
+      </div>
+
       <div className="more-list">
         {moreItems.map((item) => (
           <button
