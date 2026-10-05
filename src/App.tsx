@@ -2621,7 +2621,15 @@ async function getTelegramInitData(): Promise<string | null> {
     telegramWebApp.expand?.();
   } catch {}
 
-  return telegramWebApp.initData || null;
+  // Telegram can populate initData a moment after the WebApp object exists.
+  // Retry briefly instead of treating a valid VIP member as a guest.
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const initData = telegramWebApp.initData || "";
+    if (initData) return initData;
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
+  }
+
+  return null;
 }
 
 async function callVipApi(
