@@ -1532,7 +1532,7 @@ button:active,
   min-height: 70px;
 
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
   gap: 4px;
 
@@ -2349,4 +2349,44 @@ button:active,
   .vip-mode .glass-list-card span { color:#b9c2ba !important; }
   .vip-mode .glass-list-card .list-icon { color:#d8c59b; background:linear-gradient(145deg,rgba(216,197,155,0.12),rgba(255,255,255,0.05)); border-color:rgba(255,255,255,0.08); }
   .vip-mode .vip-journey-summary { background:linear-gradient(145deg,rgba(35,43,38,0.94),rgba(27,34,30,0.88)); border-color:rgba(255,255,255,0.09); }
+}
+
+.selected-list { display: grid; gap: 12px; }
+.selected-card {
+  width: 100%; min-height: 86px; display: flex; align-items: center; gap: 12px;
+  padding: 14px 15px; border: 1px solid rgba(255,255,255,0.72); border-radius: 21px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.66), rgba(255,255,255,0.34));
+  box-shadow: 0 15px 35px rgba(36,77,59,0.08), inset 0 1px 0 rgba(255,255,255,0.82);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+.selected-card-icon {
+  width: 48px; height: 48px; flex: 0 0 48px; display: grid; place-items: center;
+  border-radius: 16px; color: var(--green); background: rgba(36,99,71,0.08);
+}
+.selected-card .list-copy small { display:block; margin-bottom:3px; color:#8a7146; font-size:9px; font-weight:800; }
+.selected-card .list-copy strong { display:block; margin-bottom:2px; }
+.selected-card .list-copy span { display:block; }
+.selected-empty { margin-top: 4px; }
+
+.date-dot {
+  width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%;
+  background: #c5a45f; box-shadow: 0 0 0 4px rgba(197,164,95,0.08), 0 0 10px rgba(197,164,95,0.18);
+  animation: dateDotBreath 3.8s ease-in-out infinite;
+}
+@keyframes dateDotBreath {
+  0%, 100% { opacity: 0.42; transform: scale(0.88); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+.home-top-actions { direction: ltr; }
+.home-search-button { order: 1; }
+.vip-top-button { order: 2; }
+.home-page { padding-top: 14px; }
+
+@media (max-width: 390px) {
+  .bottom-nav { gap: 2px; padding-left: 5px; padding-right: 5px; }
+  .nav-item { min-width: 0; font-size: 8.5px; }
+  .nav-icon svg { width: 19px; height: 19px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .date-dot { animation: none; opacity: 0.72; }
 }
