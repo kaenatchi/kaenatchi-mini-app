@@ -103,171 +103,244 @@ const MAIN_APP_URL =
 const BOOKING_APP_URL =
   "https://kaenatchi.github.io/booking/";
 
-const energyServices: Service[] = [
-  {
-    id: "coffee",
-    title: "قهوه",
-    category: "energy",
-    price: "۷۰۰,۰۰۰ تومان",
-    duration: "۳۰ دقیقه",
-    description:
-      "انرژی‌خوانی با نقش‌های فنجان قهوه برای بررسی مسیر و نشانه‌های پیش رو.",
-  },
-  {
-    id: "playing-cards",
-    title: "پاسور",
-    category: "energy",
-    price: "۶۵۰,۰۰۰ تومان",
-    duration: "۳۰ دقیقه",
-    description:
-      "انرژی‌خوانی با کارت‌های پاسور برای بررسی موضوع مورد نظر شما.",
-  },
-  {
-    id: "rider-waite",
-    title: "تاروت رایدر وایت",
-    category: "energy",
-    price: "۷۵۰,۰۰۰ تومان",
-    duration: "۳۰ دقیقه",
-    description:
-      "خوانش تاروت رایدر وایت برای بررسی انرژی‌ها، شرایط و مسیر پیش روی شما.",
-  },
-  {
-    id: "rider-emotional",
-    title: "رایدر احساسی",
-    category: "energy",
-    price: "۷۵۰,۰۰۰ تومان",
-    duration: "۳۰ دقیقه",
-    description:
-      "خوانش احساسی برای بررسی وضعیت عاطفی، احساسات و انرژی میان افراد.",
-  },
-  {
-    id: "rider-career-financial",
-    title: "رایدر شغلی - مالی",
-    category: "energy",
-    price: "۷۵۰,۰۰۰ تومان",
-    duration: "۳۰ دقیقه",
-    description:
-      "خوانش با تمرکز بر مسیر شغلی، مالی و انرژی‌های مرتبط با این حوزه.",
-  },
-  {
-    id: "french-lenormand",
-    title: "لنورماند فرانسوی",
-    category: "energy",
-    price: "۷۵۰,۰۰۰ تومان",
-    duration: "۳۰ دقیقه",
-    description:
-      "انرژی‌خوانی با کارت‌های لنورماند فرانسوی برای بررسی موضوع انتخابی شما.",
-  },
-  {
-    id: "emotional-lenormand",
-    title: "لنورماند احساسی",
-    category: "energy",
-    price: "۷۵۰,۰۰۰ تومان",
-    duration: "۳۰ دقیقه",
-    description:
-      "خوانش احساسی با لنورماند برای بررسی روابط و انرژی‌های عاطفی.",
-  },
-  {
-    id: "greek-tarot-emotional",
-    title: "تاروت یونانی احساسی",
-    category: "energy",
-    price: "۸۵۰,۰۰۰ تومان",
-    duration: "۳۰ دقیقه",
-    description:
-      "خوانش احساسی با تاروت یونانی با تمرکز بر روابط و احساسات.",
-  },
-  {
-    id: "marseille-tarot-emotional",
-    title: "تاروت مارسی احساسی",
-    category: "energy",
-    price: "۸۵۰,۰۰۰ تومان",
-    duration: "۳۰ دقیقه",
-    description:
-      "خوانش احساسی با تاروت مارسی برای بررسی انرژی و شرایط رابطه.",
-  },
-  {
-    id: "gem-oracle",
-    title: "جم اوراکل",
-    category: "energy",
-    price: "۷۰۰,۰۰۰ تومان",
-    duration: "۳۰ دقیقه",
-    description:
-      "خوانش اوراکل با تمرکز بر پیام‌ها و انرژی‌های مرتبط با موضوع شما.",
-  },
-];
+const CMS_API_URL =
+  "https://script.google.com/macros/s/AKfycbzgocb54x4FDoQl3C8-o2WnipZuQYkM1j1juV-ZZKHoieN7DbrybTj3WyXbJe5I2nMhXw/exec";
 
-const mainServices: Service[] = [
-  {
-    id: "energy-reading",
-    title: "انرژی‌خوانی",
-    category: "energy",
-    price: "",
-    duration: "",
-    description:
-      "مجموعه‌ای از خوانش‌های انرژی با روش‌های مختلف برای موضوع مورد نظر شما.",
-  },
-  {
-    id: "candle-therapy",
-    title: "شمع‌تراپی",
-    category: "candle",
-    price: "۵۵۰,۰۰۰ تومان",
-    duration: "۲۰ دقیقه",
-    description:
-      "جلسه شمع‌تراپی به‌صورت غیرحضوری و با تمرکز بر نیت و موضوع انتخابی شما.",
-  },
-  {
-    id: "psychotherapy",
-    title: "سایکوتراپی",
-    category: "psychotherapy",
-    price: "۶۰۰,۰۰۰ تومان",
-    duration: "۴۵ دقیقه",
-    description:
-      "جلسه گفت‌وگومحور تلفنی برای صحبت درباره موضوع مورد نظر شما. این خدمت به‌عنوان روان‌درمانی یا خدمات درمانی بالینی ارائه نمی‌شود.",
-  },
-];
+type CmsRow = Record<string, unknown>;
 
-const moreItems = [
-  {
-    id: "vip",
-    title: "VIP کائنات‌چی",
-    icon: "crown" as IconName,
-    description: "باشگاه ویژه کائنات‌چی",
-  },
-  {
-    id: "classes",
-    title: "کلاس‌ها",
-    icon: "class" as IconName,
-    description: "آموزش‌ها و دوره‌های کائنات‌چی",
-  },
-  {
-    id: "events",
-    title: "ایونت‌ها",
-    icon: "event" as IconName,
-    description: "رویدادها و برنامه‌های پیش رو",
-  },
-  {
-    id: "faq",
-    title: "سوالات متداول",
-    icon: "faq" as IconName,
-    description: "پاسخ به سوالات رایج",
-  },
-  {
-    id: "hours",
-    title: "ساعات کاری",
-    icon: "clock" as IconName,
-    description: "زمان پاسخ‌گویی کائنات‌چی",
-  },
-  {
-    id: "contact",
-    title: "ارتباط با ما",
-    icon: "contact" as IconName,
-    description: "راه‌های ارتباطی کائنات‌چی",
-  },
-];
+type MoreItem = {
+  id: string;
+  title: string;
+  icon: IconName;
+  description: string;
+};
 
-const publishedClasses: SearchItem[] = [];
-const publishedEvents: SearchItem[] = [];
-const publishedFaq: SearchItem[] = [];
+const cmsRows: {
+  services: CmsRow[];
+  courses: CmsRow[];
+  events: CmsRow[];
+  faq: CmsRow[];
+  pages: CmsRow[];
+  settings: CmsRow[];
+} = {
+  services: [],
+  courses: [],
+  events: [],
+  faq: [],
+  pages: [],
+  settings: [],
+};
+
+let energyServices: Service[] = [];
+let mainServices: Service[] = [];
+let moreItems: MoreItem[] = [];
+let publishedClasses: SearchItem[] = [];
+let publishedEvents: SearchItem[] = [];
+let publishedFaq: SearchItem[] = [];
+
+function cmsText(row: CmsRow, aliases: string[]): string {
+  const normalized = new Map<string, unknown>();
+  Object.entries(row).forEach(([key, value]) => {
+    normalized.set(
+      key.trim().toLowerCase().replace(/[\s_-]+/g, ""),
+      value
+    );
+  });
+
+  for (const alias of aliases) {
+    const value = normalized.get(
+      alias.trim().toLowerCase().replace(/[\s_-]+/g, "")
+    );
+    if (value !== undefined && value !== null && String(value).trim()) {
+      return String(value).trim();
+    }
+  }
+
+  return "";
+}
+
+function cmsActive(row: CmsRow): boolean {
+  const value = cmsText(row, ["فعال", "active", "status"]).toLowerCase();
+  return !value || ["بله", "فعال", "true", "1", "yes"].includes(value);
+}
+
+function cmsSlug(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[آأإ]/g, "ا")
+    .replace(/[^a-z0-9\u0600-\u06ff]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "item";
+}
+
+function cmsCategory(value: string, title: string): ServiceCategory {
+  const text = (value + " " + title).toLocaleLowerCase("fa");
+  if (/شمع/.test(text)) return "candle";
+  if (/گفت.?وگو|سایکوتراپی|مشاوره/.test(text)) return "psychotherapy";
+  return "energy";
+}
+
+function mapCmsServices(rows: CmsRow[]): Service[] {
+  return rows
+    .filter(cmsActive)
+    .map((row, index) => {
+      const title =
+        cmsText(row, ["نام خدمت", "عنوان", "نام", "title"]) ||
+        "خدمت";
+      const categoryRaw = cmsText(row, ["دسته", "دسته‌بندی", "category"]);
+      const id =
+        cmsText(row, ["شناسه", "id", "slug"]) ||
+        `${cmsSlug(title)}-${index + 1}`;
+      const description =
+        cmsText(row, [
+          "توضیحات کامل",
+          "توضیح کوتاه",
+          "توضیحات",
+          "توضیح",
+          "description",
+          "text",
+        ]);
+
+      return {
+        id,
+        title,
+        category: cmsCategory(categoryRaw, title),
+        price: cmsText(row, ["قیمت", "هزینه", "price"]),
+        duration: cmsText(row, ["مدت", "مدت زمان", "duration"]),
+        description,
+      };
+    });
+}
+
+function mapCmsSearchItems(
+  rows: CmsRow[],
+  type: "class" | "event" | "faq"
+): SearchItem[] {
+  return rows
+    .filter(cmsActive)
+    .map((row, index) => {
+      const title =
+        cmsText(row, [
+          type === "class" ? "نام دوره" : type === "event" ? "نام ایونت" : "سؤال",
+          "عنوان",
+          "نام",
+          "title",
+        ]) || (type === "faq" ? "سؤال" : type === "class" ? "کلاس" : "ایونت");
+
+      const description =
+        cmsText(row, [
+          type === "faq" ? "پاسخ" : "توضیحات کامل",
+          "توضیحات",
+          "توضیح کوتاه",
+          "توضیح",
+          "متن",
+          "description",
+          "text",
+        ]);
+
+      return {
+        id:
+          cmsText(row, ["شناسه", "id", "slug"]) ||
+          `${type}-${cmsSlug(title)}-${index + 1}`,
+        title,
+        description,
+        type,
+        icon: type === "class" ? "class" : type === "event" ? "event" : "faq",
+      };
+    });
+}
+
+function cmsSetting(keys: string[]): string {
+  for (const row of cmsRows.settings) {
+    const key = cmsText(row, ["کلید", "key", "نام", "name"]).toLowerCase();
+    if (keys.some((candidate) => key.includes(candidate.toLowerCase()))) {
+      return cmsText(row, ["مقدار", "value", "متن", "text", "لینک", "url"]);
+    }
+  }
+  return "";
+}
+
+function cmsPageText(keys: string[]): string {
+  for (const row of cmsRows.pages) {
+    const title = cmsText(row, ["نام صفحه", "عنوان", "نام", "title"]).toLowerCase();
+    const key = cmsText(row, ["کلید", "key", "slug"]).toLowerCase();
+    const haystack = title + " " + key;
+    if (keys.some((candidate) => haystack.includes(candidate.toLowerCase()))) {
+      return cmsText(row, ["متن", "توضیحات کامل", "توضیحات", "پاسخ", "text", "description"]);
+    }
+  }
+  return "";
+}
+
+function rebuildCmsContent(data: Partial<typeof cmsRows>) {
+  cmsRows.services = Array.isArray(data.services) ? data.services : [];
+  cmsRows.courses = Array.isArray(data.courses) ? data.courses : [];
+  cmsRows.events = Array.isArray(data.events) ? data.events : [];
+  cmsRows.faq = Array.isArray(data.faq) ? data.faq : [];
+  cmsRows.pages = Array.isArray(data.pages) ? data.pages : [];
+  cmsRows.settings = Array.isArray(data.settings) ? data.settings : [];
+
+  const allServices = mapCmsServices(cmsRows.services);
+  mainServices = allServices;
+  energyServices = allServices.filter((service) => service.category === "energy");
+
+  publishedClasses = mapCmsSearchItems(cmsRows.courses, "class");
+  publishedEvents = mapCmsSearchItems(cmsRows.events, "event");
+  publishedFaq = mapCmsSearchItems(cmsRows.faq, "faq");
+
+  moreItems = [
+    {
+      id: "faq",
+      title: cmsPageText(["سوالات", "faq"]) || "سوالات متداول",
+      icon: "faq",
+      description: "پاسخ به سوالات رایج",
+    },
+    {
+      id: "hours",
+      title: cmsPageText(["ساعات", "hours"]) || "ساعات کاری",
+      icon: "clock",
+      description: "زمان پاسخ‌گویی کائنات‌چی",
+    },
+    {
+      id: "contact",
+      title: cmsPageText(["ارتباط", "contact"]) || "ارتباط با ما",
+      icon: "contact",
+      description: "راه‌های ارتباطی کائنات‌چی",
+    },
+  ];
+}
+
+async function loadCmsData(): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `${CMS_API_URL}?action=getMiniAppData&_=${Date.now()}`,
+      { method: "GET", cache: "no-store" }
+    );
+
+    if (!response.ok) return false;
+
+    const data = (await response.json()) as Partial<typeof cmsRows> & {
+      success?: boolean;
+    };
+
+    if (data.success === false) return false;
+
+    rebuildCmsContent(data);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getCmsFaqRows() {
+  return cmsRows.faq.filter(cmsActive).map((row) => ({
+    question:
+      cmsText(row, ["سؤال", "سوال", "question", "title"]) || "سؤال",
+    answer:
+      cmsText(row, ["پاسخ", "answer", "text", "توضیحات"]) || "",
+  }));
+}
+
 
 function Icon({ name }: { name: IconName }) {
   const common = {
