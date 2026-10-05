@@ -2413,15 +2413,62 @@ function normalizeVipTokens(value: unknown): VipToken[] {
 
 function formatVipJalaliDate(value: unknown): string {
   if (!value) return "";
+
   const text = String(value).trim();
-  const match = text.match(/^(\\d{3})[\\/-](\\d{1,2})[\\/-](\\d{1,2})(.*)$/);
-  if (match) {
-    const year = Number(match[1]);
-    if (year >= 700 && year < 900) {
-      return `1405/${String(Number(match[2])).padStart(2, "0")}/${String(Number(match[3])).padStart(2, "0")}${match[4] || ""}`;
-    }
+
+  // The VIP sheet can return a date as "00:00 784/04/16".
+  // Strip the time and normalize the legacy 3-digit Jalali year.
+  const match = text.match(/(?:^|\\s)(\\d{3,4})[\\/-](\\d{1,2})[\\/-](\\d{1,2})/);
+
+  if (!match) return text;
+
+  let year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return text;
   }
-  return text;
+
+  // Legacy backend formatting can drop the leading "1" from a Jalali
+  // year in the 1400s (e.g. 784 => 1404).
+  if (year >= 700 && year < 900) {
+    year += 620;
+  }
+
+  if (year < 1200 || year > 1600 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return text;
+  }
+
+  try {
+    const dateText = `${year}/${month}/${day}`;
+    const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).formatToParts(
+      new Date(
+        new Intl.DateTimeFormat("en-US", {
+          timeZone: "Asia/Tehran",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).format(new Date()) + "T00:00:00"
+      )
+    );
+
+    // Use the Jalali fields directly so we never reinterpret the stored
+    // membership date as a Gregorian date.
+    const monthNames = [
+      "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+      "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
+    ];
+
+    void parts;
+    return `${day.toLocaleString("fa-IR") } ${monthNames[month - 1]} ${year.toLocaleString("fa-IR")}`;
+  } catch {
+    return `${day.toLocaleString("fa-IR")}/${month.toLocaleString("fa-IR")}/${year.toLocaleString("fa-IR")}`;
+  }
 }
 
 function getVipTokenDisplayStatus(token: VipToken): {
@@ -2585,23 +2632,25 @@ async function connectTelegramVip(
    VIP PAGE
 ========================================================= */
 
+type VipPanel =
+  | "dashboard"
+  | "bookings"
+  | "payments"
+  | "tokens"
+  | "experiences"
+  | "classes"
+  | "events"
+  | "profile";
+
 function VipPage({
   onBack,
+  initialPanel = "dashboard",
 }: {
   onBack: () => void;
+  initialPanel?: VipPanel;
 }) {
 
-  const [activePanel, setActivePanel] =
-    useState<
-      | "dashboard"
-      | "bookings"
-      | "payments"
-      | "tokens"
-      | "experiences"
-      | "classes"
-      | "events"
-      | "profile"
-    >("dashboard");
+  const [activePanel, setActivePanel] = useState<VipPanel>(initialPanel);
 
 
   const [loading, setLoading] =
@@ -3733,64 +3782,72 @@ function MoreDetail({
   description: string;
   onBack: () => void;
 }) {
+  const isFaq = title === "سوالات متداول";
+  const isHours = title === "ساعات کاری";
+  const isContact = title === "ارتباط با ما";
 
   return (
     <div className="inner-page">
-
-      <button
-        type="button"
-        onClick={onBack}
-        style={backButtonStyle}
-      >
+      <button type="button" onClick={onBack} style={backButtonStyle}>
         ← بازگشت
       </button>
 
-
       <SectionHeaderCard
-        kicker={
-          title === "کلاس‌ها"
-            ? "CLASSES"
-            : title ===
-                "ایونت‌ها"
-              ? "EVENTS"
-              : title ===
-                  "سوالات متداول"
-                ? "FAQ"
-                : title ===
-                    "ساعات کاری"
-                  ? "HOURS"
-                  : "CONTACT"
-        }
+        kicker={isFaq ? "FAQ" : isHours ? "HOURS" : "CONTACT"}
         title={title}
-        description={
-          description
-        }
+        description={description}
         icon={icon}
       />
 
-
-      <div className="glass-list-card">
-
-        <div className="list-copy">
-
-          <strong>
-            {title}
-          </strong>
-
-
-          <span>
-            این بخش به‌صورت اختصاصی برای محتوای {title}
-            کائنات‌چی طراحی می‌شود.
-          </span>
-
+      {isFaq && (
+        <div className="more-info-stack">
+          {[
+            ["چطور نوبت رزرو کنم؟", "از دکمه + در نوار پایین، «رزرو نوبت» را انتخاب کن و مراحل انتخاب خدمت، تاریخ و ساعت را انجام بده."],
+            ["تاریخ‌ها به چه تقویمی هستند؟", "تمام تاریخ‌های نوبت و اطلاعات کاربری کائنات‌چی با تقویم شمسی نمایش داده می‌شوند."],
+            ["عضویت VIP چطور فعال می‌شود؟", "درخواست عضویت از طریق کائنات‌چی بررسی می‌شود و فعال‌شدن عضویت به‌صورت خودکار انجام نمی‌شود."],
+            ["چطور با کائنات‌چی ارتباط بگیرم؟", "از بخش «ارتباط با کائنات‌چی» می‌توانی مسیر مناسب برای پیام‌دادن را انتخاب کنی."],
+          ].map(([question, answer]) => (
+            <div className="more-info-card" key={question}>
+              <strong>{question}</strong>
+              <span>{answer}</span>
+            </div>
+          ))}
         </div>
+      )}
 
-      </div>
+      {isHours && (
+        <div className="more-info-stack">
+          <div className="more-info-card">
+            <strong>ساعات کاری کائنات‌چی</strong>
+            <span>شنبه تا چهارشنبه · ۱۱ تا ۱۴ و ۱۵ تا ۱۹</span>
+            <span>پنج‌شنبه · ۱۱ تا ۱۴</span>
+            <small>تماس خارج از زمان هماهنگ‌شده انجام نمی‌شود؛ لطفاً پیام متنی ارسال کن.</small>
+          </div>
+        </div>
+      )}
 
+      {isContact && (
+        <div className="more-contact-grid">
+          <a className="more-contact-card" href="https://t.me/AD_Kaenatchi" target="_blank" rel="noreferrer">
+            <span>✦</span>
+            <strong>تلگرام</strong>
+            <small>@AD_Kaenatchi</small>
+          </a>
+          <a className="more-contact-card" href="https://wa.me/" target="_blank" rel="noreferrer">
+            <span>◌</span>
+            <strong>واتساپ</strong>
+            <small>پیام در واتساپ</small>
+          </a>
+          <a className="more-contact-card" href="https://instagram.com/Kaenatchi" target="_blank" rel="noreferrer">
+            <span>◎</span>
+            <strong>اینستاگرام</strong>
+            <small>@Kaenatchi</small>
+          </a>
+        </div>
+      )}
     </div>
   );
 }
-
 
 /* =========================================================
    MORE PAGE
@@ -3803,11 +3860,13 @@ function MorePage({
 }) {
   const [selected, setSelected] =
     useState<(typeof moreItems)[number] | null>(null);
+  const [vipPanel, setVipPanel] = useState<VipPanel | null>(null);
   const [vipData, setVipData] = useState<VipApiResponse | null>(null);
   const [clock, setClock] = useState(new Date());
 
   useEffect(() => {
     let active = true;
+
     loadTelegramIdentity()
       .then((data) => {
         if (active) setVipData(data);
@@ -3826,8 +3885,13 @@ function MorePage({
     };
   }, []);
 
-  if (selected?.id === "vip") {
-    return <VipPage onBack={() => setSelected(null)} />;
+  if (vipPanel) {
+    return (
+      <VipPage
+        initialPanel={vipPanel}
+        onBack={() => setVipPanel(null)}
+      />
+    );
   }
 
   if (selected) {
@@ -3882,13 +3946,9 @@ function MorePage({
     window.location.href = "https://t.me/AD_Kaenatchi?text=" + message;
   };
 
-  const openVip = () =>
-    setSelected({
-      id: "vip",
-      title: "VIP کائنات‌چی",
-      icon: "crown",
-      description: "باشگاه ویژه کائنات‌چی",
-    });
+  const openVipDashboard = () => {
+    setVipPanel("dashboard");
+  };
 
   return (
     <div className="inner-page more-dashboard">
@@ -3906,15 +3966,15 @@ function MorePage({
             </strong>
             <div className="more-status-line">
               <span className={"more-status-dot " + (isVip ? "vip" : "guest")} />
-              <span>{isVip ? "عضو باشگاه VIP" : "کاربر مهمان"}</span>
+              <span>{isVip ? "عضو باشگاه VIP" : "عضویت VIP هنوز فعال نیست"}</span>
             </div>
           </div>
 
           <button
             type="button"
             className={"more-status-button " + (isVip ? "vip" : "guest")}
-            onClick={openVip}
-            aria-label={isVip ? "وضعیت عضویت VIP" : "وضعیت عضویت مهمان"}
+            onClick={openVipDashboard}
+            aria-label={isVip ? "وضعیت عضویت VIP" : "ورود به VIP"}
           >
             <span />
           </button>
@@ -3956,62 +4016,54 @@ function MorePage({
       )}
 
       {isVip && (
-        <button type="button" className="more-vip-active-card" onClick={openVip}>
-          <div className="more-vip-active-symbol">✦</div>
-          <div>
-            <span>عضویت فعال</span>
-            <strong>ورود به باشگاه VIP</strong>
+        <section className="more-member-section">
+          <div className="more-member-heading">
+            <span>MEMBERSHIP</span>
+            <strong>عضویت فعال</strong>
           </div>
-          <Icon name="arrow" />
-        </button>
-      )}
 
-      <button type="button" className="more-search-card" onClick={onSearch}>
-        <Icon name="search" />
-        <span>جست‌وجو در کائنات‌چی...</span>
-      </button>
+          <div className="more-member-grid">
+            <button
+              type="button"
+              className="more-category-card"
+              onClick={() => setVipPanel("profile")}
+            >
+              <span className="more-category-icon gold"><Icon name="user" /></span>
+              <span className="more-category-copy">
+                <strong>پروفایل من</strong>
+                <small>اطلاعات حساب و عضویت</small>
+              </span>
+              <Icon name="arrow" />
+            </button>
+
+            <button
+              type="button"
+              className="more-category-card"
+              onClick={() => setVipPanel("bookings")}
+            >
+              <span className="more-category-icon"><Icon name="calendar" /></span>
+              <span className="more-category-copy">
+                <strong>سابقه نوبت‌ها</strong>
+                <small>نوبت‌های ثبت‌شده شما</small>
+              </span>
+              <Icon name="arrow" />
+            </button>
+          </div>
+        </section>
+      )}
 
       <div className="more-dashboard-heading">
         <span>KAENATCHI</span>
         <strong>همه‌چیز در یک نگاه</strong>
+        <button
+          type="button"
+          className="more-heading-search"
+          onClick={onSearch}
+          aria-label="جست‌وجو در کائنات‌چی"
+        >
+          <Icon name="search" />
+        </button>
       </div>
-
-      <section className="more-category-section">
-        <div className="more-category-title">
-          <span>فضای من</span>
-          <strong>مدیریت شخصی</strong>
-        </div>
-
-        <div className="more-category-grid">
-          <button type="button" className="more-category-card" onClick={() => setSelected({
-            id: "profile",
-            title: "پروفایل من",
-            icon: "user",
-            description: "اطلاعات حساب و وضعیت عضویت شما",
-          })}>
-            <span className="more-category-icon"><Icon name="user" /></span>
-            <span className="more-category-copy"><strong>پروفایل من</strong><small>اطلاعات حساب و عضویت</small></span>
-            <Icon name="arrow" />
-          </button>
-
-          <button type="button" className="more-category-card" onClick={() => setSelected({
-            id: "bookings",
-            title: "سابقه نوبت‌ها",
-            icon: "calendar",
-            description: "مشاهده نوبت‌ها و سوابق رزرو",
-          })}>
-            <span className="more-category-icon"><Icon name="calendar" /></span>
-            <span className="more-category-copy"><strong>سابقه نوبت‌ها</strong><small>نوبت‌های ثبت‌شده شما</small></span>
-            <Icon name="arrow" />
-          </button>
-
-          <button type="button" className="more-category-card" onClick={openVip}>
-            <span className="more-category-icon gold"><Icon name="crown" /></span>
-            <span className="more-category-copy"><strong>باشگاه VIP</strong><small>عضویت، توکن و مزایا</small></span>
-            <Icon name="arrow" />
-          </button>
-        </div>
-      </section>
 
       <section className="more-category-section">
         <div className="more-category-title">
@@ -4020,84 +4072,43 @@ function MorePage({
         </div>
 
         <div className="more-category-grid">
-          {moreItems.filter((item) => ["faq", "contact", "hours"].includes(item.id)).map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="more-category-card"
-              onClick={() => setSelected(item)}
-            >
-              <span className="more-category-icon"><Icon name={item.icon} /></span>
-              <span className="more-category-copy"><strong>{item.title}</strong><small>{item.description}</small></span>
-              <Icon name="arrow" />
-            </button>
-          ))}
+          {moreItems
+            .filter((item) => ["faq", "contact", "hours"].includes(item.id))
+            .map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="more-category-card"
+                onClick={() => setSelected(item)}
+              >
+                <span className="more-category-icon">
+                  <Icon name={item.icon} />
+                </span>
+                <span className="more-category-copy">
+                  <strong>{item.title}</strong>
+                  <small>{item.description}</small>
+                </span>
+                <Icon name="arrow" />
+              </button>
+            ))}
 
-          <button type="button" className="more-category-card" onClick={() => window.open("https://t.me/KaenatChy", "_blank")}>
-            <span className="more-category-icon"><Icon name="spark" /></span>
-            <span className="more-category-copy"><strong>کانال کائنات‌چی</strong><small>مطالب و اطلاع‌رسانی‌ها</small></span>
+          <a
+            className="more-category-card"
+            href="https://t.me/KaenatChy"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span className="more-category-icon">
+              <Icon name="spark" />
+            </span>
+            <span className="more-category-copy">
+              <strong>کانال کائنات‌چی</strong>
+              <small>مطالب و اطلاع‌رسانی‌ها</small>
+            </span>
             <Icon name="arrow" />
-          </button>
+          </a>
         </div>
       </section>
-
-      <div className="more-list more-legacy-list">
-        {moreItems.filter((item) => ["classes", "events"].includes(item.id)).map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className="glass-list-card"
-            onClick={() => setSelected(item)}
-            style={{
-              width: "100%",
-              border: "none",
-              textAlign: "right",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            <div className="list-icon">
-              <Icon name={item.icon} />
-            </div>
-            <div className="list-copy">
-              <strong>{item.title}</strong>
-              <span>{item.description}</span>
-            </div>
-            <div className="list-arrow">
-              <Icon name="arrow" />
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <div className="more-list">
-        {moreItems.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className="glass-list-card"
-            onClick={() => setSelected(item)}
-            style={{
-              width: "100%",
-              border: "none",
-              textAlign: "right",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            <div className="list-icon">
-              <Icon name={item.icon} />
-            </div>
-            <div className="list-copy">
-              <strong>{item.title}</strong>
-              <span>{item.description}</span>
-            </div>
-            <div className="list-arrow">
-              <Icon name="arrow" />
-            </div>
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
