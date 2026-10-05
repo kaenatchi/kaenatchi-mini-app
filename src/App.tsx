@@ -1034,139 +1034,270 @@ function ServiceDetail({
 }
 
 function ServicesPage({ focus }: { focus?: "all" | "classes" | "events" }) {
-  const [activeTab, setActiveTab] =
-    useState<"all" | ServiceCategory>(
-      "all"
-    );
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [activeCategory, setActiveCategory] = useState<ServiceCategory | null>(null);
+  const [energyFilter, setEnergyFilter] = useState<"all" | "emotional" | "career" | "general">("all");
 
-  const [
-    selectedService,
-    setSelectedService,
-  ] = useState<Service | null>(null);
+  useEffect(() => {
+    if (!focus || focus === "all") return;
+
+    const targetId = focus === "classes" ? "services-classes" : "services-events";
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [focus]);
 
   if (selectedService) {
     return (
       <ServiceDetail
         service={selectedService}
-        onBack={() =>
-          setSelectedService(null)
-        }
+        onBack={() => setSelectedService(null)}
       />
     );
   }
 
-  let visibleServices: Service[];
+  const categoryCards: Array<{
+    id: ServiceCategory;
+    title: string;
+    description: string;
+    icon: IconName;
+  }> = [
+    {
+      id: "energy",
+      title: "انرژی‌خوانی",
+      description: "خوانش‌های مختلف برای احساسات، مسیر و موضوع مورد نظر تو.",
+      icon: "energy",
+    },
+    {
+      id: "candle",
+      title: "شمع‌تراپی",
+      description: "جلسه‌ای غیرحضوری با تمرکز بر نیت و موضوع انتخابی تو.",
+      icon: "candle",
+    },
+    {
+      id: "psychotherapy",
+      title: "گفت‌وگو",
+      description: "جلسه‌ای گفت‌وگومحور برای صحبت درباره موضوع مورد نظر تو.",
+      icon: "conversation",
+    },
+  ];
 
-  if (activeTab === "all") {
-    visibleServices = mainServices;
-  } else if (
-    activeTab === "energy"
-  ) {
-    visibleServices = energyServices;
-  } else {
-    visibleServices =
-      mainServices.filter(
-        (service) =>
-          service.category ===
-          activeTab
-      );
-  }
+  const categoryServices =
+    activeCategory === "energy"
+      ? energyServices
+      : activeCategory
+        ? mainServices.filter((service) => service.category === activeCategory)
+        : [];
+
+  const filteredEnergyServices =
+    energyFilter === "all"
+      ? categoryServices
+      : categoryServices.filter((service) => {
+          if (energyFilter === "emotional") {
+            return /احساس|عاطف/i.test(service.title);
+          }
+          if (energyFilter === "career") {
+            return /شغلی|مالی/i.test(service.title);
+          }
+          return !/احساس|عاطف|شغلی|مالی/i.test(service.title);
+        });
+
+  const visibleServices =
+    activeCategory === "energy"
+      ? filteredEnergyServices
+      : categoryServices;
+
+  const openCategory = (category: ServiceCategory) => {
+    setEnergyFilter("all");
+    setActiveCategory(category);
+    window.setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }, 0);
+  };
 
   return (
-    <div className="inner-page">
+    <div className="inner-page services-page">
       <SectionHeaderCard
         kicker="SERVICES"
         title="خدمات کائنات‌چی"
-        description="هر بخش را انتخاب کن تا جزئیات آن را ببینی."
+        description={
+          activeCategory
+            ? "خدمت مورد نظرت را انتخاب کن تا جزئیات و مسیر دریافت نوبت را ببینی."
+            : "از میان خدمات کائنات‌چی، مسیر مناسب خودت را انتخاب کن."
+        }
         icon="spark"
       />
 
-      <ServiceTabs
-        active={activeTab}
-        onChange={setActiveTab}
-      />
+      {!activeCategory ? (
+        <>
+          <div className="services-section-intro">
+            <span>دنیای خدمات</span>
+            <strong>هر چیزی که اینجا می‌بینی، یک مسیر مشخص دارد.</strong>
+          </div>
 
-      <div className="services-lobby-links" aria-label="بخش‌های آموزشی و رویدادها">
-        <button
-          type="button"
-          className={`services-lobby-card ${focus === "classes" ? "is-focused" : ""}`}
-          onClick={() => {
-            const target = document.getElementById("services-classes");
-            target?.scrollIntoView({ behavior: "smooth", block: "center" });
-          }}
-        >
-          <span className="services-lobby-icon"><Icon name="class" /></span>
-          <span className="services-lobby-copy">
-            <strong>کلاس‌ها</strong>
-            <span>آموزش‌ها و دوره‌های کائنات‌چی</span>
-          </span>
-          <span className="list-arrow"><Icon name="arrow" /></span>
-        </button>
+          <div className="services-category-grid" aria-label="دسته‌بندی خدمات">
+            {categoryCards.map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                className="services-category-card"
+                onClick={() => openCategory(category.id)}
+              >
+                <span className="services-category-icon">
+                  <Icon name={category.icon} />
+                </span>
+                <span className="services-category-copy">
+                  <strong>{category.title}</strong>
+                  <span>{category.description}</span>
+                </span>
+                <span className="services-category-arrow">
+                  <Icon name="arrow" />
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            className="services-back-button"
+            onClick={() => {
+              setActiveCategory(null);
+              setEnergyFilter("all");
+            }}
+          >
+            <span>→</span>
+            <span>همه خدمات</span>
+          </button>
 
-        <button
-          type="button"
-          className={`services-lobby-card ${focus === "events" ? "is-focused" : ""}`}
-          onClick={() => {
-            const target = document.getElementById("services-events");
-            target?.scrollIntoView({ behavior: "smooth", block: "center" });
-          }}
-        >
-          <span className="services-lobby-icon"><Icon name="event" /></span>
-          <span className="services-lobby-copy">
-            <strong>ایونت‌ها</strong>
-            <span>رویدادها و برنامه‌های پیش رو</span>
-          </span>
-          <span className="list-arrow"><Icon name="arrow" /></span>
-        </button>
-      </div>
-
-      <div className="service-list">
-        {visibleServices.map(
-          (service) => (
-            <ServiceCard
-              key={service.id}
-              service={service}
-              onClick={() => {
-                if (
-                  service.id ===
-                  "energy-reading"
-                ) {
-                  setActiveTab(
-                    "energy"
-                  );
-                  return;
+          <div className="services-category-title">
+            <div className="services-category-title-icon">
+              <Icon
+                name={
+                  activeCategory === "energy"
+                    ? "energy"
+                    : activeCategory === "candle"
+                      ? "candle"
+                      : "conversation"
                 }
+              />
+            </div>
+            <div>
+              <span>
+                {activeCategory === "energy"
+                  ? "ENERGY READING"
+                  : activeCategory === "candle"
+                    ? "CANDLE"
+                    : "CONVERSATION"}
+              </span>
+              <strong>
+                {activeCategory === "energy"
+                  ? "انرژی‌خوانی"
+                  : activeCategory === "candle"
+                    ? "شمع‌تراپی"
+                    : "گفت‌وگو"}
+              </strong>
+            </div>
+          </div>
 
-                setSelectedService(
-                  service
-                );
+          {activeCategory === "energy" && (
+            <div className="services-filter-row" aria-label="فیلتر انرژی‌خوانی">
+              {[
+                ["all", "همه"],
+                ["emotional", "احساسی"],
+                ["career", "شغلی و مالی"],
+                ["general", "عمومی"],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={"services-filter-chip " + (energyFilter === id ? "active" : "")}
+                  onClick={() =>
+                    setEnergyFilter(id as "all" | "emotional" | "career" | "general")
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="service-list services-detail-list">
+            {visibleServices.map((service) => (
+              <ServiceCard
+                key={service.id}
+                service={service}
+                onClick={() => setSelectedService(service)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {!activeCategory && (
+        <>
+          <div className="services-world-heading">
+            <span>دنیای کائنات‌چی</span>
+            <strong>آموزش و رویداد</strong>
+          </div>
+
+          <div className="services-content-lobby">
+            <button
+              id="services-classes"
+              type="button"
+              className={"services-content-card services-content-button " + (focus === "classes" ? "is-focused" : "")}
+              onClick={() => {
+                document.getElementById("services-classes")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
               }}
-            />
-          )
-        )}
-      </div>
+            >
+              <div className="services-content-icon"><Icon name="class" /></div>
+              <div className="list-copy">
+                <strong>کلاس‌ها</strong>
+                {publishedClasses.length > 0
+                  ? publishedClasses.map((item) => (
+                      <span key={item.id}>{item.title} — {item.description}</span>
+                    ))
+                  : <span>آموزش‌ها و دوره‌های کائنات‌چی به‌صورت خودکار اینجا نمایش داده می‌شوند.</span>}
+              </div>
+              <div className="list-arrow"><Icon name="arrow" /></div>
+            </button>
 
-      <div className="services-content-lobby">
-        <section id="services-classes" className={`services-content-card ${focus === "classes" ? "is-focused" : ""}`}>
-          <div className="services-content-icon"><Icon name="class" /></div>
-          <div className="list-copy">
-            <strong>کلاس‌ها</strong>
-            {publishedClasses.length > 0
-              ? publishedClasses.map(item => <span key={item.id}>{item.title} — {item.description}</span>)
-              : <span>آموزش‌ها و دوره‌های کائنات‌چی در این بخش قرار می‌گیرند.</span>}
+            <button
+              id="services-events"
+              type="button"
+              className={"services-content-card services-content-button " + (focus === "events" ? "is-focused" : "")}
+              onClick={() => {
+                document.getElementById("services-events")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+              }}
+            >
+              <div className="services-content-icon"><Icon name="event" /></div>
+              <div className="list-copy">
+                <strong>ایونت‌ها</strong>
+                {publishedEvents.length > 0
+                  ? publishedEvents.map((item) => (
+                      <span key={item.id}>{item.title} — {item.description}</span>
+                    ))
+                  : <span>رویدادها و برنامه‌های پیش روی کائنات‌چی اینجا قرار می‌گیرند.</span>}
+              </div>
+              <div className="list-arrow"><Icon name="arrow" /></div>
+            </button>
           </div>
-        </section>
-
-        <section id="services-events" className={`services-content-card ${focus === "events" ? "is-focused" : ""}`}>
-          <div className="services-content-icon"><Icon name="event" /></div>
-          <div className="list-copy">
-            <strong>ایونت‌ها</strong>
-            {publishedEvents.length > 0
-              ? publishedEvents.map(item => <span key={item.id}>{item.title} — {item.description}</span>)
-              : <span>رویدادها و برنامه‌های پیش روی کائنات‌چی در این بخش قرار می‌گیرند.</span>}
-          </div>
-        </section>
-      </div>
+        </>
+      )}
     </div>
   );
 }
