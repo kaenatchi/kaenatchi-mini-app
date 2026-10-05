@@ -3895,6 +3895,15 @@ function App() {
     const nextIndex = sectionOrder.indexOf(nextSection);
 
     setNavDirection(nextIndex > currentIndex ? "forward" : "backward");
+
+    // Every main section is a fresh navigation destination.
+    // Never carry the previous section's vertical scroll position into it.
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+
     setSection(nextSection);
   };
 
