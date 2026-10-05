@@ -4317,6 +4317,20 @@ function App() {
   const [navDirection, setNavDirection] = useState<"forward" | "backward">("forward");
 
   const touchStart = useRef<{ x: number; y: number; identifier: number } | null>(null);
+  const [cmsReady, setCmsReady] = useState(false);
+  const [cmsLoading, setCmsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    loadCmsData().then((ready) => {
+      if (!mounted) return;
+      setCmsReady(ready);
+      setCmsLoading(false);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let telegramWebApp: any = null;
@@ -4458,6 +4472,30 @@ function App() {
   const handleTouchCancel = () => {
     touchStart.current = null;
   };
+
+  if (cmsLoading) {
+    return (
+      <div className="app-shell app-shell-loading">
+        <div className="cms-loading-card">
+          <div className="cms-loading-mark">✦</div>
+          <strong>در حال آماده‌سازی کائنات‌چی</strong>
+          <span>در حال دریافت تازه‌ترین محتوا...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!cmsReady) {
+    return (
+      <div className="app-shell app-shell-loading">
+        <div className="cms-loading-card">
+          <div className="cms-loading-mark">!</div>
+          <strong>محتوا در دسترس نیست</strong>
+          <span>اتصال به سامانه محتوا برقرار نشد. لطفاً چند لحظه بعد دوباره تلاش کن.</span>
+        </div>
+      </div>
+    );
+  }
 
   const openSearch = () => {
     setVipOpen(false);
