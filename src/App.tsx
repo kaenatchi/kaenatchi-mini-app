@@ -3858,13 +3858,15 @@ function MoreDetail({
   const isFaq = title === "سوالات متداول";
   const isHours = title === "ساعات کاری";
   const isContact = title === "ارتباط با ما";
+  const faqRows = getCmsFaqRows();
+  const hoursText = cmsPageText(["ساعات", "hours"]) || cmsSetting(["hours", "ساعات"]);
+  const telegram = cmsSetting(["telegram", "تلگرام"]) || "https://t.me/AD_Kaenatchi";
+  const whatsapp = cmsSetting(["whatsapp", "واتساپ"]);
+  const instagram = cmsSetting(["instagram", "اینستاگرام"]) || "https://instagram.com/Kaenatchi";
 
   return (
     <div className="inner-page">
-      <button type="button" onClick={onBack} style={backButtonStyle}>
-        ← بازگشت
-      </button>
-
+      <button type="button" onClick={onBack} style={backButtonStyle}>← بازگشت</button>
       <SectionHeaderCard
         kicker={isFaq ? "FAQ" : isHours ? "HOURS" : "CONTACT"}
         title={title}
@@ -3874,47 +3876,41 @@ function MoreDetail({
 
       {isFaq && (
         <div className="more-info-stack">
-          {[
-            ["چطور نوبت رزرو کنم؟", "از دکمه + در نوار پایین، «رزرو نوبت» را انتخاب کن و مراحل انتخاب خدمت، تاریخ و ساعت را انجام بده."],
-            ["تاریخ‌ها به چه تقویمی هستند؟", "تمام تاریخ‌های نوبت و اطلاعات کاربری کائنات‌چی با تقویم شمسی نمایش داده می‌شوند."],
-            ["عضویت VIP چطور فعال می‌شود؟", "درخواست عضویت از طریق کائنات‌چی بررسی می‌شود و فعال‌شدن عضویت به‌صورت خودکار انجام نمی‌شود."],
-            ["چطور با کائنات‌چی ارتباط بگیرم؟", "از بخش «ارتباط با کائنات‌چی» می‌توانی مسیر مناسب برای پیام‌دادن را انتخاب کنی."],
-          ].map(([question, answer]) => (
-            <div className="more-info-card" key={question}>
-              <strong>{question}</strong>
-              <span>{answer}</span>
+          {faqRows.length ? faqRows.map((item, index) => (
+            <div className="more-info-card" key={item.question + index}>
+              <strong>{item.question}</strong>
+              <span>{item.answer}</span>
             </div>
-          ))}
+          )) : (
+            <div className="more-info-card">
+              <strong>هنوز محتوایی ثبت نشده</strong>
+              <span>این بخش را از پنل CMS تکمیل کن.</span>
+            </div>
+          )}
         </div>
       )}
 
       {isHours && (
         <div className="more-info-stack">
           <div className="more-info-card">
-            <strong>ساعات کاری کائنات‌چی</strong>
-            <span>شنبه تا چهارشنبه · ۱۱ تا ۱۴ و ۱۵ تا ۱۹</span>
-            <span>پنج‌شنبه · ۱۱ تا ۱۴</span>
-            <small>تماس خارج از زمان هماهنگ‌شده انجام نمی‌شود؛ لطفاً پیام متنی ارسال کن.</small>
+            <strong>{title}</strong>
+            <span>{hoursText || "هنوز ساعت کاری در CMS ثبت نشده است."}</span>
           </div>
         </div>
       )}
 
       {isContact && (
         <div className="more-contact-grid">
-          <a className="more-contact-card" href="https://t.me/AD_Kaenatchi" target="_blank" rel="noreferrer">
-            <span>✦</span>
-            <strong>تلگرام</strong>
-            <small>@AD_Kaenatchi</small>
+          <a className="more-contact-card" href={telegram} target="_blank" rel="noreferrer">
+            <span>✦</span><strong>تلگرام</strong><small>ارتباط با کائنات‌چی</small>
           </a>
-          <a className="more-contact-card" href="https://wa.me/" target="_blank" rel="noreferrer">
-            <span>◌</span>
-            <strong>واتساپ</strong>
-            <small>پیام در واتساپ</small>
-          </a>
-          <a className="more-contact-card" href="https://instagram.com/Kaenatchi" target="_blank" rel="noreferrer">
-            <span>◎</span>
-            <strong>اینستاگرام</strong>
-            <small>@Kaenatchi</small>
+          {whatsapp && (
+            <a className="more-contact-card" href={whatsapp} target="_blank" rel="noreferrer">
+              <span>◌</span><strong>واتساپ</strong><small>پیام در واتساپ</small>
+            </a>
+          )}
+          <a className="more-contact-card" href={instagram} target="_blank" rel="noreferrer">
+            <span>◎</span><strong>اینستاگرام</strong><small>صفحه کائنات‌چی</small>
           </a>
         </div>
       )}
@@ -4159,12 +4155,13 @@ function MorePage({
               </button>
             ))}
 
-          <a
-            className="more-category-card"
-            href="https://t.me/KaenatChy"
-            target="_blank"
-            rel="noreferrer"
-          >
+          {cmsSetting(["channel", "کانال", "telegramchannel"]) && (
+            <a
+              className="more-category-card"
+              href={cmsSetting(["channel", "کانال", "telegramchannel"])}
+              target="_blank"
+              rel="noreferrer"
+            >
             <span className="more-category-icon">
               <Icon name="spark" />
             </span>
@@ -4172,8 +4169,9 @@ function MorePage({
               <strong>کانال کائنات‌چی</strong>
               <small>مطالب و اطلاع‌رسانی‌ها</small>
             </span>
-            <Icon name="arrow" />
-          </a>
+              <Icon name="arrow" />
+            </a>
+          )}
         </div>
       </section>
     </div>
