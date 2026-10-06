@@ -4431,7 +4431,6 @@ function BookingPage({ onBack }: { onBack: () => void }) {
         firstName:firstName.trim(),
         lastName:lastName.trim(),
         mobile:mobile.trim(),
-        requestId,
         serviceId,
         serviceName,
         date,
