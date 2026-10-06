@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "react";
 
-type Section = "home" | "services" | "selected" | "more";
+type Section = "home" | "services" | "booking" | "selected" | "more";
 
 type IconName =
   | "home"
@@ -4191,33 +4191,325 @@ function MorePage({
 }
 
 function BookingPage({ onBack }: { onBack: () => void }) {
+  type BookingConfig = {
+    services: Array<Record<string, unknown>>;
+    availableDates: Array<Record<string, unknown>>;
+    settings: Record<string, unknown>;
+  };
+
+  type BookingState = "idle" | "loading" | "submitting" | "success" | "error";
+
+  const ENDPOINT =
+    "https://script.google.com/macros/s/AKfycbyn9j5NvtVI5QaOUmSqajD3VGnFhlhnzvpbS6Hs67P6I-gx0kr71l6ZajGFJp5AO7f0zg/exec";
+
+  const [config, setConfig] = useState<BookingConfig | null>(null);
+  const [serviceId, setServiceId] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [slots, setSlots] = useState<Array<Record<string, unknown>>>([]);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
+  const [discount, setDiscount] = useState<{valid:boolean; percent:number; amount:number}>({valid:false,percent:0,amount:0});
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [transactionNumber, setTransactionNumber] = useState("");
+  const [message, setMessage] = useState("");
+  const [state, setState] = useState<BookingState>("loading");
+  const [trackingCode, setTrackingCode] = useState("");
+  const [checkingDiscount, setCheckingDiscount] = useState(false);
+
+  const selectedService = config?.services.find((item) => String(item.id ?? item.ID ?? "") === serviceId);
+  const basePrice = Number(selectedService?.price ?? selectedService?.Price ?? 0) || 0;
+  const finalPrice = Math.max(0, basePrice - discount.amount);
+
+  const getTelegramId = () => {
+    try {
+      return String((window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id || "");
+    } catch {
+      return "";
+    }
+  };
+
+  const apiGet = async (action: string, params: Record<string,string> = {}) => {
+    const query = new URLSearchParams({action, ...params, _: String(Date.now())});
+    const response = await fetch(ENDPOINT + "?" + query.toString(), {cache:"no-store"});
+    const data = await response.json();
+    if (!response.ok || data?.ok === false) throw new Error(data?.message || "خطا در ارتباط با سامانه.");
+    return data;
+  };
+
+  const apiPost = async (action: string, payload: Record<string,unknown>) => {
+    const response = await fetch(ENDPOINT, {
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action, ...payload}),
+    });
+    const data = await response.json();
+    if (!response.ok || data?.ok === false) throw new Error(data?.message || "ثبت اطلاعات ناموفق بود.");
+    return data;
+  };
+
+  const loadConfig = async () => {
+    try {
+      setState("loading");
+      setMessage("");
+      const data = await apiGet("getConfig");
+      const next: BookingConfig = {
+        services: Array.isArray(data.services) ? data.services : [],
+        availableDates: Array.isArray(data.availableDates) ? data.availableDates : [],
+        settings: data.settings || {},
+      };
+      setConfig(next);
+      setState("idle");
+    } catch (error) {
+      setState("error");
+      setMessage(error instanceof Error ? error.message : "اطلاعات رزرو دریافت نشد.");
+    }
+  };
+
+  useEffect(() => {
+    void loadConfig();
+    try {
+      (window as any).Telegram?.WebApp?.ready?.();
+      (window as any).Telegram?.WebApp?.expand?.();
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!date) {
+      setSlots([]);
+      setTime("");
+      return;
+    }
+    let active = true;
+    setTime("");
+    apiGet("getAvailableSlots", {date})
+      .then((data) => {
+        if (!active) return;
+        setSlots(Array.isArray(data.slots) ? data.slots : []);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setSlots([]);
+        setMessage(error instanceof Error ? error.message : "ساعت‌ها دریافت نشدند.");
+      });
+    return () => { active = false; };
+  }, [date]);
+
+  const checkDiscount = async () => {
+    const code = discountCode.trim();
+    if (!code || !basePrice) {
+      setDiscount({valid:false,percent:0,amount:0});
+      return;
+    }
+    setCheckingDiscount(true);
+    setMessage("");
+    try {
+      const data = await apiGet("validateDiscount", {
+        code,
+        price: String(basePrice),
+        telegramId: getTelegramId(),
+      });
+      if (data.valid) {
+        setDiscount({
+          valid:true,
+          percent:Number(data.discountPercent)||0,
+          amount:Number(data.discountAmount)||0,
+        });
+        setMessage("کد تخفیف با موفقیت اعمال شد.");
+      } else {
+        setDiscount({valid:false,percent:0,amount:0});
+        setMessage(data.message || "کد تخفیف معتبر نیست.");
+      }
+    } catch (error) {
+      setDiscount({valid:false,percent:0,amount:0});
+      setMessage(error instanceof Error ? error.message : "بررسی کد تخفیف ناموفق بود.");
+    } finally {
+      setCheckingDiscount(false);
+    }
+  };
+
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve,reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("خواندن تصویر فیش ناموفق بود."));
+      reader.readAsDataURL(file);
+    });
+
+  const submit = async () => {
+    setMessage("");
+    if (!selectedService || !serviceId) return setMessage("لطفاً خدمت موردنظر را انتخاب کن.");
+    if (!date || !time) return setMessage("لطفاً تاریخ و ساعت نوبت را انتخاب کن.");
+    if (!firstName.trim() || !lastName.trim() || !mobile.trim()) return setMessage("لطفاً نام، نام خانوادگی و شماره موبایل را کامل وارد کن.");
+    if (!receiptFile && !transactionNumber.trim()) return setMessage("تصویر فیش یا کد پیگیری پرداخت الزامی است.");
+    if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
+
+    setState("submitting");
+    try {
+      const requestId = "REQ-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8).toUpperCase();
+      const serviceName = String(selectedService.name ?? selectedService.title ?? selectedService.serviceName ?? "");
+      const telegramId = getTelegramId();
+
+      const create = await apiPost("createBooking", {
+        requestId,
+        telegramId,
+        firstName:firstName.trim(),
+        lastName:lastName.trim(),
+        mobile:mobile.trim(),
+        serviceId,
+        serviceName,
+        date,
+        time,
+        discountCode:discountCode.trim(),
+      });
+
+      const bookingId = String(create?.booking?.bookingId || create?.bookingId || "");
+      if (!bookingId) throw new Error("کد نوبت از سامانه دریافت نشد.");
+
+      let receiptData = "";
+      if (receiptFile) receiptData = await fileToDataUrl(receiptFile);
+
+      const payment = await apiPost("submitPayment", {
+        bookingId,
+        telegramId,
+        transactionNumber:transactionNumber.trim(),
+        receiptData,
+        receiptFileName:receiptFile?.name || "",
+        receiptMimeType:receiptFile?.type || "",
+      });
+
+      if (!payment?.ok) throw new Error(payment?.message || "ارسال پرداخت ناموفق بود.");
+
+      setTrackingCode(String(create?.booking?.trackingCode || payment?.trackingCode || ""));
+      setState("success");
+      setMessage("درخواست نوبت و اطلاعات پرداخت با موفقیت ثبت شد و در انتظار بررسی ادمین است.");
+    } catch (error) {
+      setState("error");
+      setMessage(error instanceof Error ? error.message : "هنگام ثبت نوبت مشکلی پیش آمد.");
+    }
+  };
+
+  if (state === "loading" && !config) {
+    return (
+      <div className="inner-page">
+        <button type="button" onClick={onBack} style={backButtonStyle}>← بازگشت</button>
+        <SectionHeaderCard kicker="KAENATCHI" title="رزرو نوبت" description="در حال دریافت خدمات و زمان‌های قابل رزرو..." icon="calendar" />
+        <div className="glass-list-card" style={{display:"block",textAlign:"center"}}>
+          <div className="list-copy"><strong>در حال آماده‌سازی رزرو...</strong><span>لطفاً چند لحظه صبر کن.</span></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (state === "success") {
+    return (
+      <div className="inner-page">
+        <SectionHeaderCard kicker="BOOKING RECEIVED" title="درخواست ثبت شد" description="اطلاعات نوبت و پرداخت دریافت شد و درخواست برای بررسی ادمین ارسال شده است." icon="check" status="در انتظار تأیید" />
+        <div className="glass-list-card" style={{display:"block",textAlign:"center"}}>
+          <div className="list-icon" style={{margin:"0 auto 12px"}}><Icon name="ticket" /></div>
+          <div className="list-copy">
+            <strong>کد پیگیری</strong>
+            <span style={{direction:"ltr",fontWeight:700,fontSize:"18px"}}>{trackingCode || "ثبت شد"}</span>
+            <span>لطفاً این کد را نگه دار.</span>
+          </div>
+        </div>
+        <button type="button" onClick={onBack} style={{...backButtonStyle, width:"100%", marginTop:"16px"}}>بازگشت</button>
+      </div>
+    );
+  }
+
+  const availableServices = config?.services || [];
+  const availableDates = config?.availableDates || [];
+  const availableSlots = slots.filter((slot) => slot.available === true);
+
   return (
     <div className="inner-page">
       <button type="button" onClick={onBack} style={backButtonStyle}>← بازگشت</button>
-      <SectionHeaderCard
-        kicker="KAENATCHI"
-        title="رزرو نوبت"
-        description="خدمت، تاریخ و ساعت موردنظر خود را انتخاب کنید."
-        icon="calendar"
-      />
-      <div style={{
-        position: "relative",
-        width: "100%",
-        height: "calc(var(--tg-viewport-height, 100vh) - 220px)",
-        minHeight: "620px",
-        overflow: "hidden",
-        borderRadius: "22px",
-        background: "#f4f7f4",
-        boxShadow: "0 10px 28px rgba(53,59,50,0.10)",
-        border: "1px solid rgba(53,59,50,0.08)"
-      }}>
-        <iframe
-          title="رزرو نوبت کائنات‌چی"
-          src={BOOKING_APP_URL}
-          style={{display:"block",width:"100%",height:"100%",border:"0",background:"#f4f7f4"}}
-          allow="clipboard-write"
-        />
+      <SectionHeaderCard kicker="KAENATCHI" title="رزرو نوبت" description="خدمت، تاریخ و ساعت موردنظر را انتخاب کن؛ مبلغ نهایی از سامانه محاسبه می‌شود." icon="calendar" />
+
+      <div className="glass-list-card" style={{display:"block"}}>
+        <div className="list-copy">
+          <strong>۱. انتخاب خدمت</strong>
+          <span>خدمت موردنظر را انتخاب کن.</span>
+        </div>
+        <select value={serviceId} onChange={(e) => {setServiceId(e.target.value);setDiscount({valid:false,percent:0,amount:0});}} style={{marginTop:"12px",width:"100%",padding:"14px",borderRadius:"15px",border:"1px solid rgba(53,59,50,.12)",background:"rgba(255,255,255,.72)",fontFamily:"inherit",fontSize:"14px"}}>
+          <option value="">انتخاب خدمت</option>
+          {availableServices.map((item) => {
+            const id = String(item.id ?? item.ID ?? "");
+            const name = String(item.name ?? item.title ?? item.serviceName ?? "خدمت");
+            return <option key={id} value={id}>{name}</option>;
+          })}
+        </select>
+        {selectedService && (
+          <div style={{marginTop:"10px",fontSize:"12px",lineHeight:1.9,color:"#73786f"}}>
+            {String(selectedService.description ?? selectedService.Description ?? "")}
+          </div>
+        )}
       </div>
+
+      <div className="glass-list-card" style={{display:"block"}}>
+        <div className="list-copy"><strong>۲. انتخاب زمان</strong><span>تاریخ‌ها و ساعت‌ها مستقیماً از سامانه نوبت‌دهی خوانده می‌شوند.</span></div>
+        <select value={date} onChange={(e)=>setDate(e.target.value)} style={{marginTop:"12px",width:"100%",padding:"14px",borderRadius:"15px",border:"1px solid rgba(53,59,50,.12)",background:"rgba(255,255,255,.72)",fontFamily:"inherit",fontSize:"14px"}}>
+          <option value="">انتخاب تاریخ</option>
+          {availableDates.map((item) => {
+            const value=String(item.date||"");
+            const label=String(item.dayOfWeek||"") + (item.dayOfWeek ? " — " : "") + value;
+            return <option key={value} value={value}>{label}</option>;
+          })}
+        </select>
+        <select value={time} onChange={(e)=>setTime(e.target.value)} disabled={!date} style={{marginTop:"4px",width:"100%",padding:"14px",borderRadius:"15px",border:"1px solid rgba(53,59,50,.12)",background:"rgba(255,255,255,.72)",fontFamily:"inherit",fontSize:"14px"}}>
+          <option value="">{date ? "انتخاب ساعت" : "ابتدا تاریخ را انتخاب کن"}</option>
+          {availableSlots.map((item) => <option key={String(item.time)} value={String(item.time)}>{String(item.time)}</option>)}
+        </select>
+      </div>
+
+      <div className="glass-list-card" style={{display:"block"}}>
+        <div className="list-copy"><strong>۳. اطلاعات شما</strong><span>نام و شماره موبایل برای ثبت نوبت لازم است.</span></div>
+        <input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder="نام" autoComplete="given-name" />
+        <input value={lastName} onChange={e=>setLastName(e.target.value)} placeholder="نام خانوادگی" autoComplete="family-name" />
+        <input value={mobile} onChange={e=>setMobile(e.target.value)} placeholder="09xxxxxxxxx" inputMode="tel" autoComplete="tel" />
+      </div>
+
+      <div className="glass-list-card" style={{display:"block"}}>
+        <div className="list-copy"><strong>۴. کد تخفیف VIP</strong><span>اگر توکن VIP داری، قبل از پرداخت بررسی‌اش کن.</span></div>
+        <div style={{display:"flex",gap:"8px",marginTop:"12px"}}>
+          <input value={discountCode} onChange={e=>{setDiscountCode(e.target.value.toUpperCase());setDiscount({valid:false,percent:0,amount:0});}} placeholder="کد تخفیف" style={{marginBottom:0,flex:1}} />
+          <button type="button" onClick={()=>void checkDiscount()} disabled={checkingDiscount || !discountCode.trim() || !basePrice} style={{width:"120px",marginTop:0}}>{checkingDiscount ? "..." : "بررسی"}</button>
+        </div>
+        {discount.valid && <div style={{marginTop:"10px",fontSize:"12px",color:"#246347"}}>تخفیف {discount.percent}% اعمال شد.</div>}
+        {basePrice > 0 && (
+          <div style={{marginTop:"14px",padding:"14px",borderRadius:"16px",background:"rgba(36,99,71,.06)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:"12px",marginBottom:"7px"}}><span>مبلغ خدمت</span><strong>{basePrice.toLocaleString("fa-IR")} تومان</strong></div>
+            {discount.valid && <div style={{display:"flex",justifyContent:"space-between",fontSize:"12px",marginBottom:"7px"}}><span>تخفیف</span><strong>{discount.amount.toLocaleString("fa-IR")} تومان</strong></div>}
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:"15px",color:"#174b38"}}><strong>مبلغ نهایی</strong><strong>{finalPrice.toLocaleString("fa-IR")} تومان</strong></div>
+          </div>
+        )}
+      </div>
+
+      <div className="glass-list-card" style={{display:"block"}}>
+        <div className="list-copy"><strong>۵. پرداخت و رسید</strong><span>پس از پرداخت، تصویر فیش یا کد پیگیری پرداخت را ارسال کن.</span></div>
+        <div style={{marginTop:"12px",padding:"13px",borderRadius:"15px",background:"rgba(165,139,91,.08)",fontSize:"12px",lineHeight:1.9}}>
+          شماره کارت: <b dir="ltr">6219 - 8619 - 7737 - 8974</b><br />
+          بانک سامان · بنام آرشام نظری
+        </div>
+        <input value={transactionNumber} onChange={e=>setTransactionNumber(e.target.value)} placeholder="کد پیگیری پرداخت (اختیاری)" inputMode="numeric" />
+        <label style={{display:"block",padding:"14px",borderRadius:"15px",border:"1px dashed rgba(36,99,71,.35)",background:"rgba(36,99,71,.05)",textAlign:"center",cursor:"pointer"}}>
+          📎 {receiptFile ? receiptFile.name : "انتخاب تصویر فیش"}
+          <input type="file" accept="image/*" onChange={e=>setReceiptFile(e.target.files?.[0] || null)} style={{display:"none"}} />
+        </label>
+      </div>
+
+      {message && (
+        <div style={{padding:"13px",borderRadius:"15px",marginTop:"12px",background:state==="error"?"rgba(165,45,45,.08)":"rgba(36,99,71,.08)",color:state==="error"?"#a52d2d":"#246347",fontSize:"13px",lineHeight:1.9,whiteSpace:"pre-line"}}>
+          {message}
+        </div>
+      )}
+
+      <button type="button" onClick={()=>void submit()} disabled={state==="submitting"} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px",cursor:state==="submitting"?"default":"pointer",boxShadow:"0 10px 24px rgba(23,75,56,.2)"}}>
+        {state==="submitting" ? "در حال ثبت نوبت و پرداخت..." : "ثبت نهایی نوبت"}
+      </button>
     </div>
   );
 }
@@ -4351,7 +4643,7 @@ function BottomNav({
 ========================================================= */
 
 function App() {
-  const sectionOrder: Section[] = ["home", "services", "selected", "more"];
+  const sectionOrder: Section[] = ["home", "services", "booking", "selected", "more"];
 
   const [section, setSection] = useState<Section>("home");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -4586,6 +4878,11 @@ function App() {
           <ServiceDetail
             service={searchService}
             onBack={() => setSearchService(null)}
+            onOpenBooking={() => {
+              setSearchOpen(false);
+              setSearchService(null);
+              changeSection("booking");
+            }}
           />
           <AppFooter />
         </div>
