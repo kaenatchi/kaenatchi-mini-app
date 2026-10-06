@@ -4235,31 +4235,21 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     action: string,
     params: Record<string,string> = {}
   ) => {
-    const callbackName =
-      "kaenatchiBookingJsonp_" +
-      Date.now().toString(36) +
-      "_" +
-      Math.random().toString(36).slice(2);
-
     const query = new URLSearchParams({
       action,
       ...params,
       _: String(Date.now()),
-      callback: callbackName,
+      bridge: "iframe",
     });
 
     return await new Promise<any>((resolve, reject) => {
       let settled = false;
-      const script = document.createElement("script");
+      const iframe = document.createElement("iframe");
 
       const cleanup = () => {
         window.clearTimeout(timeoutId);
-        script.remove();
-        try {
-          delete (window as any)[callbackName];
-        } catch {
-          (window as any)[callbackName] = undefined;
-        }
+        window.removeEventListener("message", handleMessage);
+        iframe.remove();
       };
 
       const finish = (callback: () => void) => {
@@ -4269,25 +4259,37 @@ function BookingPage({ onBack }: { onBack: () => void }) {
         callback();
       };
 
-      (window as any)[callbackName] = (data: any) => {
+      const handleMessage = (event: MessageEvent) => {
+        const data = event.data;
+        if (!data || data.source !== "kaenatchi-booking-bridge") return;
+
         finish(() => {
-          if (data?.ok === false) {
+          if (data.data?.ok === false) {
             reject(
               new Error(
-                data?.message ||
+                data.data?.message ||
                 "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
               )
             );
             return;
           }
 
-          resolve(data);
+          resolve(data.data);
         });
       };
 
-      script.async = true;
-      script.src = ENDPOINT + "?" + query.toString();
-      script.onerror = () => {
+      window.addEventListener("message", handleMessage);
+
+      iframe.style.position = "fixed";
+      iframe.style.width = "1px";
+      iframe.style.height = "1px";
+      iframe.style.border = "0";
+      iframe.style.opacity = "0";
+      iframe.style.pointerEvents = "none";
+      iframe.setAttribute("aria-hidden", "true");
+      iframe.src = ENDPOINT + "?" + query.toString();
+
+      iframe.onerror = () => {
         finish(() => {
           reject(
             new Error(
@@ -4311,7 +4313,7 @@ function BookingPage({ onBack }: { onBack: () => void }) {
         });
       }, 15000);
 
-      document.head.appendChild(script);
+      document.body.appendChild(iframe);
     });
   };
 
