@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KaenatChi Booking Bridge</title>
+</head>
+<body>
+<script>
+(function () {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var payload = params.get("payload") || "";
+    var normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    while (normalized.length % 4) normalized += "=";
+
+    var binary = atob(normalized);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    var json = new TextDecoder("utf-8").decode(bytes);
+    var data = JSON.parse(json);
+
+    window.parent.postMessage({
+      source: "kaenatchi-booking-bridge",
+      data: data
+    }, "*");
+  } catch (error) {
+    window.parent.postMessage({
+      source: "kaenatchi-booking-bridge",
+      data: {
+        ok: false,
+        error: "BRIDGE_ERROR",
+        message: "خطا در دریافت پاسخ سامانه رزرو."
+      }
+    }, "*");
+  }
+})();
+</script>
+</body>
+</html>
