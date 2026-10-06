@@ -1020,9 +1020,11 @@ function ServiceCard({
 function ServiceDetail({
   service,
   onBack,
+  onOpenBooking,
 }: {
   service: Service;
   onBack: () => void;
+  onOpenBooking: () => void;
 }) {
   const icon =
     service.category === "energy"
@@ -1093,12 +1095,7 @@ function ServiceDetail({
           boxShadow:
             "0 10px 24px rgba(23, 75, 56, 0.2)",
         }}
-        onClick={() => {
-          window.open(
-            BOOKING_APP_URL,
-            "_blank"
-          );
-        }}
+        onClick={onOpenBooking}
       >
         📅 دریافت نوبت
       </button>
@@ -1106,7 +1103,13 @@ function ServiceDetail({
   );
 }
 
-function ServicesPage({ focus }: { focus?: "all" | "classes" | "events" }) {
+function ServicesPage({
+  focus,
+  onOpenBooking,
+}: {
+  focus?: "all" | "classes" | "events";
+  onOpenBooking: () => void;
+}) {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [activeCategory, setActiveCategory] = useState<ServiceCategory | null>(null);
   const [energyFilter, setEnergyFilter] = useState<"all" | "emotional" | "career" | "general">("all");
@@ -1130,6 +1133,7 @@ function ServicesPage({ focus }: { focus?: "all" | "classes" | "events" }) {
       <ServiceDetail
         service={selectedService}
         onBack={() => setSelectedService(null)}
+        onOpenBooking={onOpenBooking}
       />
     );
   }
@@ -4186,20 +4190,54 @@ function MorePage({
   );
 }
 
+function BookingPage({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="inner-page">
+      <button type="button" onClick={onBack} style={backButtonStyle}>← بازگشت</button>
+      <SectionHeaderCard
+        kicker="KAENATCHI"
+        title="رزرو نوبت"
+        description="خدمت، تاریخ و ساعت موردنظر خود را انتخاب کنید."
+        icon="calendar"
+      />
+      <div style={{
+        position: "relative",
+        width: "100%",
+        height: "calc(var(--tg-viewport-height, 100vh) - 220px)",
+        minHeight: "620px",
+        overflow: "hidden",
+        borderRadius: "22px",
+        background: "#f4f7f4",
+        boxShadow: "0 10px 28px rgba(53,59,50,0.10)",
+        border: "1px solid rgba(53,59,50,0.08)"
+      }}>
+        <iframe
+          title="رزرو نوبت کائنات‌چی"
+          src={BOOKING_APP_URL}
+          style={{display:"block",width:"100%",height:"100%",border:"0",background:"#f4f7f4"}}
+          allow="clipboard-write"
+        />
+      </div>
+    </div>
+  );
+}
+
 function BottomNav({
   active,
   onChange,
   onQuickDestination,
+  onOpenBooking,
 }: {
   active: Section;
   onChange: (section: Section) => void;
   onQuickDestination: (destination: "classes" | "events") => void;
+  onOpenBooking: () => void;
 }) {
   const [quickOpen, setQuickOpen] = useState(false);
 
   const openBooking = () => {
     setQuickOpen(false);
-    window.location.assign(BOOKING_APP_URL);
+    onOpenBooking();
   };
 
   const openQuickSection = (section: Section) => {
@@ -4588,7 +4626,16 @@ function App() {
           />
         )}
 
-        {section === "services" && <ServicesPage focus={serviceFocus} />}
+        {section === "services" && (
+          <ServicesPage
+            focus={serviceFocus}
+            onOpenBooking={() => changeSection("booking")}
+          />
+        )}
+
+        {section === "booking" && (
+          <BookingPage onBack={() => changeSection("home")} />
+        )}
 
         {section === "selected" && (
           <SelectedPage
@@ -4609,6 +4656,7 @@ function App() {
         active={section}
         onChange={changeSection}
         onQuickDestination={openQuickDestination}
+        onOpenBooking={() => changeSection("booking")}
       />
     </div>
   );
