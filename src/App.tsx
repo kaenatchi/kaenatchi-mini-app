@@ -4200,7 +4200,7 @@ function BookingPage({ onBack }: { onBack: () => void }) {
   type BookingState = "idle" | "loading" | "submitting" | "success" | "error";
 
   const ENDPOINT =
-    "https://script.google.com/macros/s/AKfycbyn9j5NvtVI5QaOUmSqajD3VGnFhlhnzvpbS6Hs67P6I-gx0kr71l6ZajGFJp5AO7f0zg/exec";
+    "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
 
   const [config, setConfig] = useState<BookingConfig | null>(null);
   const [serviceId, setServiceId] = useState("");
