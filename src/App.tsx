@@ -4244,16 +4244,82 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     const query = new URLSearchParams(queryParams);
 
     /*
-     * Booking transport:
+     * Booking transport v2:
      *
-     * Google Apps Script Web Apps are not reliably readable through
-     * fetch() inside Telegram's WebView. JSONP can also be suppressed
-     * by the WebView, so the iframe/postMessage bridge is the primary
-     * transport for GET requests.
+     * JSONP is the primary GET transport because it does not require
+     * cross-origin fetch access inside Telegram's WebView.
      *
-     * The backend's iframe response is intentionally tiny and sends
-     * the parsed payload to the parent window with postMessage.
+     * The iframe bridge remains as a fallback for environments where
+     * JSONP is blocked. Booking/business logic is intentionally untouched.
      */
+    const requestThroughJsonp = async () => {
+      return await new Promise<any>((resolve, reject) => {
+        const callbackName =
+          "__kaenatchiBookingJsonp_" +
+          Date.now() +
+          "_" +
+          Math.random().toString(36).slice(2);
+
+        const script = document.createElement("script");
+        let settled = false;
+        let timeoutId = 0;
+
+        const cleanup = () => {
+          window.clearTimeout(timeoutId);
+          script.remove();
+          try {
+            delete (window as any)[callbackName];
+          } catch {}
+        };
+
+        const finish = (callback: () => void) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          callback();
+        };
+
+        (window as any)[callbackName] = (data: any) => {
+          finish(() => {
+            if (data?.ok === false) {
+              reject(
+                new Error(
+                  data?.message ||
+                  "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
+                )
+              );
+              return;
+            }
+
+            resolve(data);
+          });
+        };
+
+        script.async = true;
+
+        script.onerror = () => {
+          finish(() =>
+            reject(new Error("JSONP_TRANSPORT_FAILED"))
+          );
+        };
+
+        timeoutId = window.setTimeout(() => {
+          finish(() =>
+            reject(new Error("JSONP_TRANSPORT_TIMEOUT"))
+          );
+        }, 15000);
+
+        script.src =
+          ENDPOINT +
+          "?" +
+          query.toString() +
+          "&callback=" +
+          encodeURIComponent(callbackName);
+
+        document.head.appendChild(script);
+      });
+    };
+
     const requestThroughBridge = async () => {
       return await new Promise<any>((resolve, reject) => {
         let settled = false;
@@ -4314,120 +4380,43 @@ function BookingPage({ onBack }: { onBack: () => void }) {
 
         iframe.onerror = () => {
           finish(() =>
-            reject(
-              new Error(
-                "BRIDGE_TRANSPORT_FAILED"
-              )
-            )
+            reject(new Error("BRIDGE_TRANSPORT_FAILED"))
           );
         };
 
         timeoutId = window.setTimeout(() => {
           finish(() =>
-            reject(
-              new Error(
-                "BRIDGE_TRANSPORT_TIMEOUT"
-              )
-            )
+            reject(new Error("BRIDGE_TRANSPORT_TIMEOUT"))
           );
-        }, 10000);
+        }, 12000);
 
         document.body.appendChild(iframe);
       });
     };
 
-    const requestThroughJsonp = async () => {
-      return await new Promise<any>((resolve, reject) => {
-        const callbackName =
-          "__kaenatchiBookingJsonp_" +
-          Date.now() +
-          "_" +
-          Math.random().toString(36).slice(2);
-
-        const script = document.createElement("script");
-        let settled = false;
-        let timeoutId = 0;
-
-        const cleanup = () => {
-          window.clearTimeout(timeoutId);
-          script.remove();
-          try {
-            delete (window as any)[callbackName];
-          } catch {}
-        };
-
-        const finish = (callback: () => void) => {
-          if (settled) return;
-          settled = true;
-          cleanup();
-          callback();
-        };
-
-        (window as any)[callbackName] = (data: any) => {
-          finish(() => {
-            if (data?.ok === false) {
-              reject(
-                new Error(
-                  data?.message ||
-                  "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
-                )
-              );
-              return;
-            }
-
-            resolve(data);
-          });
-        };
-
-        script.onerror = () => {
-          finish(() =>
-            reject(
-              new Error(
-                "JSONP_TRANSPORT_FAILED"
-              )
-            )
-          );
-        };
-
-        timeoutId = window.setTimeout(() => {
-          finish(() =>
-            reject(
-              new Error(
-                "JSONP_TRANSPORT_TIMEOUT"
-              )
-            )
-          );
-        }, 10000);
-
-        script.src =
-          ENDPOINT +
-          "?" +
-          query.toString() +
-          "&callback=" +
-          encodeURIComponent(callbackName);
-
-        document.head.appendChild(script);
-      });
-    };
-
-    let bridgeError: unknown = null;
-
-    try {
-      return await requestThroughBridge();
-    } catch (error) {
-      bridgeError = error;
-    }
+    let jsonpError: unknown = null;
 
     try {
       return await requestThroughJsonp();
-    } catch (jsonpError) {
-      if (bridgeError instanceof Error) {
-        throw bridgeError;
+    } catch (error) {
+      jsonpError = error;
+    }
+
+    try {
+      return await requestThroughBridge();
+    } catch (bridgeError) {
+      if (jsonpError instanceof Error && bridgeError instanceof Error) {
+        throw new Error(
+          "سامانه رزرو پاسخ قابل دریافت نداد. " +
+          "[" + jsonpError.message + " / " + bridgeError.message + "]"
+        );
       }
 
-      throw jsonpError instanceof Error
-        ? jsonpError
-        : new Error("سامانه رزرو پاسخ قابل دریافت نداد.");
+      throw bridgeError instanceof Error
+        ? bridgeError
+        : jsonpError instanceof Error
+          ? jsonpError
+          : new Error("سامانه رزرو پاسخ قابل دریافت نداد.");
     }
   };
 
