@@ -4235,53 +4235,84 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     action: string,
     params: Record<string,string> = {}
   ) => {
+    const callbackName =
+      "kaenatchiBookingJsonp_" +
+      Date.now().toString(36) +
+      "_" +
+      Math.random().toString(36).slice(2);
+
     const query = new URLSearchParams({
       action,
       ...params,
       _: String(Date.now()),
+      callback: callbackName,
     });
 
-    const response = await fetch(
-      ENDPOINT + "?" + query.toString(),
-      {
-        method: "GET",
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-        },
-      }
-    );
+    return await new Promise<any>((resolve, reject) => {
+      let settled = false;
+      const script = document.createElement("script");
 
-    if (!response.ok) {
-      throw new Error(
-        "سامانه رزرو در مرحله «" +
-        action +
-        "» با وضعیت HTTP " +
-        response.status +
-        " پاسخ داد."
-      );
-    }
+      const cleanup = () => {
+        window.clearTimeout(timeoutId);
+        script.remove();
+        try {
+          delete (window as any)[callbackName];
+        } catch {
+          (window as any)[callbackName] = undefined;
+        }
+      };
 
-    let data: any;
+      const finish = (callback: () => void) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        callback();
+      };
 
-    try {
-      data = await response.json();
-    } catch {
-      throw new Error(
-        "سامانه رزرو در مرحله «" +
-        action +
-        "» پاسخ JSON معتبر برنگرداند."
-      );
-    }
+      (window as any)[callbackName] = (data: any) => {
+        finish(() => {
+          if (data?.ok === false) {
+            reject(
+              new Error(
+                data?.message ||
+                "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
+              )
+            );
+            return;
+          }
 
-    if (data?.ok === false) {
-      throw new Error(
-        data?.message ||
-        "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
-      );
-    }
+          resolve(data);
+        });
+      };
 
-    return data;
+      script.async = true;
+      script.src = ENDPOINT + "?" + query.toString();
+      script.onerror = () => {
+        finish(() => {
+          reject(
+            new Error(
+              "اتصال به سامانه رزرو در مرحله «" +
+              action +
+              "» برقرار نشد."
+            )
+          );
+        });
+      };
+
+      const timeoutId = window.setTimeout(() => {
+        finish(() => {
+          reject(
+            new Error(
+              "پاسخ سامانه رزرو در مرحله «" +
+              action +
+              "» دریافت نشد."
+            )
+          );
+        });
+      }, 15000);
+
+      document.head.appendChild(script);
+    });
   };
 
   const waitForBookingStatus = async (requestId: string, mode: "created" | "paid") => {
