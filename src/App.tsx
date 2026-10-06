@@ -4233,7 +4233,12 @@ function BookingPage({ onBack }: { onBack: () => void }) {
 
   const apiGet = (action: string, params: Record<string,string> = {}) =>
     new Promise<any>((resolve, reject) => {
-      const callbackName = "__kaenatchi_jsonp_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+      const callbackName =
+        "__kaenatchi_jsonp_" +
+        Date.now() +
+        "_" +
+        Math.random().toString(36).slice(2);
+
       const script = document.createElement("script");
       const query = new URLSearchParams({
         action,
@@ -4242,33 +4247,58 @@ function BookingPage({ onBack }: { onBack: () => void }) {
         _: String(Date.now()),
       });
 
+      const requestUrl = ENDPOINT + "?" + query.toString();
+      let settled = false;
+
       const cleanup = () => {
         try { delete (window as any)[callbackName]; } catch {}
         script.remove();
       };
 
-      const timer = window.setTimeout(() => {
+      const fail = (message: string) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
         cleanup();
-        reject(new Error("اتصال به سامانه رزرو برقرار نشد. لطفاً دوباره تلاش کن."));
+        reject(new Error(message));
+      };
+
+      const timer = window.setTimeout(() => {
+        fail(
+          "ارتباط با سامانه رزرو در مرحله «" +
+          action +
+          "» پاسخ نداد (timeout)."
+        );
       }, 15000);
 
       (window as any)[callbackName] = (data: any) => {
+        if (settled) return;
+        settled = true;
         window.clearTimeout(timer);
         cleanup();
+
         if (data?.ok === false) {
-          reject(new Error(data?.message || "خطا در ارتباط با سامانه."));
+          reject(
+            new Error(
+              data?.message ||
+              "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
+            )
+          );
           return;
         }
+
         resolve(data);
       };
 
       script.onerror = () => {
-        window.clearTimeout(timer);
-        cleanup();
-        reject(new Error("اتصال به سامانه رزرو برقرار نشد. لطفاً دوباره تلاش کن."));
+        fail(
+          "درخواست سامانه رزرو در مرحله «" +
+          action +
+          "» با خطای اسکریپت/شبکه شکست خورد."
+        );
       };
 
-      script.src = ENDPOINT + "?" + query.toString();
+      script.src = requestUrl;
       document.body.appendChild(script);
     });
 
