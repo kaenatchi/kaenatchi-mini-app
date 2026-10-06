@@ -4327,17 +4327,44 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     try {
       setState("loading");
       setMessage("");
+
+      // مرحله ۱: فقط مسیر عمومی Web App + JSONP را تست می‌کنیم.
+      // اگر این مرحله رد شود، مشکل از حمل‌ونقل/Deployment است و
+      // دیگر نباید آن را با خطای Sheet یا getConfig قاطی کنیم.
+      const transport = await apiGet("transportTest");
+
+      if (transport?.transport !== true) {
+        throw new Error("اتصال عمومی به سامانه رزرو پاسخ معتبر نداد.");
+      }
+
+      // مرحله ۲: حالا خود getConfig را می‌خوانیم.
       const data = await apiGet("getConfig");
+
+      if (!data || data.ok === false) {
+        throw new Error(data?.message || "سامانه رزرو در پاسخ getConfig خطا داد.");
+      }
+
+      const services = Array.isArray(data.services) ? data.services : [];
+
+      if (services.length === 0) {
+        throw new Error("اتصال به سامانه برقرار است، اما لیست خدمات خالی برگشت.");
+      }
+
       const next: BookingConfig = {
-        services: Array.isArray(data.services) ? data.services : [],
+        services,
         availableDates: Array.isArray(data.availableDates) ? data.availableDates : [],
         settings: data.settings || {},
       };
+
       setConfig(next);
       setState("idle");
     } catch (error) {
       setState("error");
-      setMessage(error instanceof Error ? error.message : "اطلاعات رزرو دریافت نشد.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "اطلاعات رزرو دریافت نشد."
+      );
     }
   };
 
