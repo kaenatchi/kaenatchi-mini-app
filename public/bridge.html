@@ -8,6 +8,11 @@
 <body>
 <script>
 (function () {
+  var message = {
+    source: "kaenatchi-booking-bridge",
+    data: null
+  };
+
   try {
     var params = new URLSearchParams(window.location.search);
     var payload = params.get("payload") || "";
@@ -21,22 +26,35 @@
     }
 
     var json = new TextDecoder("utf-8").decode(bytes);
-    var data = JSON.parse(json);
-
-    window.parent.postMessage({
-      source: "kaenatchi-booking-bridge",
-      data: data
-    }, "*");
+    message.data = JSON.parse(json);
   } catch (error) {
-    window.parent.postMessage({
-      source: "kaenatchi-booking-bridge",
-      data: {
-        ok: false,
-        error: "BRIDGE_ERROR",
-        message: "خطا در دریافت پاسخ سامانه رزرو."
-      }
-    }, "*");
+    message.data = {
+      ok: false,
+      error: "BRIDGE_ERROR",
+      message: "خطا در دریافت پاسخ سامانه رزرو."
+    };
   }
+
+  /*
+   * The parent Mini App is the same GitHub Pages origin after the
+   * Apps Script iframe redirects here. Store the decoded response in
+   * the DOM as a same-origin fallback, and also try postMessage.
+   */
+  var node = document.createElement("pre");
+  node.id = "kaenatchi-bridge-data";
+  node.style.display = "none";
+  node.textContent = JSON.stringify(message.data);
+  document.body.appendChild(node);
+
+  window.__KAENATCHI_BRIDGE_DATA__ = message.data;
+
+  try {
+    window.parent.postMessage(message, "*");
+  } catch (e) {}
+
+  try {
+    window.top.postMessage(message, "*");
+  } catch (e) {}
 })();
 </script>
 </body>
