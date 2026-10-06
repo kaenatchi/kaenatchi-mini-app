@@ -4231,23 +4231,96 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const apiGet = async (action: string, params: Record<string,string> = {}) => {
-    const query = new URLSearchParams({action, ...params, _: String(Date.now())});
-    const response = await fetch(ENDPOINT + "?" + query.toString(), {cache:"no-store"});
-    const data = await response.json();
-    if (!response.ok || data?.ok === false) throw new Error(data?.message || "خطا در ارتباط با سامانه.");
-    return data;
+  const apiGet = (action: string, params: Record<string,string> = {}) =>
+    new Promise<any>((resolve, reject) => {
+      const callbackName = "__kaenatchi_jsonp_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+      const script = document.createElement("script");
+      const query = new URLSearchParams({
+        action,
+        ...params,
+        callback: callbackName,
+        _: String(Date.now()),
+      });
+
+      const cleanup = () => {
+        try { delete (window as any)[callbackName]; } catch {}
+        script.remove();
+      };
+
+      const timer = window.setTimeout(() => {
+        cleanup();
+        reject(new Error("اتصال به سامانه رزرو برقرار نشد. لطفاً دوباره تلاش کن."));
+      }, 15000);
+
+      (window as any)[callbackName] = (data: any) => {
+        window.clearTimeout(timer);
+        cleanup();
+        if (data?.ok === false) {
+          reject(new Error(data?.message || "خطا در ارتباط با سامانه."));
+          return;
+        }
+        resolve(data);
+      };
+
+      script.onerror = () => {
+        window.clearTimeout(timer);
+        cleanup();
+        reject(new Error("اتصال به سامانه رزرو برقرار نشد. لطفاً دوباره تلاش کن."));
+      };
+
+      script.src = ENDPOINT + "?" + query.toString();
+      document.body.appendChild(script);
+    });
+
+  const waitForBookingStatus = async (requestId: string, mode: "created" | "paid") => {
+    const started = Date.now();
+
+    while (Date.now() - started < 30000) {
+      const data = await apiGet("bookingStatus", {requestId});
+
+      if (data.found) {
+        if (mode === "created" && data.bookingId) return data;
+        if (mode === "paid" && (
+          data.paymentStatus === "فیش دریافت شد" ||
+          data.paymentStatus === "تأیید شد"
+        )) return data;
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, 1200));
+    }
+
+    throw new Error(
+      mode === "created"
+        ? "ثبت نوبت زمان‌بر شد. لطفاً وضعیت درخواست را دوباره بررسی کن."
+        : "ارسال اطلاعات پرداخت زمان‌بر شد. لطفاً چند لحظه بعد دوباره وضعیت نوبت را بررسی کن."
+    );
   };
 
   const apiPost = async (action: string, payload: Record<string,unknown>) => {
-    const response = await fetch(ENDPOINT, {
-      method:"POST",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify({action, ...payload}),
+    const requestId = String(
+      payload.requestId ||
+      payload.clientRequestId ||
+      payload.clientTrackingCode ||
+      ""
+    ).trim();
+
+    const body = JSON.stringify({action, ...payload});
+
+    await fetch(ENDPOINT, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {"Content-Type":"text/plain;charset=utf-8"},
+      body,
     });
-    const data = await response.json();
-    if (!response.ok || data?.ok === false) throw new Error(data?.message || "ثبت اطلاعات ناموفق بود.");
-    return data;
+
+    if (!requestId) {
+      return {ok:true};
+    }
+
+    return waitForBookingStatus(
+      requestId,
+      action === "createBooking" ? "created" : "paid"
+    );
   };
 
   const loadConfig = async () => {
@@ -4358,6 +4431,7 @@ function BookingPage({ onBack }: { onBack: () => void }) {
         firstName:firstName.trim(),
         lastName:lastName.trim(),
         mobile:mobile.trim(),
+        requestId,
         serviceId,
         serviceName,
         date,
@@ -4372,6 +4446,7 @@ function BookingPage({ onBack }: { onBack: () => void }) {
       if (receiptFile) receiptData = await fileToDataUrl(receiptFile);
 
       const payment = await apiPost("submitPayment", {
+        requestId,
         bookingId,
         telegramId,
         transactionNumber:transactionNumber.trim(),
