@@ -4244,17 +4244,98 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     const query = new URLSearchParams(queryParams);
 
     /*
-     * Booking GET transport:
+     * Booking transport:
      *
-     * Google Apps Script redirects its Web App response through a Google
-     * domain. In Telegram WebView, a normal cross-origin fetch is not a
-     * reliable readable transport, and the iframe/postMessage bridge can
-     * also be loaded while its message is suppressed.
+     * Google Apps Script Web Apps are not reliably readable through
+     * fetch() inside Telegram's WebView. JSONP can also be suppressed
+     * by the WebView, so the iframe/postMessage bridge is the primary
+     * transport for GET requests.
      *
-     * The backend already supports JSONP, so use the browser's native
-     * script transport first. This avoids CORS/readability issues entirely.
-     * The iframe bridge remains as a secondary fallback only.
+     * The backend's iframe response is intentionally tiny and sends
+     * the parsed payload to the parent window with postMessage.
      */
+    const requestThroughBridge = async () => {
+      return await new Promise<any>((resolve, reject) => {
+        let settled = false;
+        let timeoutId = 0;
+
+        const iframe = document.createElement("iframe");
+
+        const cleanup = () => {
+          window.clearTimeout(timeoutId);
+          window.removeEventListener("message", handleMessage);
+          iframe.remove();
+        };
+
+        const finish = (callback: () => void) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          callback();
+        };
+
+        const handleMessage = (event: MessageEvent) => {
+          const data = event.data;
+
+          if (!data || data.source !== "kaenatchi-booking-bridge") {
+            return;
+          }
+
+          finish(() => {
+            if (data.data?.ok === false) {
+              reject(
+                new Error(
+                  data.data?.message ||
+                  "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
+                )
+              );
+              return;
+            }
+
+            resolve(data.data);
+          });
+        };
+
+        window.addEventListener("message", handleMessage);
+
+        iframe.style.position = "fixed";
+        iframe.style.width = "1px";
+        iframe.style.height = "1px";
+        iframe.style.border = "0";
+        iframe.style.opacity = "0";
+        iframe.style.pointerEvents = "none";
+        iframe.setAttribute("aria-hidden", "true");
+
+        iframe.src =
+          ENDPOINT +
+          "?" +
+          query.toString() +
+          "&bridge=iframe";
+
+        iframe.onerror = () => {
+          finish(() =>
+            reject(
+              new Error(
+                "BRIDGE_TRANSPORT_FAILED"
+              )
+            )
+          );
+        };
+
+        timeoutId = window.setTimeout(() => {
+          finish(() =>
+            reject(
+              new Error(
+                "BRIDGE_TRANSPORT_TIMEOUT"
+              )
+            )
+          );
+        }, 10000);
+
+        document.body.appendChild(iframe);
+      });
+    };
+
     const requestThroughJsonp = async () => {
       return await new Promise<any>((resolve, reject) => {
         const callbackName =
@@ -4293,16 +4374,29 @@ function BookingPage({ onBack }: { onBack: () => void }) {
               );
               return;
             }
+
             resolve(data);
           });
         };
 
         script.onerror = () => {
-          finish(() => reject(new Error("JSONP_TRANSPORT_FAILED")));
+          finish(() =>
+            reject(
+              new Error(
+                "JSONP_TRANSPORT_FAILED"
+              )
+            )
+          );
         };
 
         timeoutId = window.setTimeout(() => {
-          finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT")));
+          finish(() =>
+            reject(
+              new Error(
+                "JSONP_TRANSPORT_TIMEOUT"
+              )
+            )
+          );
         }, 10000);
 
         script.src =
@@ -4316,85 +4410,24 @@ function BookingPage({ onBack }: { onBack: () => void }) {
       });
     };
 
-    const requestThroughBridge = async () => {
-      const bridgeQuery = new URLSearchParams({
-        ...queryParams,
-        bridge: "iframe",
-      });
+    let bridgeError: unknown = null;
 
-      return await new Promise<any>((resolve, reject) => {
-        let settled = false;
-        const iframe = document.createElement("iframe");
-        let timeoutId = 0;
-
-        const cleanup = () => {
-          window.clearTimeout(timeoutId);
-          window.removeEventListener("message", handleMessage);
-          iframe.remove();
-        };
-
-        const finish = (callback: () => void) => {
-          if (settled) return;
-          settled = true;
-          cleanup();
-          callback();
-        };
-
-        const handleMessage = (event: MessageEvent) => {
-          const data = event.data;
-          if (!data || data.source !== "kaenatchi-booking-bridge") return;
-
-          finish(() => {
-            if (data.data?.ok === false) {
-              reject(
-                new Error(
-                  data.data?.message ||
-                  "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
-                )
-              );
-              return;
-            }
-
-            resolve(data.data);
-          });
-        };
-
-        window.addEventListener("message", handleMessage);
-
-        iframe.style.position = "fixed";
-        iframe.style.width = "1px";
-        iframe.style.height = "1px";
-        iframe.style.border = "0";
-        iframe.style.opacity = "0";
-        iframe.style.pointerEvents = "none";
-        iframe.setAttribute("aria-hidden", "true");
-        iframe.src = ENDPOINT + "?" + bridgeQuery.toString();
-
-        iframe.onerror = () => {
-          finish(() => reject(new Error("BRIDGE_TRANSPORT_FAILED")));
-        };
-
-        timeoutId = window.setTimeout(() => {
-          finish(() => reject(new Error("BRIDGE_TRANSPORT_TIMEOUT")));
-        }, 7000);
-
-        document.body.appendChild(iframe);
-      });
-    };
+    try {
+      return await requestThroughBridge();
+    } catch (error) {
+      bridgeError = error;
+    }
 
     try {
       return await requestThroughJsonp();
     } catch (jsonpError) {
-      try {
-        return await requestThroughBridge();
-      } catch (bridgeError) {
-        if (action === "transportTest") {
-          throw new Error(
-            "پاسخ سامانه رزرو در مرحله «transport Test» دریافت نشد."
-          );
-        }
-        throw jsonpError instanceof Error ? jsonpError : bridgeError;
+      if (bridgeError instanceof Error) {
+        throw bridgeError;
       }
+
+      throw jsonpError instanceof Error
+        ? jsonpError
+        : new Error("سامانه رزرو پاسخ قابل دریافت نداد.");
     }
   };
 
