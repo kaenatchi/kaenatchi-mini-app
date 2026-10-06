@@ -4235,86 +4235,166 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     action: string,
     params: Record<string,string> = {}
   ) => {
-    const query = new URLSearchParams({
+    const queryParams = {
       action,
       ...params,
       _: String(Date.now()),
-      bridge: "iframe",
-    });
+    };
 
-    return await new Promise<any>((resolve, reject) => {
-      let settled = false;
-      const iframe = document.createElement("iframe");
+    const query = new URLSearchParams(queryParams);
 
-      const cleanup = () => {
-        window.clearTimeout(timeoutId);
-        window.removeEventListener("message", handleMessage);
-        iframe.remove();
-      };
+    const requestThroughBridge = async () => {
+      const bridgeQuery = new URLSearchParams({
+        ...queryParams,
+        bridge: "iframe",
+      });
 
-      const finish = (callback: () => void) => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        callback();
-      };
+      return await new Promise<any>((resolve, reject) => {
+        let settled = false;
+        const iframe = document.createElement("iframe");
+        let timeoutId = 0;
 
-      const handleMessage = (event: MessageEvent) => {
-        const data = event.data;
-        if (!data || data.source !== "kaenatchi-booking-bridge") return;
+        const cleanup = () => {
+          window.clearTimeout(timeoutId);
+          window.removeEventListener("message", handleMessage);
+          iframe.remove();
+        };
 
-        finish(() => {
-          if (data.data?.ok === false) {
-            reject(
-              new Error(
-                data.data?.message ||
-                "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
-              )
-            );
-            return;
-          }
+        const finish = (callback: () => void) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          callback();
+        };
 
-          resolve(data.data);
-        });
-      };
+        const handleMessage = (event: MessageEvent) => {
+          const data = event.data;
+          if (!data || data.source !== "kaenatchi-booking-bridge") return;
 
-      window.addEventListener("message", handleMessage);
+          finish(() => {
+            if (data.data?.ok === false) {
+              reject(
+                new Error(
+                  data.data?.message ||
+                  "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
+                )
+              );
+              return;
+            }
 
-      iframe.style.position = "fixed";
-      iframe.style.width = "1px";
-      iframe.style.height = "1px";
-      iframe.style.border = "0";
-      iframe.style.opacity = "0";
-      iframe.style.pointerEvents = "none";
-      iframe.setAttribute("aria-hidden", "true");
-      iframe.src = ENDPOINT + "?" + query.toString();
+            resolve(data.data);
+          });
+        };
 
-      iframe.onerror = () => {
-        finish(() => {
-          reject(
-            new Error(
-              "اتصال به سامانه رزرو در مرحله «" +
-              action +
-              "» برقرار نشد."
-            )
+        window.addEventListener("message", handleMessage);
+
+        iframe.style.position = "fixed";
+        iframe.style.width = "1px";
+        iframe.style.height = "1px";
+        iframe.style.border = "0";
+        iframe.style.opacity = "0";
+        iframe.style.pointerEvents = "none";
+        iframe.setAttribute("aria-hidden", "true");
+        iframe.src = ENDPOINT + "?" + bridgeQuery.toString();
+
+        iframe.onerror = () => {
+          finish(() => {
+            reject(new Error("BRIDGE_TRANSPORT_FAILED"));
+          });
+        };
+
+        timeoutId = window.setTimeout(() => {
+          finish(() => {
+            reject(new Error("BRIDGE_TRANSPORT_TIMEOUT"));
+          });
+        }, 7000);
+
+        document.body.appendChild(iframe);
+      });
+    };
+
+    const requestThroughJsonp = async () => {
+      return await new Promise<any>((resolve, reject) => {
+        const callbackName =
+          "__kaenatchiBookingJsonp_" +
+          Date.now() +
+          "_" +
+          Math.random().toString(36).slice(2);
+
+        const script = document.createElement("script");
+        let settled = false;
+        let timeoutId = 0;
+
+        const cleanup = () => {
+          window.clearTimeout(timeoutId);
+          script.remove();
+          try {
+            delete (window as any)[callbackName];
+          } catch {}
+        };
+
+        const finish = (callback: () => void) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          callback();
+        };
+
+        (window as any)[callbackName] = (data: any) => {
+          finish(() => {
+            if (data?.ok === false) {
+              reject(
+                new Error(
+                  data?.message ||
+                  "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
+                )
+              );
+              return;
+            }
+            resolve(data);
+          });
+        };
+
+        script.onerror = () => {
+          finish(() => reject(new Error("JSONP_TRANSPORT_FAILED")));
+        };
+
+        timeoutId = window.setTimeout(() => {
+          finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT")));
+        }, 8000);
+
+        script.src =
+          ENDPOINT +
+          "?" +
+          query.toString() +
+          "&callback=" +
+          encodeURIComponent(callbackName);
+
+        document.head.appendChild(script);
+      });
+    };
+
+    try {
+      return await requestThroughBridge();
+    } catch (bridgeError) {
+      /*
+       * Telegram WebView can sometimes load the iframe successfully but
+       * suppress the postMessage path. In that case, fall back to the
+       * original JSONP transport used by the booking backend.
+       *
+       * This is transport-only. Booking/payment business logic is untouched.
+       */
+      try {
+        return await requestThroughJsonp();
+      } catch (jsonpError) {
+        if (action === "transportTest") {
+          throw new Error(
+            "پاسخ سامانه رزرو در مرحله «transport Test» دریافت نشد."
           );
-        });
-      };
-
-      const timeoutId = window.setTimeout(() => {
-        finish(() => {
-          reject(
-            new Error(
-              "پاسخ سامانه رزرو در مرحله «" +
-              action +
-              "» دریافت نشد."
-            )
-          );
-        });
-      }, 15000);
-
-      document.body.appendChild(iframe);
-    });
+        }
+        throw bridgeError instanceof Error ? bridgeError : jsonpError;
+      }
+    }
   };
 
   const waitForBookingStatus = async (requestId: string, mode: "created" | "paid") => {
