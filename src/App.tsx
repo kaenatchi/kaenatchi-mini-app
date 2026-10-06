@@ -4243,6 +4243,79 @@ function BookingPage({ onBack }: { onBack: () => void }) {
 
     const query = new URLSearchParams(queryParams);
 
+    /*
+     * Booking GET transport:
+     *
+     * Google Apps Script redirects its Web App response through a Google
+     * domain. In Telegram WebView, a normal cross-origin fetch is not a
+     * reliable readable transport, and the iframe/postMessage bridge can
+     * also be loaded while its message is suppressed.
+     *
+     * The backend already supports JSONP, so use the browser's native
+     * script transport first. This avoids CORS/readability issues entirely.
+     * The iframe bridge remains as a secondary fallback only.
+     */
+    const requestThroughJsonp = async () => {
+      return await new Promise<any>((resolve, reject) => {
+        const callbackName =
+          "__kaenatchiBookingJsonp_" +
+          Date.now() +
+          "_" +
+          Math.random().toString(36).slice(2);
+
+        const script = document.createElement("script");
+        let settled = false;
+        let timeoutId = 0;
+
+        const cleanup = () => {
+          window.clearTimeout(timeoutId);
+          script.remove();
+          try {
+            delete (window as any)[callbackName];
+          } catch {}
+        };
+
+        const finish = (callback: () => void) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          callback();
+        };
+
+        (window as any)[callbackName] = (data: any) => {
+          finish(() => {
+            if (data?.ok === false) {
+              reject(
+                new Error(
+                  data?.message ||
+                  "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
+                )
+              );
+              return;
+            }
+            resolve(data);
+          });
+        };
+
+        script.onerror = () => {
+          finish(() => reject(new Error("JSONP_TRANSPORT_FAILED")));
+        };
+
+        timeoutId = window.setTimeout(() => {
+          finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT")));
+        }, 10000);
+
+        script.src =
+          ENDPOINT +
+          "?" +
+          query.toString() +
+          "&callback=" +
+          encodeURIComponent(callbackName);
+
+        document.head.appendChild(script);
+      });
+    };
+
     const requestThroughBridge = async () => {
       const bridgeQuery = new URLSearchParams({
         ...queryParams,
@@ -4298,101 +4371,29 @@ function BookingPage({ onBack }: { onBack: () => void }) {
         iframe.src = ENDPOINT + "?" + bridgeQuery.toString();
 
         iframe.onerror = () => {
-          finish(() => {
-            reject(new Error("BRIDGE_TRANSPORT_FAILED"));
-          });
+          finish(() => reject(new Error("BRIDGE_TRANSPORT_FAILED")));
         };
 
         timeoutId = window.setTimeout(() => {
-          finish(() => {
-            reject(new Error("BRIDGE_TRANSPORT_TIMEOUT"));
-          });
+          finish(() => reject(new Error("BRIDGE_TRANSPORT_TIMEOUT")));
         }, 7000);
 
         document.body.appendChild(iframe);
       });
     };
 
-    const requestThroughJsonp = async () => {
-      return await new Promise<any>((resolve, reject) => {
-        const callbackName =
-          "__kaenatchiBookingJsonp_" +
-          Date.now() +
-          "_" +
-          Math.random().toString(36).slice(2);
-
-        const script = document.createElement("script");
-        let settled = false;
-        let timeoutId = 0;
-
-        const cleanup = () => {
-          window.clearTimeout(timeoutId);
-          script.remove();
-          try {
-            delete (window as any)[callbackName];
-          } catch {}
-        };
-
-        const finish = (callback: () => void) => {
-          if (settled) return;
-          settled = true;
-          cleanup();
-          callback();
-        };
-
-        (window as any)[callbackName] = (data: any) => {
-          finish(() => {
-            if (data?.ok === false) {
-              reject(
-                new Error(
-                  data?.message ||
-                  "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
-                )
-              );
-              return;
-            }
-            resolve(data);
-          });
-        };
-
-        script.onerror = () => {
-          finish(() => reject(new Error("JSONP_TRANSPORT_FAILED")));
-        };
-
-        timeoutId = window.setTimeout(() => {
-          finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT")));
-        }, 8000);
-
-        script.src =
-          ENDPOINT +
-          "?" +
-          query.toString() +
-          "&callback=" +
-          encodeURIComponent(callbackName);
-
-        document.head.appendChild(script);
-      });
-    };
-
     try {
-      return await requestThroughBridge();
-    } catch (bridgeError) {
-      /*
-       * Telegram WebView can sometimes load the iframe successfully but
-       * suppress the postMessage path. In that case, fall back to the
-       * original JSONP transport used by the booking backend.
-       *
-       * This is transport-only. Booking/payment business logic is untouched.
-       */
+      return await requestThroughJsonp();
+    } catch (jsonpError) {
       try {
-        return await requestThroughJsonp();
-      } catch (jsonpError) {
+        return await requestThroughBridge();
+      } catch (bridgeError) {
         if (action === "transportTest") {
           throw new Error(
             "پاسخ سامانه رزرو در مرحله «transport Test» دریافت نشد."
           );
         }
-        throw bridgeError instanceof Error ? bridgeError : jsonpError;
+        throw jsonpError instanceof Error ? jsonpError : bridgeError;
       }
     }
   };
