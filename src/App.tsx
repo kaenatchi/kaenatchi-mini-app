@@ -108,9 +108,8 @@ const BOOKING_APP_URL =
 
 const BOOKING_TRANSPORT_ENDPOINT =
   "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
-const BOOKING_BACKEND_ENDPOINT =
-  "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
-const BOOKING_TRANSPORT_VERSION = "v4";
+
+const BOOKING_TRANSPORT_VERSION = "v5-fetch-jsonp";
 const BOOKING_CONFIG_CACHE_KEY =
   "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
 const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
@@ -127,8 +126,7 @@ const readBookingConfigCache = () => {
     return {
       data: parsed.data,
       savedAt: parsed.savedAt,
-      fresh:
-        Date.now() - parsed.savedAt < BOOKING_CONFIG_CACHE_TTL,
+      fresh: Date.now() - parsed.savedAt < BOOKING_CONFIG_CACHE_TTL,
     };
   } catch {
     return null;
@@ -152,8 +150,7 @@ const bookingSleep = (ms: number) =>
 
 const apiGetJsonpOnce = (
   action: string,
-  params: Record<string, string> = {},
-  endpoint: string = BOOKING_TRANSPORT_ENDPOINT
+  params: Record<string, string> = {}
 ): Promise<any> =>
   new Promise((resolve, reject) => {
     const callbackName =
@@ -163,7 +160,7 @@ const apiGetJsonpOnce = (
       Math.random().toString(36).slice(2);
 
     const script = document.createElement("script");
-    const url = new URL(endpoint);
+    const url = new URL(BOOKING_TRANSPORT_ENDPOINT);
 
     url.searchParams.set("action", action);
     Object.entries(params).forEach(([key, value]) =>
@@ -232,7 +229,7 @@ const apiGetFetchOnce = async (
   url.searchParams.set("_", String(Date.now()));
 
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+  const timeoutId = window.setTimeout(() => controller.abort(), 10000);
 
   try {
     const response = await fetch(url.toString(), {
@@ -265,6 +262,61 @@ const apiGetFetchOnce = async (
   }
 };
 
+const apiGetLive = async (
+  action: string,
+  params: Record<string, string> = {}
+): Promise<any> => {
+  /*
+   * Proven booking GET order:
+   * 1) standard cross-origin fetch
+   * 2) JSONP fallback
+   *
+   * Do not introduce iframe bridges here. Telegram/WebView failures are
+   * handled by the deterministic JSONP fallback.
+   */
+  let fetchError: unknown = null;
+
+  try {
+    const data = await apiGetFetchOnce(action, params);
+
+    if (action === "getConfig") {
+      writeBookingConfigCache(data);
+    }
+
+    return data;
+  } catch (error) {
+    fetchError = error;
+  }
+
+  try {
+    const data = await apiGetJsonpOnce(action, params);
+
+    if (action === "getConfig") {
+      writeBookingConfigCache(data);
+    }
+
+    return data;
+  } catch (jsonpError) {
+    const firstError =
+      fetchError instanceof Error ? fetchError.message : "FETCH_FAILED";
+    const secondError =
+      jsonpError instanceof Error
+        ? jsonpError.message
+        : "JSONP_FAILED";
+
+    console.warn(
+      "[KaenatChi Booking] fetch + JSONP transport failed",
+      action,
+      firstError,
+      secondError
+    );
+
+    throw new Error(
+      "BOOKING_TRANSPORT_FAILED:" + firstError + "|" + secondError
+    );
+  }
+};
+
 const apiGet = async (
   action: string,
   params: Record<string, string> = {}
@@ -294,7 +346,10 @@ const apiGet = async (
             const fresh = await apiGetLive(action, params);
             writeBookingConfigCache(fresh);
           } catch (error) {
-            console.warn("[KaenatChi Booking] background config refresh failed", error);
+            console.warn(
+              "[KaenatChi Booking] background config refresh failed",
+              error
+            );
           }
         })();
 
@@ -312,202 +367,6 @@ const apiGet = async (
   } finally {
     bookingInflight.delete(key);
   }
-};
-
-const apiGetIframeBridgeOnce = (
-  endpoint: string,
-  action: string,
-  params: Record<string, string> = {}
-): Promise<any> =>
-  new Promise((resolve, reject) => {
-    const frame = document.createElement("iframe");
-    const url = new URL(endpoint);
-
-    url.searchParams.set("action", action);
-    url.searchParams.set("bridge", "iframe");
-    Object.entries(params).forEach(([key, value]) =>
-      url.searchParams.set(key, value)
-    );
-    url.searchParams.set("_", String(Date.now()));
-
-    let settled = false;
-    let timeoutId = 0;
-
-    const cleanup = () => {
-      window.clearTimeout(timeoutId);
-      window.removeEventListener("message", onMessage);
-      frame.remove();
-    };
-
-    const finish = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      fn();
-    };
-
-    const onMessage = (event: MessageEvent) => {
-      const payload = event?.data;
-
-      /*
-       * The bridge may arrive as an object from bridge.html, or as a
-       * serialized object in a WebView. Keep the contract based on the
-       * stable source marker, not on event.origin.
-       */
-      if (
-        !payload ||
-        payload.source !== "kaenatchi-booking-bridge"
-      ) {
-        return;
-      }
-
-      let data = payload.data;
-
-      if (typeof data === "string") {
-        try {
-          data = JSON.parse(data);
-        } catch {
-          return;
-        }
-      }
-
-      if (!data) {
-        return;
-      }
-
-      finish(() => {
-        if (data?.ok === false) {
-          reject(
-            new Error(
-              data?.message ||
-                "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
-            )
-          );
-          return;
-        }
-
-        resolve(data);
-      });
-    };
-
-    window.addEventListener("message", onMessage);
-
-    frame.setAttribute("aria-hidden", "true");
-    frame.tabIndex = -1;
-    frame.style.cssText =
-      "position:fixed;width:1px;height:1px;left:-10000px;top:-10000px;" +
-      "border:0;pointer-events:none;";
-
-    frame.onload = () => {
-      /*
-       * Some embedded WebViews do not reliably expose iframe load/error
-       * events. The bridge response itself remains the source of truth.
-       */
-    };
-
-    frame.onerror = () =>
-      finish(() => reject(new Error("IFRAME_BRIDGE_LOAD_FAILED")));
-
-    timeoutId = window.setTimeout(
-      () =>
-        finish(() =>
-          reject(new Error("IFRAME_BRIDGE_TIMEOUT"))
-        ),
-      15000
-    );
-
-    frame.src = url.toString();
-    document.body.appendChild(frame);
-  });
-
-const apiGetLive = async (
-  action: string,
-  params: Record<string, string> = {}
-): Promise<any> => {
-  /*
-   * Transport order is deliberately kept cross-platform:
-   * 1) iframe + postMessage bridge
-   * 2) normal CORS GET
-   * 3) legacy JSONP only as a compatibility fallback
-   *
-   * The Worker, backend, CMS, VIP and booking business logic are untouched.
-   */
-  let lastError: unknown = null;
-
-  const bridgeEndpoints = [
-    BOOKING_TRANSPORT_ENDPOINT,
-    BOOKING_BACKEND_ENDPOINT,
-  ];
-
-  for (const endpoint of bridgeEndpoints) {
-    try {
-      const data = await apiGetIframeBridgeOnce(endpoint, action, params);
-
-      if (action === "getConfig") {
-        writeBookingConfigCache(data);
-      }
-
-      return data;
-    } catch (error) {
-      lastError = error;
-      console.warn(
-        "[KaenatChi Booking] iframe bridge failed",
-        endpoint,
-        action,
-        error
-      );
-    }
-  }
-
-  try {
-    const data = await apiGetFetchOnce(action, params);
-
-    if (action === "getConfig") {
-      writeBookingConfigCache(data);
-    }
-
-    return data;
-  } catch (error) {
-    lastError = error;
-    console.warn(
-      "[KaenatChi Booking] CORS fetch failed",
-      action,
-      error
-    );
-  }
-
-  /*
-   * JSONP is the final compatibility fallback. Try the Worker first,
-   * then the backend directly. No booking business logic is changed.
-   */
-  for (const endpoint of [
-    BOOKING_TRANSPORT_ENDPOINT,
-    BOOKING_BACKEND_ENDPOINT,
-  ]) {
-    try {
-      const data = await apiGetJsonpOnce(action, params, endpoint);
-
-      if (action === "getConfig") {
-        writeBookingConfigCache(data);
-      }
-
-      return data;
-    } catch (error) {
-      lastError = error;
-      console.warn(
-        "[KaenatChi Booking] JSONP fallback failed",
-        endpoint,
-        action,
-        error
-      );
-    }
-  }
-
-  void lastError;
-
-  throw new Error(
-    "ارتباط با سامانه رزرو برقرار نشد. لطفاً چند لحظه بعد دوباره تلاش کن."
-  );
 };
 
 const CMS_API_URL =
