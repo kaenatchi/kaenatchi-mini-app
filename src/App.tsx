@@ -4320,63 +4320,146 @@ function BookingPage({
       url.searchParams.set("_", String(Date.now()));
 
       let settled = false;
-      const timeoutId = window.setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        script.remove();
-        try { delete (window as any)[callbackName]; } catch {}
-        reject(new Error("BOOKING_TRANSPORT_TIMEOUT"));
-      }, 12000);
 
       const cleanup = () => {
         window.clearTimeout(timeoutId);
         script.remove();
-        try { delete (window as any)[callbackName]; } catch {}
+        try {
+          delete (window as any)[callbackName];
+        } catch {}
       };
 
-      (window as any)[callbackName] = (data: any) => {
+      const finish = (fn: () => void) => {
         if (settled) return;
         settled = true;
         cleanup();
+        fn();
+      };
 
-        if (data?.ok === false) {
+      const timeoutId = window.setTimeout(() => {
+        finish(() =>
           reject(
             new Error(
-              data?.message ||
-                "سامانه رزرو در مرحله «" +
-                  action +
-                  "» خطا برگرداند."
+              "BOOKING_TRANSPORT_TIMEOUT"
             )
-          );
-          return;
-        }
+          )
+        );
+      }, 20000);
 
-        resolve(data);
+      (window as any)[callbackName] = (data: any) => {
+        finish(() => {
+          if (data?.ok === false) {
+            reject(
+              new Error(
+                data?.message ||
+                  "سامانه رزرو در مرحله «" +
+                    action +
+                    "» خطا برگرداند."
+              )
+            );
+            return;
+          }
+          resolve(data);
+        });
       };
 
       script.async = true;
       script.src = url.toString();
       script.onerror = () => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        reject(new Error("BOOKING_JSONP_ERROR"));
+        finish(() =>
+          reject(
+            new Error(
+              "ارتباط با سامانه رزرو برقرار نشد."
+            )
+          )
+        );
       };
 
       document.head.appendChild(script);
     });
   };
 
-  const apiGet = (
+  const apiGet = async (
     action: string,
     params: Record<string, string> = {}
   ): Promise<any> => {
-    /*
-     * In Telegram iOS the reliable transport for this backend is JSONP.
-     * The endpoint is intentionally called as a script request so the
-     * WebView does not depend on CORS/fetch behavior.
-     */
-    return apiGetJsonp(action, params);
+    const url = new URL(ENDPOINT);
+
+    url.searchParams.set("action", action);
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.set(key, value);
+    });
+    url.searchParams.set("_", String(Date.now()));
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+
+    try {
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        mode: "cors",
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "follow",
+        headers: {
+          Accept: "application/json, text/plain, */*",
+        },
+        signal: controller.signal,
+      });
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        throw new Error(
+          "سامانه رزرو پاسخ HTTP " +
+            response.status +
+            " برگرداند."
+        );
+      }
+
+      let data: any;
+
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error(
+          "پاسخ سامانه رزرو JSON معتبر نیست."
+        );
+      }
+
+      if (data?.ok === false) {
+        throw new Error(
+          data?.message ||
+            "سامانه رزرو در مرحله «" +
+              action +
+              "» خطا برگرداند."
+        );
+      }
+
+      return data;
+    } catch (error) {
+      const shouldFallback =
+        error instanceof DOMException &&
+        error.name === "AbortError";
+
+      if (
+        !shouldFallback &&
+        !(
+          error instanceof TypeError &&
+          /fetch|network|failed/i.test(error.message)
+        )
+      ) {
+        throw error;
+      }
+
+      try {
+        return await apiGetJsonp(action, params);
+      } catch {
+        throw new Error("BOOKING_TRANSPORT_TIMEOUT");
+      }
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
   };
 
   const waitForBookingStatus = async (
