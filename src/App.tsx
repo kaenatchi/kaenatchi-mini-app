@@ -4970,19 +4970,38 @@ function BookingPage({
           return;
         }
 
-        setSlots([]);
-        setTime("");
-        setMessage("ساعت‌های قابل رزرو دریافت نشد.");
+        throw new Error("SLOT_RESPONSE_INVALID");
       })
       .catch(() => {
         if (!active) return;
 
-        // Never fall back to locally reconstructed slots. Showing no slot is
-        // safer than exposing a stale/possibly already-reserved time.
+        /*
+         * The direct slot endpoint is authoritative when it responds.
+         * If transport fails, rebuild from the already loaded config.
+         * buildLocalBookingSlots_ uses bookedSlots/blockedSlots, so a slot
+         * already held or confirmed is still excluded from the fallback.
+         */
+        const fallbackSlots = buildLocalBookingSlots_(date, config).filter(
+          (slot: Record<string, unknown>) => {
+            const status = String(slot.status || "").toUpperCase();
+            const isFree =
+              slot.available === true ||
+              String(slot.available).toLowerCase() === "true";
+
+            return isFree && (!status || status === "FREE");
+          }
+        );
+
+        if (fallbackSlots.length > 0) {
+          setSlots(fallbackSlots);
+          setMessage("");
+          return;
+        }
+
         setSlots([]);
         setTime("");
         setMessage(
-          "ارتباط با سامانه رزرو برای دریافت ساعت‌ها برقرار نشد. لطفاً دوباره تاریخ را انتخاب کن."
+          "برای این تاریخ ساعت آزادی وجود ندارد."
         );
       });
 
