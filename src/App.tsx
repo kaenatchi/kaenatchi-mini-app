@@ -4763,7 +4763,14 @@ function BookingPage({
     mode: "created" | "paid"
   ) => {
     const started = Date.now();
+    let attempt = 0;
 
+    /*
+     * The POST is intentionally opaque, so bookingStatus is the authoritative
+     * confirmation path. Poll aggressively at the beginning so a fast backend
+     * does not make the customer wait through an artificial 1.2s interval.
+     * Back off gradually to avoid hammering Apps Script if it is genuinely busy.
+     */
     while (Date.now() - started < 30000) {
       const data = await apiGet("bookingStatus", { requestId });
 
@@ -4780,8 +4787,16 @@ function BookingPage({
         }
       }
 
+      attempt += 1;
+      const delay =
+        attempt <= 3
+          ? 300
+          : attempt <= 6
+            ? 600
+            : 1000;
+
       await new Promise((resolve) =>
-        window.setTimeout(resolve, 1200)
+        window.setTimeout(resolve, delay)
       );
     }
 
