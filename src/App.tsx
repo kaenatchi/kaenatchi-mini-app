@@ -5074,18 +5074,57 @@ function BookingPage({
       const serviceName = String(selectedService.title || "");
       const telegramId = getTelegramId();
 
-      const create = await apiPost("createBooking", {
-        requestId,
-        telegramId,
-        firstName:firstName.trim(),
-        lastName:lastName.trim(),
-        mobile:mobile.trim(),
-        serviceId,
-        serviceName,
-        date,
-        time,
-        discountCode:discountCode.trim(),
-      });
+      // A POST can time out after the backend has already committed the booking.
+      // Recover by requestId before treating the attempt as failed, so a successful
+      // booking never leaves a hidden hold that forces the customer to choose another slot.
+      let create: any;
+      try {
+        create = await apiPost("createBooking", {
+          requestId,
+          telegramId,
+          firstName:firstName.trim(),
+          lastName:lastName.trim(),
+          mobile:mobile.trim(),
+          serviceId,
+          serviceName,
+          date,
+          time,
+          discountCode:discountCode.trim(),
+        });
+      } catch (error) {
+        const isTransportTimeout =
+          error instanceof Error &&
+          (
+            error.message === "BOOKING_TRANSPORT_TIMEOUT" ||
+            /HTTP 502|ارتباط با سامانه رزرو برقرار نشد|JSONP_TRANSPORT_TIMEOUT/i.test(error.message)
+          );
+
+        if (!isTransportTimeout) throw error;
+
+        let recovered: any = null;
+        try {
+          recovered = await waitForBookingStatus(requestId, "created");
+        } catch {}
+
+        if (!recovered?.bookingId) {
+          throw error;
+        }
+
+        create = {
+          ok: true,
+          bookingId: recovered.bookingId,
+          trackingCode: recovered.trackingCode || "",
+          booking: {
+            bookingId: recovered.bookingId,
+            trackingCode: recovered.trackingCode || "",
+            date,
+            time,
+            paymentStatus: recovered.paymentStatus || "",
+            appointmentStatus: recovered.appointmentStatus || "",
+          },
+          recovered: true,
+        };
+      }
 
       const bookingId = String(create?.booking?.bookingId || create?.bookingId || "");
       if (!bookingId) throw new Error("کد نوبت از سامانه دریافت نشد.");
@@ -5093,15 +5132,43 @@ function BookingPage({
       let receiptData = "";
       if (receiptFile) receiptData = await fileToDataUrl(receiptFile);
 
-      const payment = await apiPost("submitPayment", {
-        requestId,
-        bookingId,
-        telegramId,
-        transactionNumber:transactionNumber.trim(),
-        receiptData,
-        receiptFileName:receiptFile?.name || "",
-        receiptMimeType:receiptFile?.type || "",
-      });
+      let payment: any;
+      try {
+        payment = await apiPost("submitPayment", {
+          requestId,
+          bookingId,
+          telegramId,
+          transactionNumber:transactionNumber.trim(),
+          receiptData,
+          receiptFileName:receiptFile?.name || "",
+          receiptMimeType:receiptFile?.type || "",
+        });
+      } catch (error) {
+        const isTransportTimeout =
+          error instanceof Error &&
+          (
+            error.message === "BOOKING_TRANSPORT_TIMEOUT" ||
+            /HTTP 502|ارتباط با سامانه رزرو برقرار نشد|JSONP_TRANSPORT_TIMEOUT/i.test(error.message)
+          );
+
+        if (!isTransportTimeout) throw error;
+
+        let recovered: any = null;
+        try {
+          recovered = await waitForBookingStatus(requestId, "paid");
+        } catch {}
+
+        if (!recovered?.found) {
+          throw error;
+        }
+
+        payment = {
+          ok: true,
+          bookingId,
+          paymentStatus: recovered.paymentStatus || "",
+          recovered: true,
+        };
+      }
 
       if (!payment?.ok) throw new Error(payment?.message || "ارسال پرداخت ناموفق بود.");
 
