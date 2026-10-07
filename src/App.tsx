@@ -4199,8 +4199,7 @@ function BookingPage({ onBack }: { onBack: () => void }) {
 
   type BookingState = "idle" | "loading" | "submitting" | "success" | "error";
 
-  const ENDPOINT =
-    "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
+  const ENDPOINT = "/";
 
   const [config, setConfig] = useState<BookingConfig | null>(null);
   const [serviceId, setServiceId] = useState("");
