@@ -342,10 +342,16 @@ const apiGetIframeBridgeOnce = (
       fn();
     };
 
+    const bridgeOrigin = new URL(BOOKING_TRANSPORT_ENDPOINT).origin;
+
     const onMessage = (event: MessageEvent) => {
       const payload = event?.data;
 
+      // Accept messages only from the booking transport Worker itself.
+      // This prevents unrelated postMessage traffic in Telegram/WebView
+      // or the hosting page from accidentally resolving this request.
       if (
+        event.origin !== bridgeOrigin ||
         !payload ||
         payload.source !== "kaenatchi-booking-bridge" ||
         !payload.data
