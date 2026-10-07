@@ -108,8 +108,10 @@ const BOOKING_APP_URL =
 
 const BOOKING_TRANSPORT_ENDPOINT =
   "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
+const BOOKING_BACKEND_ENDPOINT =
+  "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
 
-const BOOKING_TRANSPORT_VERSION = "v5-fetch-jsonp";
+const BOOKING_TRANSPORT_VERSION = "v6-fetch-jsonp-backend";
 const BOOKING_CONFIG_CACHE_KEY =
   "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
 const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
@@ -150,7 +152,8 @@ const bookingSleep = (ms: number) =>
 
 const apiGetJsonpOnce = (
   action: string,
-  params: Record<string, string> = {}
+  params: Record<string, string> = {},
+  endpoint: string = BOOKING_TRANSPORT_ENDPOINT
 ): Promise<any> =>
   new Promise((resolve, reject) => {
     const callbackName =
@@ -160,7 +163,7 @@ const apiGetJsonpOnce = (
       Math.random().toString(36).slice(2);
 
     const script = document.createElement("script");
-    const url = new URL(BOOKING_TRANSPORT_ENDPOINT);
+    const url = new URL(endpoint);
 
     url.searchParams.set("action", action);
     Object.entries(params).forEach(([key, value]) =>
@@ -198,19 +201,17 @@ const apiGetJsonpOnce = (
           );
           return;
         }
-
         resolve(data);
       });
 
     script.async = true;
     script.src = url.toString();
-
     script.onerror = () =>
       finish(() => reject(new Error("JSONP_TRANSPORT_FAILED")));
 
     timeoutId = window.setTimeout(
       () => finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT"))),
-      15000
+      12000
     );
 
     document.head.appendChild(script);
@@ -266,53 +267,65 @@ const apiGetLive = async (
   action: string,
   params: Record<string, string> = {}
 ): Promise<any> => {
-  /*
-   * Proven booking GET order:
-   * 1) standard cross-origin fetch
-   * 2) JSONP fallback
-   *
-   * Do not introduce iframe bridges here. Telegram/WebView failures are
-   * handled by the deterministic JSONP fallback.
-   */
   let fetchError: unknown = null;
 
   try {
     const data = await apiGetFetchOnce(action, params);
-
-    if (action === "getConfig") {
-      writeBookingConfigCache(data);
-    }
-
+    if (action === "getConfig") writeBookingConfigCache(data);
     return data;
   } catch (error) {
     fetchError = error;
   }
 
+  let workerJsonpError: unknown = null;
+
   try {
-    const data = await apiGetJsonpOnce(action, params);
-
-    if (action === "getConfig") {
-      writeBookingConfigCache(data);
-    }
-
+    const data = await apiGetJsonpOnce(
+      action,
+      params,
+      BOOKING_TRANSPORT_ENDPOINT
+    );
+    if (action === "getConfig") writeBookingConfigCache(data);
     return data;
-  } catch (jsonpError) {
+  } catch (error) {
+    workerJsonpError = error;
+  }
+
+  try {
+    const data = await apiGetJsonpOnce(
+      action,
+      params,
+      BOOKING_BACKEND_ENDPOINT
+    );
+    if (action === "getConfig") writeBookingConfigCache(data);
+    return data;
+  } catch (backendJsonpError) {
     const firstError =
       fetchError instanceof Error ? fetchError.message : "FETCH_FAILED";
     const secondError =
-      jsonpError instanceof Error
-        ? jsonpError.message
-        : "JSONP_FAILED";
+      workerJsonpError instanceof Error
+        ? workerJsonpError.message
+        : "WORKER_JSONP_FAILED";
+    const thirdError =
+      backendJsonpError instanceof Error
+        ? backendJsonpError.message
+        : "BACKEND_JSONP_FAILED";
 
     console.warn(
-      "[KaenatChi Booking] fetch + JSONP transport failed",
+      "[KaenatChi Booking] fetch + Worker JSONP + backend JSONP failed",
       action,
       firstError,
-      secondError
+      secondError,
+      thirdError
     );
 
     throw new Error(
-      "BOOKING_TRANSPORT_FAILED:" + firstError + "|" + secondError
+      "BOOKING_TRANSPORT_FAILED:" +
+        firstError +
+        "|" +
+        secondError +
+        "|" +
+        thirdError
     );
   }
 };
