@@ -4865,6 +4865,37 @@ function BookingPage({
         return data;
       }
 
+      // The booking backend already returns the authoritative result in the
+      // POST response. Use it immediately so a successful booking/payment
+      // does not wait through the status-polling cycle.
+      if (action === "createBooking") {
+        const bookingId = String(
+          data?.booking?.bookingId || data?.bookingId || ""
+        ).trim();
+
+        if (data?.ok && bookingId) {
+          return data;
+        }
+      }
+
+      if (action === "submitPayment") {
+        const paymentStatus = String(
+          data?.paymentStatus || data?.booking?.paymentStatus || ""
+        ).trim();
+
+        if (
+          data?.ok &&
+          (
+            paymentStatus === "فیش دریافت شد" ||
+            paymentStatus === "تأیید شد"
+          )
+        ) {
+          return data;
+        }
+      }
+
+      // Fallback only when the POST response did not contain the expected
+      // authoritative result.
       return waitForBookingStatus(
         requestId,
         action === "createBooking"
