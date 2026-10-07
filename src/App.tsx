@@ -184,10 +184,14 @@ function cmsCategory(value: string, title: string): ServiceCategory {
     .replace(/\s+/g, " ")
     .trim();
 
-  if (/شمع|candle/.test(text)) return "candle";
-  if (/سایکو|سایکو تراپی|سایکوتراپی|روان|مشاوره|psychotherapy|psycho/.test(text)) {
+  // Backend Sheet/category names can vary slightly. Keep the booking
+  // categories compatible with the existing service data.
+  if (/شمع|شمع تراپی|شمع‌تراپی|candle|sham/.test(text)) return "candle";
+  if (/سایکو|سایکو تراپی|سایکو‌تراپی|سایکوتراپی|روان|مشاوره|psychotherapy|psycho|psych/.test(text)) {
     return "psychotherapy";
   }
+  // Everything else in the existing Services sheet is an energy-reading
+  // service unless explicitly matched above.
   return "energy";
 }
 
