@@ -4298,38 +4298,36 @@ function BookingPage({
     }
   };
 
-  const apiGetIframe = (
+  const apiGetJsonp = (
     action: string,
     params: Record<string, string> = {}
   ): Promise<any> => {
     return new Promise((resolve, reject) => {
-      const workerUrl = new URL(ENDPOINT, window.location.href);
-      workerUrl.searchParams.set("action", action);
-      Object.entries(params).forEach(([key, value]) => {
-        workerUrl.searchParams.set(key, value);
-      });
-      workerUrl.searchParams.set("bridge", "iframe");
-      workerUrl.searchParams.set("_", String(Date.now()));
+      const callbackName =
+        "__kaenatchiBooking_" +
+        Date.now() +
+        "_" +
+        Math.random().toString(36).slice(2);
 
-      const iframe = document.createElement("iframe");
-      iframe.setAttribute("aria-hidden", "true");
-      iframe.tabIndex = -1;
-      iframe.style.position = "fixed";
-      iframe.style.width = "1px";
-      iframe.style.height = "1px";
-      iframe.style.border = "0";
-      iframe.style.opacity = "0";
-      iframe.style.pointerEvents = "none";
-      iframe.style.left = "-9999px";
-      iframe.style.top = "-9999px";
-      iframe.src = workerUrl.toString();
+      const script = document.createElement("script");
+      const url = new URL(ENDPOINT);
+
+      url.searchParams.set("action", action);
+      Object.entries(params).forEach(([key, value]) => {
+        url.searchParams.set(key, value);
+      });
+      url.searchParams.set("callback", callbackName);
+      url.searchParams.set("_", String(Date.now()));
 
       let settled = false;
+      let timeoutId = 0;
 
       const cleanup = () => {
         window.clearTimeout(timeoutId);
-        window.removeEventListener("message", onMessage);
-        iframe.remove();
+        script.remove();
+        try {
+          delete (window as any)[callbackName];
+        } catch {}
       };
 
       const finish = (fn: () => void) => {
@@ -4339,17 +4337,8 @@ function BookingPage({
         fn();
       };
 
-      const onMessage = (event: MessageEvent) => {
-        if (event.origin !== workerUrl.origin) return;
-
-        const payload = event.data;
-        if (!payload || payload.source !== "kaenatchi-booking-bridge") {
-          return;
-        }
-
+      (window as any)[callbackName] = (data: any) => {
         finish(() => {
-          const data = payload.data;
-
           if (data?.ok === false) {
             reject(
               new Error(
@@ -4361,20 +4350,22 @@ function BookingPage({
             );
             return;
           }
-
           resolve(data);
         });
       };
 
-      window.addEventListener("message", onMessage);
+      script.async = true;
+      script.src = url.toString();
 
-      const timeoutId = window.setTimeout(() => {
-        finish(() =>
-          reject(new Error("BOOKING_TRANSPORT_TIMEOUT"))
-        );
-      }, 20000);
+      script.onerror = () => {
+        finish(() => reject(new Error("JSONP_TRANSPORT_FAILED")));
+      };
 
-      document.body.appendChild(iframe);
+      timeoutId = window.setTimeout(() => {
+        finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT")));
+      }, 12000);
+
+      document.head.appendChild(script);
     });
   };
 
@@ -4382,7 +4373,88 @@ function BookingPage({
     action: string,
     params: Record<string, string> = {}
   ): Promise<any> => {
-    return apiGetIframe(action, params);
+    const url = new URL(ENDPOINT);
+
+    url.searchParams.set("action", action);
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.set(key, value);
+    });
+    url.searchParams.set("_", String(Date.now()));
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        mode: "cors",
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "follow",
+        headers: {
+          Accept: "application/json, text/plain, */*",
+        },
+        signal: controller.signal,
+      });
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        throw new Error(
+          "سامانه رزرو پاسخ HTTP " +
+            response.status +
+            " برگرداند."
+        );
+      }
+
+      let data: any;
+
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error("BOOKING_JSON_INVALID");
+      }
+
+      if (data?.ok === false) {
+        throw new Error(
+          data?.message ||
+            "سامانه رزرو در مرحله «" +
+              action +
+              "» خطا برگرداند."
+        );
+      }
+
+      return data;
+    } catch (error) {
+      /*
+       * Telegram WebView, Safari/WKWebView, Android WebView and desktop
+       * clients can reject or hide a cross-origin fetch even when the
+       * Worker is healthy. JSONP is the browser-native cross-origin
+       * script transport and therefore is the deterministic fallback.
+       *
+       * IMPORTANT: any fetch failure reaches this fallback. We do not
+       * depend on browser-specific error-message text.
+       */
+      try {
+        return await apiGetJsonp(action, params);
+      } catch (jsonpError) {
+        const firstError =
+          error instanceof Error ? error.message : "FETCH_FAILED";
+        const secondError =
+          jsonpError instanceof Error
+            ? jsonpError.message
+            : "JSONP_FAILED";
+
+        throw new Error(
+          "BOOKING_TRANSPORT_FAILED:" +
+            firstError +
+            "|" +
+            secondError
+        );
+      }
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
   };
 
   const waitForBookingStatus = async (
