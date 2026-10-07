@@ -342,16 +342,14 @@ const apiGetIframeBridgeOnce = (
       fn();
     };
 
-    const bridgeOrigin = new URL(BOOKING_TRANSPORT_ENDPOINT).origin;
-
     const onMessage = (event: MessageEvent) => {
       const payload = event?.data;
 
-      // Accept messages only from the booking transport Worker itself.
-      // This prevents unrelated postMessage traffic in Telegram/WebView
-      // or the hosting page from accidentally resolving this request.
+      // The Worker bridge identifies its own response with a stable source.
+      // Do not require a specific event.origin here: Telegram WebViews and
+      // embedded browser implementations can normalize iframe origins
+      // differently even when the bridge response itself is valid.
       if (
-        event.origin !== bridgeOrigin ||
         !payload ||
         payload.source !== "kaenatchi-booking-bridge" ||
         !payload.data
