@@ -108,7 +108,11 @@ const BOOKING_APP_URL =
 
 const BOOKING_TRANSPORT_ENDPOINT =
   "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
-const BOOKING_TRANSPORT_VERSION = "v4";
+
+const BOOKING_BACKEND_ENDPOINT =
+  "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
+
+const BOOKING_TRANSPORT_VERSION = "v5";
 const BOOKING_CONFIG_CACHE_KEY =
   "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
 const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
@@ -149,6 +153,7 @@ const bookingSleep = (ms: number) =>
   new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 const apiGetJsonpOnce = (
+  endpoint: string,
   action: string,
   params: Record<string, string> = {}
 ): Promise<any> =>
@@ -160,7 +165,7 @@ const apiGetJsonpOnce = (
       Math.random().toString(36).slice(2);
 
     const script = document.createElement("script");
-    const url = new URL(BOOKING_TRANSPORT_ENDPOINT);
+    const url = new URL(endpoint);
 
     url.searchParams.set("action", action);
     Object.entries(params).forEach(([key, value]) =>
@@ -217,10 +222,11 @@ const apiGetJsonpOnce = (
   });
 
 const apiGetFetchOnce = async (
+  endpoint: string,
   action: string,
   params: Record<string, string> = {}
 ): Promise<any> => {
-  const url = new URL(BOOKING_TRANSPORT_ENDPOINT);
+  const url = new URL(endpoint);
 
   url.searchParams.set("action", action);
   Object.entries(params).forEach(([key, value]) =>
@@ -262,6 +268,56 @@ const apiGetFetchOnce = async (
   }
 };
 
+const apiGetLive = async (
+  action: string,
+  params: Record<string, string> = {}
+): Promise<any> => {
+  const endpoints = [
+    BOOKING_BACKEND_ENDPOINT,
+    BOOKING_TRANSPORT_ENDPOINT,
+  ];
+
+  let lastError: unknown = null;
+
+  /*
+   * GET/reading transport only:
+   * - Primary: the current Booking Backend v2 Apps Script deployment.
+   * - Secondary: the Cloudflare Worker transport.
+   *
+   * Both terminate at the same Booking Backend v2 business logic.
+   * We are NOT changing booking/payment/hold logic here.
+   *
+   * The old /booking/ Mini App is deliberately not used as a fallback:
+   * it has the legacy booking flow that we already replaced.
+   */
+  for (const endpoint of endpoints) {
+    try {
+      return await apiGetJsonpOnce(endpoint, action, params);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  /*
+   * JSONP is the primary WebView-safe transport. Fetch remains only as a
+   * browser fallback. Try both current endpoints before giving up.
+   */
+  for (const endpoint of endpoints) {
+    try {
+      return await apiGetFetchOnce(endpoint, action, params);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  const message =
+    lastError instanceof Error
+      ? lastError.message
+      : "BOOKING_TRANSPORT_FAILED";
+
+  throw new Error("BOOKING_TRANSPORT_FAILED:" + message);
+};
+
 const apiGet = async (
   action: string,
   params: Record<string, string> = {}
@@ -291,7 +347,10 @@ const apiGet = async (
             const fresh = await apiGetLive(action, params);
             writeBookingConfigCache(fresh);
           } catch (error) {
-            console.warn("[KaenatChi Booking] background config refresh failed", error);
+            console.warn(
+              "[KaenatChi Booking] background config refresh failed",
+              error
+            );
           }
         })();
 
@@ -299,7 +358,13 @@ const apiGet = async (
       }
     }
 
-    return apiGetLive(action, params);
+    const data = await apiGetLive(action, params);
+
+    if (action === "getConfig") {
+      writeBookingConfigCache(data);
+    }
+
+    return data;
   })();
 
   bookingInflight.set(key, request);
@@ -310,55 +375,6 @@ const apiGet = async (
     bookingInflight.delete(key);
   }
 };
-
-const apiGetLive = async (
-  action: string,
-  params: Record<string, string> = {}
-): Promise<any> => {
-  let jsonpError: unknown = null;
-
-  // Telegram iOS/WebView has historically been reliable with script/JSONP
-  // transport while cross-origin fetch can stall or abort. Keep JSONP first.
-  try {
-    const data = await apiGetJsonpOnce(action, params);
-
-    if (action === "getConfig") {
-      writeBookingConfigCache(data);
-    }
-
-    return data;
-  } catch (error) {
-    jsonpError = error;
-  }
-
-  // Fetch is a secondary fallback for browsers/WebViews where JSONP is blocked.
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const data = await apiGetFetchOnce(action, params);
-
-      if (action === "getConfig") {
-        writeBookingConfigCache(data);
-      }
-
-      return data;
-    } catch (error) {
-      if (attempt === 0) {
-        await bookingSleep(250);
-      }
-    }
-  }
-
-  console.warn(
-    "[KaenatChi Booking] transport failed",
-    action,
-    jsonpError
-  );
-
-  throw new Error(
-    "ارتباط با سامانه رزرو برقرار نشد. لطفاً چند لحظه بعد دوباره تلاش کن."
-  );
-};
-
 
 const CMS_API_URL =
   "https://script.google.com/macros/s/AKfycbzgocb54x4FDoQl3C8-o2WnipZuQYkM1j1juV-ZZKHoieN7DbrybTj3WyXbJe5I2nMhXw/exec";
