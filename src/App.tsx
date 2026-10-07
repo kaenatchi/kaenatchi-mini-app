@@ -4337,14 +4337,8 @@ function BookingPage({
       };
 
       const timeoutId = window.setTimeout(() => {
-        finish(() =>
-          reject(
-            new Error(
-              "BOOKING_TRANSPORT_TIMEOUT"
-            )
-          )
-        );
-      }, 20000);
+        finish(() => reject(new Error("BOOKING_TRANSPORT_TIMEOUT")));
+      }, 15000);
 
       (window as any)[callbackName] = (data: any) => {
         finish(() => {
@@ -4366,20 +4360,14 @@ function BookingPage({
       script.async = true;
       script.src = url.toString();
       script.onerror = () => {
-        finish(() =>
-          reject(
-            new Error(
-              "ارتباط با سامانه رزرو برقرار نشد."
-            )
-          )
-        );
+        finish(() => reject(new Error("BOOKING_JSONP_ERROR")));
       };
 
       document.head.appendChild(script);
     });
   };
 
-  const apiGet = async (
+  const apiGetFetch = async (
     action: string,
     params: Record<string, string> = {}
   ): Promise<any> => {
@@ -4435,27 +4423,45 @@ function BookingPage({
       }
 
       return data;
-    } catch (error) {
-      // Telegram iOS/WebView can reject or stall a normal cross-origin
-      // fetch even though the same Worker endpoint is reachable by script
-      // loading. Always give JSONP a chance before surfacing a transport
-      // error; this is the transport fallback, not a backend change.
-      try {
-        return await apiGetJsonp(action, params);
-      } catch (jsonpError) {
-        if (jsonpError instanceof Error && jsonpError.message) {
-          throw jsonpError;
-        }
-
-        if (error instanceof Error && error.message) {
-          throw error;
-        }
-
-        throw new Error("BOOKING_TRANSPORT_TIMEOUT");
-      }
     } finally {
       window.clearTimeout(timeoutId);
     }
+  };
+
+  const apiGet = (
+    action: string,
+    params: Record<string, string> = {}
+  ): Promise<any> => {
+    /*
+     * GET requests are read-only. Start JSONP and CORS fetch together and
+     * accept the first valid response. Telegram iOS WebView may stall one
+     * transport while allowing the other, so this avoids the old serial
+     * timeout chain without changing backend or booking logic.
+     */
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      let completed = 0;
+      let lastError: Error | null = null;
+
+      const succeed = (data: any) => {
+        if (settled) return;
+        settled = true;
+        resolve(data);
+      };
+
+      const fail = (error: unknown) => {
+        completed += 1;
+        if (error instanceof Error && error.message) {
+          lastError = error;
+        }
+
+        if (completed < 2 || settled) return;
+        reject(lastError || new Error("BOOKING_TRANSPORT_TIMEOUT"));
+      };
+
+      apiGetJsonp(action, params).then(succeed, fail);
+      apiGetFetch(action, params).then(succeed, fail);
+    });
   };
 
   const waitForBookingStatus = async (
