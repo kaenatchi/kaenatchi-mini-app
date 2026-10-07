@@ -1135,7 +1135,7 @@ function ServiceDetail({
           boxShadow:
             "0 10px 24px rgba(23, 75, 56, 0.2)",
         }}
-        onClick={onOpenBooking}
+        onClick={() => onOpenBooking(service)}
       >
         📅 دریافت نوبت
       </button>
@@ -4725,7 +4725,7 @@ function BookingPage({
     setState("submitting");
     try {
       const requestId = "REQ-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8).toUpperCase();
-      const serviceName = String(selectedService.name ?? selectedService.title ?? selectedService.serviceName ?? "");
+      const serviceName = String(selectedService.title || "");
       const telegramId = getTelegramId();
 
       const create = await apiPost("createBooking", {
@@ -5373,7 +5373,7 @@ function App() {
         {section === "services" && (
           <ServicesPage
             focus={serviceFocus}
-            onOpenBooking={(service) => {
+            onOpenBooking={(service: Service) => {
               setBookingService(service || null);
               changeSection("booking");
             }}
