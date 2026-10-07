@@ -1148,7 +1148,7 @@ function ServicesPage({
   onOpenBooking,
 }: {
   focus?: "all" | "classes" | "events";
-  onOpenBooking: () => void;
+  onOpenBooking: (service?: Service) => void;
 }) {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [activeCategory, setActiveCategory] = useState<ServiceCategory | null>(null);
