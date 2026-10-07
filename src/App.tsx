@@ -311,27 +311,118 @@ const apiGet = async (
   }
 };
 
+const apiGetIframeBridgeOnce = (
+  action: string,
+  params: Record<string, string> = {}
+): Promise<any> =>
+  new Promise((resolve, reject) => {
+    const frame = document.createElement("iframe");
+    const url = new URL(BOOKING_TRANSPORT_ENDPOINT);
+
+    url.searchParams.set("action", action);
+    url.searchParams.set("bridge", "iframe");
+    Object.entries(params).forEach(([key, value]) =>
+      url.searchParams.set(key, value)
+    );
+    url.searchParams.set("_", String(Date.now()));
+
+    let settled = false;
+    let timeoutId = 0;
+
+    const cleanup = () => {
+      window.clearTimeout(timeoutId);
+      window.removeEventListener("message", onMessage);
+      frame.remove();
+    };
+
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      fn();
+    };
+
+    const onMessage = (event: MessageEvent) => {
+      const payload = event?.data;
+
+      if (
+        !payload ||
+        payload.source !== "kaenatchi-booking-bridge" ||
+        !payload.data
+      ) {
+        return;
+      }
+
+      finish(() => {
+        if (payload.data?.ok === false) {
+          reject(
+            new Error(
+              payload.data?.message ||
+                "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
+            )
+          );
+          return;
+        }
+
+        resolve(payload.data);
+      });
+    };
+
+    window.addEventListener("message", onMessage);
+
+    frame.setAttribute("aria-hidden", "true");
+    frame.tabIndex = -1;
+    frame.style.cssText =
+      "position:fixed;width:1px;height:1px;left:-10000px;top:-10000px;" +
+      "border:0;opacity:0;pointer-events:none;";
+
+    frame.onerror = () =>
+      finish(() => reject(new Error("IFRAME_BRIDGE_LOAD_FAILED")));
+
+    timeoutId = window.setTimeout(
+      () =>
+        finish(() =>
+          reject(new Error("IFRAME_BRIDGE_TIMEOUT"))
+        ),
+      15000
+    );
+
+    frame.src = url.toString();
+    document.body.appendChild(frame);
+  });
+
 const apiGetLive = async (
   action: string,
   params: Record<string, string> = {}
 ): Promise<any> => {
-  let jsonpError: unknown = null;
-
-  // Telegram iOS/WebView has historically been reliable with script/JSONP
-  // transport while cross-origin fetch can stall or abort. Keep JSONP first.
+  /*
+   * Transport v2:
+   * iframe + postMessage is the primary browser/WebView transport.
+   * Direct JSONP is intentionally NOT part of the active path.
+   *
+   * The booking backend, CMS, VIP and booking rules remain untouched.
+   */
   try {
-    const data = await apiGetJsonpOnce(action, params);
+    const data = await apiGetIframeBridgeOnce(action, params);
 
     if (action === "getConfig") {
       writeBookingConfigCache(data);
     }
 
     return data;
-  } catch (error) {
-    jsonpError = error;
+  } catch (bridgeError) {
+    console.warn(
+      "[KaenatChi Booking] iframe bridge failed; trying CORS fetch fallback",
+      action,
+      bridgeError
+    );
   }
 
-  // Fetch is a secondary fallback for browsers/WebViews where JSONP is blocked.
+  /*
+   * Fetch remains a secondary transport for normal browsers where
+   * the Worker exposes a valid CORS response. It is not the primary
+   * bridge and does not reintroduce JSONP.
+   */
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const data = await apiGetFetchOnce(action, params);
@@ -349,16 +440,14 @@ const apiGetLive = async (
   }
 
   console.warn(
-    "[KaenatChi Booking] transport failed",
-    action,
-    jsonpError
+    "[KaenatChi Booking] transport v2 failed",
+    action
   );
 
   throw new Error(
     "ارتباط با سامانه رزرو برقرار نشد. لطفاً چند لحظه بعد دوباره تلاش کن."
   );
 };
-
 
 const CMS_API_URL =
   "https://script.google.com/macros/s/AKfycbzgocb54x4FDoQl3C8-o2WnipZuQYkM1j1juV-ZZKHoieN7DbrybTj3WyXbJe5I2nMhXw/exec";
