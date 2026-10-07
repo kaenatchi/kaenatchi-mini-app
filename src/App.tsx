@@ -4806,107 +4806,34 @@ function BookingPage({
     const url = new URL(ENDPOINT);
     url.searchParams.set("_", String(Date.now()));
 
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(
-      () => controller.abort(),
-      30000
-    );
+    const body = JSON.stringify({
+      action,
+      ...payload,
+    });
 
+    /*
+     * Telegram WebView can stall when it tries to read the response of a
+     * cross-origin POST, even though the POST itself reaches the Worker.
+     * For booking mutations we therefore use a no-cors POST as the write
+     * transport and then read the authoritative result through the existing
+     * JSONP/Worker status endpoint.
+     *
+     * This is deliberately the same requestId-based recovery architecture
+     * used by the backend: the UI never needs to read the opaque POST response.
+     */
     try {
-      const response = await fetch(url.toString(), {
+      await fetch(url.toString(), {
         method: "POST",
-        mode: "cors",
+        mode: "no-cors",
         credentials: "omit",
         cache: "no-store",
         redirect: "follow",
         headers: {
           "Content-Type": "text/plain;charset=utf-8",
-          Accept: "application/json, text/plain, */*",
         },
-        body: JSON.stringify({
-          action,
-          ...payload,
-        }),
-        signal: controller.signal,
+        body,
       });
-
-      const responseText = await response.text();
-
-      if (!response.ok) {
-        throw new Error(
-          "سامانه رزرو پاسخ HTTP " +
-            response.status +
-            " برگرداند."
-        );
-      }
-
-      let data: any = { ok: true };
-
-      if (responseText.trim()) {
-        try {
-          data = JSON.parse(responseText);
-        } catch {
-          throw new Error(
-            "پاسخ ثبت نوبت JSON معتبر نیست."
-          );
-        }
-      }
-
-      if (data?.ok === false) {
-        throw new Error(
-          data?.message ||
-            "سامانه رزرو در مرحله «" +
-              action +
-              "» خطا برگرداند."
-        );
-      }
-
-      if (!requestId) {
-        return data;
-      }
-
-      // The booking backend already returns the authoritative result in the
-      // POST response. Use it immediately so a successful booking/payment
-      // does not wait through the status-polling cycle.
-      if (action === "createBooking") {
-        const bookingId = String(
-          data?.booking?.bookingId || data?.bookingId || ""
-        ).trim();
-
-        if (data?.ok && bookingId) {
-          return data;
-        }
-      }
-
-      if (action === "submitPayment") {
-        const paymentStatus = String(
-          data?.paymentStatus || data?.booking?.paymentStatus || ""
-        ).trim();
-
-        if (
-          data?.ok &&
-          (
-            paymentStatus === "فیش دریافت شد" ||
-            paymentStatus === "تأیید شد"
-          )
-        ) {
-          return data;
-        }
-      }
-
-      // Fallback only when the POST response did not contain the expected
-      // authoritative result.
-      return waitForBookingStatus(
-        requestId,
-        action === "createBooking"
-          ? "created"
-          : "paid"
-      );
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        throw new Error("BOOKING_TRANSPORT_TIMEOUT");
-      }
-
       if (
         error instanceof TypeError &&
         /fetch|network|failed/i.test(error.message)
@@ -4915,11 +4842,22 @@ function BookingPage({
           "ارتباط با سامانه رزرو برقرار نشد. لطفاً دوباره تلاش کن."
         );
       }
-
       throw error;
-    } finally {
-      window.clearTimeout(timeoutId);
     }
+
+    if (!requestId) {
+      return { ok: true };
+    }
+
+    /*
+     * The POST response is intentionally opaque. bookingStatus is the
+     * authoritative confirmation path for both createBooking and
+     * submitPayment and works through the Worker JSONP transport.
+     */
+    return waitForBookingStatus(
+      requestId,
+      action === "createBooking" ? "created" : "paid"
+    );
   };
 
   const loadConfig = async () => {
