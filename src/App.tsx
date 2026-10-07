@@ -5373,7 +5373,7 @@ function App() {
         {section === "services" && (
           <ServicesPage
             focus={serviceFocus}
-            onOpenBooking={(service: Service) => {
+            onOpenBooking={(service?: Service) => {
               setBookingService(service || null);
               changeSection("booking");
             }}
