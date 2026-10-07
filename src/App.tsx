@@ -4939,32 +4939,51 @@ function BookingPage({
     let active = true;
     setTime("");
 
-    // Render slots immediately from the already-loaded getConfig payload.
-    // This prevents the UI from hanging on a slow/blocked slot request.
-    const localSlots = buildLocalBookingSlots_(date, config);
-    setSlots(localSlots);
-    setMessage(
-      localSlots.length
-        ? ""
-        : "برای این تاریخ ساعت آزادی وجود ندارد."
-    );
+    // BookingPage must use the authoritative slot response for the selected
+    // date. Do not render locally reconstructed/cached slots first, because
+    // that can temporarily expose a slot that is already held or confirmed.
+    setSlots([]);
+    setMessage("");
 
-    // Refresh availability in the background when the backend responds.
-    // The booking backend remains the final source of truth at submission.
     void apiGet("getAvailableSlots", { date })
       .then((data) => {
         if (!active) return;
+
         if (Array.isArray(data.slots)) {
-          setSlots(data.slots);
+          const authoritativeSlots = data.slots.filter(
+            (slot: Record<string, unknown>) => {
+              const status = String(slot.status || "").toUpperCase();
+              const isFree =
+                slot.available === true ||
+                String(slot.available).toLowerCase() === "true";
+
+              return isFree && (!status || status === "FREE");
+            }
+          );
+
+          setSlots(authoritativeSlots);
           setMessage(
-            data.slots.length
+            authoritativeSlots.length
               ? ""
               : "برای این تاریخ ساعت آزادی وجود ندارد."
           );
+          return;
         }
+
+        setSlots([]);
+        setTime("");
+        setMessage("ساعت‌های قابل رزرو دریافت نشد.");
       })
       .catch(() => {
-        // Local slots are already visible; do not replace them with an error.
+        if (!active) return;
+
+        // Never fall back to locally reconstructed slots. Showing no slot is
+        // safer than exposing a stale/possibly already-reserved time.
+        setSlots([]);
+        setTime("");
+        setMessage(
+          "ارتباط با سامانه رزرو برای دریافت ساعت‌ها برقرار نشد. لطفاً دوباره تاریخ را انتخاب کن."
+        );
       });
 
     return () => {
