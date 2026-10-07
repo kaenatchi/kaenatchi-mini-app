@@ -345,10 +345,11 @@ const apiGetIframeBridgeOnce = (
     const onMessage = (event: MessageEvent) => {
       const payload = event?.data;
 
-      // The Worker bridge identifies its own response with a stable source.
-      // Do not require a specific event.origin here: Telegram WebViews and
-      // embedded browser implementations can normalize iframe origins
-      // differently even when the bridge response itself is valid.
+      /*
+       * Telegram WebViews may report iframe message origins differently
+       * across iOS, Android and desktop. The Worker bridge therefore uses
+       * its stable application-level source marker as the contract.
+       */
       if (
         !payload ||
         payload.source !== "kaenatchi-booking-bridge" ||
@@ -380,6 +381,13 @@ const apiGetIframeBridgeOnce = (
       "position:fixed;width:1px;height:1px;left:-10000px;top:-10000px;" +
       "border:0;opacity:0;pointer-events:none;";
 
+    frame.onload = () => {
+      /*
+       * Some embedded WebViews do not reliably expose iframe load/error
+       * events. The bridge response itself remains the source of truth.
+       */
+    };
+
     frame.onerror = () =>
       finish(() => reject(new Error("IFRAME_BRIDGE_LOAD_FAILED")));
 
@@ -400,12 +408,15 @@ const apiGetLive = async (
   params: Record<string, string> = {}
 ): Promise<any> => {
   /*
-   * Transport v2:
-   * iframe + postMessage is the primary browser/WebView transport.
-   * Direct JSONP is intentionally NOT part of the active path.
+   * Transport order is deliberately kept cross-platform:
+   * 1) iframe + postMessage bridge
+   * 2) normal CORS GET
+   * 3) legacy JSONP only as a compatibility fallback
    *
-   * The booking backend, CMS, VIP and booking rules remain untouched.
+   * The Worker, backend, CMS, VIP and booking business logic are untouched.
    */
+  let lastError: unknown = null;
+
   try {
     const data = await apiGetIframeBridgeOnce(action, params);
 
@@ -414,39 +425,56 @@ const apiGetLive = async (
     }
 
     return data;
-  } catch (bridgeError) {
+  } catch (error) {
+    lastError = error;
     console.warn(
-      "[KaenatChi Booking] iframe bridge failed; trying CORS fetch fallback",
+      "[KaenatChi Booking] iframe bridge failed",
       action,
-      bridgeError
+      error
+    );
+  }
+
+  try {
+    const data = await apiGetFetchOnce(action, params);
+
+    if (action === "getConfig") {
+      writeBookingConfigCache(data);
+    }
+
+    return data;
+  } catch (error) {
+    lastError = error;
+    console.warn(
+      "[KaenatChi Booking] CORS fetch failed",
+      action,
+      error
     );
   }
 
   /*
-   * Fetch remains a secondary transport for normal browsers where
-   * the Worker exposes a valid CORS response. It is not the primary
-   * bridge and does not reintroduce JSONP.
+   * JSONP is only a compatibility fallback. It does not replace the
+   * primary bridge and does not alter the Worker or backend contract.
+   * This is especially useful for embedded WebViews that block ordinary
+   * cross-origin fetch while still allowing script loading.
    */
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const data = await apiGetFetchOnce(action, params);
+  try {
+    const data = await apiGetJsonpOnce(action, params);
 
-      if (action === "getConfig") {
-        writeBookingConfigCache(data);
-      }
-
-      return data;
-    } catch (error) {
-      if (attempt === 0) {
-        await bookingSleep(250);
-      }
+    if (action === "getConfig") {
+      writeBookingConfigCache(data);
     }
+
+    return data;
+  } catch (error) {
+    lastError = error;
+    console.warn(
+      "[KaenatChi Booking] JSONP fallback failed",
+      action,
+      error
+    );
   }
 
-  console.warn(
-    "[KaenatChi Booking] transport v2 failed",
-    action
-  );
+  void lastError;
 
   throw new Error(
     "ارتباط با سامانه رزرو برقرار نشد. لطفاً چند لحظه بعد دوباره تلاش کن."
