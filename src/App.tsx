@@ -5668,7 +5668,6 @@ function App() {
   if (vipOpen) {
     return (
       <div className="app-shell app-shell-special">
-        {bookingThemeStyle}
       <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
         <VipPage onBack={() => setVipOpen(false)} />
@@ -11378,7 +11377,6 @@ function App() {
   if (vipOpen) {
     return (
       <div className="app-shell app-shell-special">
-        {bookingThemeStyle}
       <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
         <VipPage onBack={() => setVipOpen(false)} />
