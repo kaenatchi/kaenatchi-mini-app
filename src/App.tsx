@@ -4564,6 +4564,106 @@ function MorePage({
   );
 }
 
+function buildLocalBookingSlots_(
+  date: string,
+  config: {
+    availableDates: Array<Record<string, unknown>>;
+    workHours?: Array<Record<string, unknown>>;
+    blockedSlots?: Array<Record<string, unknown>>;
+    bookedSlots?: Array<Record<string, unknown>>;
+  } | null
+): Array<Record<string, unknown>> {
+  if (!config || !date) return [];
+
+  const dateInfo = config.availableDates.find(
+    (item) => String(item.date || "") === date
+  );
+  const dayName = String(dateInfo?.dayOfWeek || "").trim();
+  if (!dayName) return [];
+
+  const normalizeDay = (value: unknown) =>
+    String(value || "")
+      .replace(/[\u200c\u200d\s]/g, "")
+      .replace(/(صبح|عصر)$/u, "");
+
+  const toMinutes = (value: unknown) => {
+    const parts = String(value || "").split(":");
+    const hours = Number(parts[0]);
+    const minutes = Number(parts[1]);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return NaN;
+    return hours * 60 + minutes;
+  };
+
+  const toTime = (minutes: number) =>
+    String(Math.floor(minutes / 60)).padStart(2, "0") +
+    ":" +
+    String(minutes % 60).padStart(2, "0");
+
+  const blocked = new Set(
+    (config.blockedSlots || [])
+      .filter(
+        (item) =>
+          String(item.date || "") === date &&
+          String(item.active).toLowerCase() !== "false" &&
+          String(item.active) !== "خیر"
+      )
+      .map((item) => date + "|" + String(item.time || ""))
+  );
+
+  const booked = new Set(
+    (config.bookedSlots || [])
+      .filter((item) => {
+        const itemDate = String(item.date || "");
+        const status = String(item.status || item["Appointment Status"] || "");
+        return (
+          itemDate === date &&
+          (status === "PENDING" ||
+            status === "CONFIRMED" ||
+            status === "در انتظار" ||
+            status === "تأیید شده")
+        );
+      })
+      .map((item) => date + "|" + String(item.time || ""))
+  );
+
+  const result: Array<Record<string, unknown>> = [];
+  const schedules = (config.workHours || []).filter(
+    (row) =>
+      Boolean(row.active) &&
+      normalizeDay(row.day) === normalizeDay(dayName)
+  );
+
+  schedules.forEach((row) => {
+    const start = toMinutes(row.startTime);
+    const end = toMinutes(row.endTime);
+    const duration = Number(row.slotDuration) || 30;
+
+    if (!Number.isFinite(start) || !Number.isFinite(end) || duration <= 0) {
+      return;
+    }
+
+    for (let minutes = start; minutes + duration <= end; minutes += duration) {
+      const time = toTime(minutes);
+      const slotKey = date + "|" + time;
+      const status = blocked.has(slotKey)
+        ? "BLOCKED"
+        : booked.has(slotKey)
+          ? "CONFIRMED"
+          : "FREE";
+
+      result.push({
+        date,
+        time,
+        slotKey,
+        status,
+        available: status === "FREE",
+      });
+    }
+  });
+
+  return result;
+}
+
 function BookingPage({
   onBack,
   initialService,
@@ -4574,6 +4674,9 @@ function BookingPage({
   type BookingConfig = {
     services: Array<Record<string, unknown>>;
     availableDates: Array<Record<string, unknown>>;
+    workHours: Array<Record<string, unknown>>;
+    blockedSlots: Array<Record<string, unknown>>;
+    bookedSlots: Array<Record<string, unknown>>;
     settings: Record<string, unknown>;
   };
 
@@ -4812,6 +4915,9 @@ function BookingPage({
       const next: BookingConfig = {
         services,
         availableDates: Array.isArray(data.availableDates) ? data.availableDates : [],
+        workHours: Array.isArray(data.workHours) ? data.workHours : [],
+        blockedSlots: Array.isArray(data.blockedSlots) ? data.blockedSlots : [],
+        bookedSlots: Array.isArray(data.bookedSlots) ? data.bookedSlots : [],
         settings: data.settings || {},
       };
 
@@ -4848,33 +4954,39 @@ function BookingPage({
 
     let active = true;
     setTime("");
-    setMessage("در حال دریافت ساعت‌های قابل رزرو...");
 
-    // The backend resolves the daily schedule from the Jalali date.
-    // serviceId is not required by getAvailableSlots_ and is deliberately
-    // omitted so the slot request stays compatible with the locked backend.
-    apiGet("getAvailableSlots", { date })
+    // Render slots immediately from the already-loaded getConfig payload.
+    // This prevents the UI from hanging on a slow/blocked slot request.
+    const localSlots = buildLocalBookingSlots_(date, config);
+    setSlots(localSlots);
+    setMessage(
+      localSlots.length
+        ? ""
+        : "برای این تاریخ ساعت آزادی وجود ندارد."
+    );
+
+    // Refresh availability in the background when the backend responds.
+    // The booking backend remains the final source of truth at submission.
+    void apiGet("getAvailableSlots", { date })
       .then((data) => {
         if (!active) return;
-        setSlots(Array.isArray(data.slots) ? data.slots : []);
-        setMessage(
-          Array.isArray(data.slots) && data.slots.length
-            ? ""
-            : "برای این تاریخ ساعت آزادی وجود ندارد."
-        );
+        if (Array.isArray(data.slots)) {
+          setSlots(data.slots);
+          setMessage(
+            data.slots.length
+              ? ""
+              : "برای این تاریخ ساعت آزادی وجود ندارد."
+          );
+        }
       })
-      .catch((error) => {
-        if (!active) return;
-        setSlots([]);
-        setMessage(
-          error instanceof Error ? error.message : "ساعت‌ها دریافت نشدند."
-        );
+      .catch(() => {
+        // Local slots are already visible; do not replace them with an error.
       });
 
     return () => {
       active = false;
     };
-  }, [date]);
+  }, [date, config]);
 
   const checkDiscount = async () => {
     const code = discountCode.trim();
