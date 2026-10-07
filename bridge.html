@@ -8,34 +8,77 @@
 <body>
 <script>
 (function () {
+  function send(data) {
+    try {
+      window.parent.postMessage({
+        source: "kaenatchi-booking-bridge",
+        data: data
+      }, "*");
+    } catch (error) {}
+  }
+
+  function decodePayload(value) {
+    if (!value) return null;
+
+    var text = String(value).trim();
+
+    // Worker may provide plain JSON.
+    try {
+      return JSON.parse(text);
+    } catch (error) {}
+
+    // Or base64 / base64url encoded UTF-8 JSON.
+    try {
+      var normalized = text
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+
+      while (normalized.length % 4) {
+        normalized += "=";
+      }
+
+      var binary = atob(normalized);
+      var bytes = new Uint8Array(binary.length);
+
+      for (var i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      var json = new TextDecoder("utf-8").decode(bytes);
+      return JSON.parse(json);
+    } catch (error) {
+      return null;
+    }
+  }
+
   try {
     var params = new URLSearchParams(window.location.search);
-    var payload = params.get("payload") || "";
-    var normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    while (normalized.length % 4) normalized += "=";
 
-    var binary = atob(normalized);
-    var bytes = new Uint8Array(binary.length);
-    for (var i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
+    var candidates = [
+      params.get("payload"),
+      params.get("data"),
+      params.get("response"),
+      params.get("result")
+    ];
+
+    var data = null;
+
+    for (var i = 0; i < candidates.length; i++) {
+      data = decodePayload(candidates[i]);
+      if (data) break;
     }
 
-    var json = new TextDecoder("utf-8").decode(bytes);
-    var data = JSON.parse(json);
+    if (!data) {
+      throw new Error("BRIDGE_PAYLOAD_MISSING");
+    }
 
-    window.parent.postMessage({
-      source: "kaenatchi-booking-bridge",
-      data: data
-    }, "*");
+    send(data);
   } catch (error) {
-    window.parent.postMessage({
-      source: "kaenatchi-booking-bridge",
-      data: {
-        ok: false,
-        error: "BRIDGE_ERROR",
-        message: "خطا در دریافت پاسخ سامانه رزرو."
-      }
-    }, "*");
+    send({
+      ok: false,
+      error: "BRIDGE_ERROR",
+      message: "خطا در دریافت پاسخ سامانه رزرو."
+    });
   }
 })();
 </script>
