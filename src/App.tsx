@@ -4199,7 +4199,7 @@ function BookingPage({ onBack }: { onBack: () => void }) {
 
   type BookingState = "idle" | "loading" | "submitting" | "success" | "error";
 
-  const ENDPOINT = "/";
+  const ENDPOINT = "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
 
   const [config, setConfig] = useState<BookingConfig | null>(null);
   const [serviceId, setServiceId] = useState("");
@@ -4234,119 +4234,105 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     action: string,
     params: Record<string, string> = {}
   ): Promise<any> => {
-    /*
-     * Booking transport v5:
-     *
-     * Telegram iOS WebView was timing out on both cross-origin fetch()
-     * and dynamic JSONP <script> loading. The Worker itself is healthy.
-     *
-     * GET requests therefore use the existing iframe bridge supported by
-     * the unchanged Apps Script backend. The iframe is allowed to load the
-     * cross-origin Worker, and the Worker forwards the backend bridge HTML.
-     * The response sends its data to this page with postMessage().
-     *
-     * Booking/CMS/VIP/business logic is untouched.
-     */
-    const queryParams = {
-      action,
-      ...params,
-      bridge: "iframe",
-      _: String(Date.now()),
-    };
+    const url = new URL(ENDPOINT);
 
-    const query = new URLSearchParams(queryParams);
-    const url = ENDPOINT + "?" + query.toString();
-
-    return new Promise((resolve, reject) => {
-      const iframe = document.createElement("iframe");
-      let settled = false;
-
-      const cleanup = () => {
-        window.clearTimeout(timeoutId);
-        window.removeEventListener("message", onMessage);
-
-        try {
-          iframe.src = "about:blank";
-        } catch {}
-
-        iframe.remove();
-      };
-
-      const finish = (fn: (value: any) => void, value: any) => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        fn(value);
-      };
-
-      const onMessage = (event: MessageEvent) => {
-        const data = event?.data;
-
-        /*
-         * The bridge source is unique to KaenatChi. We intentionally do not
-         * compare event.source here because Telegram iOS WebView can expose
-         * a null/different WindowProxy for cross-origin iframe messages.
-         */
-        if (!data || data.source !== "kaenatchi-booking-bridge") return;
-
-        const payload = data.data;
-
-        if (payload?.ok === false) {
-          finish(
-            reject,
-            new Error(
-              payload?.message ||
-              "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
-            )
-          );
-          return;
-        }
-
-        finish(resolve, payload);
-      };
-
-      window.addEventListener("message", onMessage);
-
-      iframe.setAttribute("aria-hidden", "true");
-      iframe.style.position = "fixed";
-      iframe.style.width = "1px";
-      iframe.style.height = "1px";
-      iframe.style.border = "0";
-      /*
-       * Keep the iframe off-screen rather than opacity:0. Some iOS WebViews
-       * are stricter about executing scripts in fully hidden frames.
-       */
-      iframe.style.pointerEvents = "none";
-      iframe.style.left = "-10000px";
-      iframe.style.top = "0";
-      iframe.src = url;
-
-      const timeoutId = window.setTimeout(() => {
-        finish(
-          reject,
-          new Error("BOOKING_TRANSPORT_TIMEOUT")
-        );
-      }, 15000);
-
-      document.body.appendChild(iframe);
+    url.searchParams.set("action", action);
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.set(key, value);
     });
+    url.searchParams.set("_", String(Date.now()));
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+
+    try {
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        mode: "cors",
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "follow",
+        headers: {
+          Accept: "application/json, text/plain, */*",
+        },
+        signal: controller.signal,
+      });
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        throw new Error(
+          "سامانه رزرو پاسخ HTTP " +
+            response.status +
+            " برگرداند."
+        );
+      }
+
+      let data: any;
+
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error(
+          "پاسخ سامانه رزرو JSON معتبر نیست."
+        );
+      }
+
+      if (data?.ok === false) {
+        throw new Error(
+          data?.message ||
+            "سامانه رزرو در مرحله «" +
+              action +
+              "» خطا برگرداند."
+        );
+      }
+
+      return data;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error("BOOKING_TRANSPORT_TIMEOUT");
+      }
+
+      if (
+        error instanceof TypeError &&
+        /fetch|network|failed/i.test(error.message)
+      ) {
+        throw new Error(
+          "ارتباط با سامانه رزرو برقرار نشد. لطفاً دوباره تلاش کن."
+        );
+      }
+
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
   };
 
-const waitForBookingStatus = async (requestId: string, mode: "created" | "paid") => {
+  const waitForBookingStatus = async (
+    requestId: string,
+    mode: "created" | "paid"
+  ) => {
     const started = Date.now();
 
     while (Date.now() - started < 30000) {
-      const data = await apiGet("bookingStatus", {requestId});
+      const data = await apiGet("bookingStatus", { requestId });
 
       if (data.found) {
         if (mode === "created" && data.bookingId) return data;
-        if (mode === "paid" && (
-          data.paymentStatus === "فیش دریافت شد" ||
-          data.paymentStatus === "تأیید شد"
-        )) return data;
+        if (
+          mode === "paid" &&
+          (
+            data.paymentStatus === "فیش دریافت شد" ||
+            data.paymentStatus === "تأیید شد"
+          )
+        ) {
+          return data;
+        }
       }
 
-      await new Promise((resolve) => window.setTimeout(resolve, 1200));
+      await new Promise((resolve) =>
+        window.setTimeout(resolve, 1200)
+      );
     }
 
     throw new Error(
@@ -4356,31 +4342,103 @@ const waitForBookingStatus = async (requestId: string, mode: "created" | "paid")
     );
   };
 
-  const apiPost = async (action: string, payload: Record<string,unknown>) => {
+  const apiPost = async (
+    action: string,
+    payload: Record<string, unknown>
+  ) => {
     const requestId = String(
       payload.requestId ||
-      payload.clientRequestId ||
-      payload.clientTrackingCode ||
-      ""
+        payload.clientRequestId ||
+        payload.clientTrackingCode ||
+        ""
     ).trim();
 
-    const body = JSON.stringify({action, ...payload});
+    const url = new URL(ENDPOINT);
+    url.searchParams.set("_", String(Date.now()));
 
-    await fetch(ENDPOINT, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {"Content-Type":"text/plain;charset=utf-8"},
-      body,
-    });
-
-    if (!requestId) {
-      return {ok:true};
-    }
-
-    return waitForBookingStatus(
-      requestId,
-      action === "createBooking" ? "created" : "paid"
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(
+      () => controller.abort(),
+      30000
     );
+
+    try {
+      const response = await fetch(url.toString(), {
+        method: "POST",
+        mode: "cors",
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "follow",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+          Accept: "application/json, text/plain, */*",
+        },
+        body: JSON.stringify({
+          action,
+          ...payload,
+        }),
+        signal: controller.signal,
+      });
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        throw new Error(
+          "سامانه رزرو پاسخ HTTP " +
+            response.status +
+            " برگرداند."
+        );
+      }
+
+      let data: any = { ok: true };
+
+      if (responseText.trim()) {
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          throw new Error(
+            "پاسخ ثبت نوبت JSON معتبر نیست."
+          );
+        }
+      }
+
+      if (data?.ok === false) {
+        throw new Error(
+          data?.message ||
+            "سامانه رزرو در مرحله «" +
+              action +
+              "» خطا برگرداند."
+        );
+      }
+
+      if (!requestId) {
+        return data;
+      }
+
+      return waitForBookingStatus(
+        requestId,
+        action === "createBooking"
+          ? "created"
+          : "paid"
+      );
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error("BOOKING_TRANSPORT_TIMEOUT");
+      }
+
+      if (
+        error instanceof TypeError &&
+        /fetch|network|failed/i.test(error.message)
+      ) {
+        throw new Error(
+          "ارتباط با سامانه رزرو برقرار نشد. لطفاً دوباره تلاش کن."
+        );
+      }
+
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
   };
 
   const loadConfig = async () => {
