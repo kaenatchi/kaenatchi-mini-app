@@ -346,30 +346,43 @@ const apiGetIframeBridgeOnce = (
       const payload = event?.data;
 
       /*
-       * Telegram WebViews may report iframe message origins differently
-       * across iOS, Android and desktop. The Worker bridge therefore uses
-       * its stable application-level source marker as the contract.
+       * The bridge may arrive as an object from bridge.html, or as a
+       * serialized object in a WebView. Keep the contract based on the
+       * stable source marker, not on event.origin.
        */
       if (
         !payload ||
-        payload.source !== "kaenatchi-booking-bridge" ||
-        !payload.data
+        payload.source !== "kaenatchi-booking-bridge"
       ) {
         return;
       }
 
+      let data = payload.data;
+
+      if (typeof data === "string") {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          return;
+        }
+      }
+
+      if (!data) {
+        return;
+      }
+
       finish(() => {
-        if (payload.data?.ok === false) {
+        if (data?.ok === false) {
           reject(
             new Error(
-              payload.data?.message ||
+              data?.message ||
                 "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
             )
           );
           return;
         }
 
-        resolve(payload.data);
+        resolve(data);
       });
     };
 
