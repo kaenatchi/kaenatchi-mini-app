@@ -4235,6 +4235,15 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     action: string,
     params: Record<string,string> = {}
   ) => {
+    /*
+     * Booking transport v3:
+     *
+     * GET requests now go directly to the Cloudflare Worker with normal
+     * CORS/fetch. The Worker is the transport layer between this Mini App
+     * and the existing Google Apps Script backend.
+     *
+     * Booking/business logic is intentionally untouched.
+     */
     const queryParams = {
       action,
       ...params,
@@ -4242,181 +4251,59 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     };
 
     const query = new URLSearchParams(queryParams);
+    const url = ENDPOINT + "?" + query.toString();
 
-    /*
-     * Booking transport v2:
-     *
-     * JSONP is the primary GET transport because it does not require
-     * cross-origin fetch access inside Telegram's WebView.
-     *
-     * The iframe bridge remains as a fallback for environments where
-     * JSONP is blocked. Booking/business logic is intentionally untouched.
-     */
-    const requestThroughJsonp = async () => {
-      return await new Promise<any>((resolve, reject) => {
-        const callbackName =
-          "__kaenatchiBookingJsonp_" +
-          Date.now() +
-          "_" +
-          Math.random().toString(36).slice(2);
-
-        const script = document.createElement("script");
-        let settled = false;
-        let timeoutId = 0;
-
-        const cleanup = () => {
-          window.clearTimeout(timeoutId);
-          script.remove();
-          try {
-            delete (window as any)[callbackName];
-          } catch {}
-        };
-
-        const finish = (callback: () => void) => {
-          if (settled) return;
-          settled = true;
-          cleanup();
-          callback();
-        };
-
-        (window as any)[callbackName] = (data: any) => {
-          finish(() => {
-            if (data?.ok === false) {
-              reject(
-                new Error(
-                  data?.message ||
-                  "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
-                )
-              );
-              return;
-            }
-
-            resolve(data);
-          });
-        };
-
-        script.async = true;
-
-        script.onerror = () => {
-          finish(() =>
-            reject(new Error("JSONP_TRANSPORT_FAILED"))
-          );
-        };
-
-        timeoutId = window.setTimeout(() => {
-          finish(() =>
-            reject(new Error("JSONP_TRANSPORT_TIMEOUT"))
-          );
-        }, 15000);
-
-        script.src =
-          ENDPOINT +
-          "?" +
-          query.toString() +
-          "&callback=" +
-          encodeURIComponent(callbackName);
-
-        document.head.appendChild(script);
-      });
-    };
-
-    const requestThroughBridge = async () => {
-      return await new Promise<any>((resolve, reject) => {
-        let settled = false;
-        let timeoutId = 0;
-
-        const iframe = document.createElement("iframe");
-
-        const cleanup = () => {
-          window.clearTimeout(timeoutId);
-          window.removeEventListener("message", handleMessage);
-          iframe.remove();
-        };
-
-        const finish = (callback: () => void) => {
-          if (settled) return;
-          settled = true;
-          cleanup();
-          callback();
-        };
-
-        const handleMessage = (event: MessageEvent) => {
-          const data = event.data;
-
-          if (!data || data.source !== "kaenatchi-booking-bridge") {
-            return;
-          }
-
-          finish(() => {
-            if (data.data?.ok === false) {
-              reject(
-                new Error(
-                  data.data?.message ||
-                  "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
-                )
-              );
-              return;
-            }
-
-            resolve(data.data);
-          });
-        };
-
-        window.addEventListener("message", handleMessage);
-
-        iframe.style.position = "fixed";
-        iframe.style.width = "1px";
-        iframe.style.height = "1px";
-        iframe.style.border = "0";
-        iframe.style.opacity = "0";
-        iframe.style.pointerEvents = "none";
-        iframe.setAttribute("aria-hidden", "true");
-
-        iframe.src =
-          ENDPOINT +
-          "?" +
-          query.toString() +
-          "&bridge=iframe";
-
-        iframe.onerror = () => {
-          finish(() =>
-            reject(new Error("BRIDGE_TRANSPORT_FAILED"))
-          );
-        };
-
-        timeoutId = window.setTimeout(() => {
-          finish(() =>
-            reject(new Error("BRIDGE_TRANSPORT_TIMEOUT"))
-          );
-        }, 12000);
-
-        document.body.appendChild(iframe);
-      });
-    };
-
-    let jsonpError: unknown = null;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 15000);
 
     try {
-      return await requestThroughJsonp();
-    } catch (error) {
-      jsonpError = error;
-    }
+      const response = await fetch(url, {
+        method: "GET",
+        mode: "cors",
+        cache: "no-store",
+        headers: {
+          "Accept": "application/json, text/plain, */*"
+        },
+        signal: controller.signal,
+      });
 
-    try {
-      return await requestThroughBridge();
-    } catch (bridgeError) {
-      if (jsonpError instanceof Error && bridgeError instanceof Error) {
+      if (!response.ok) {
         throw new Error(
-          "سامانه رزرو پاسخ قابل دریافت نداد. " +
-          "[" + jsonpError.message + " / " + bridgeError.message + "]"
+          "سامانه رزرو با وضعیت HTTP " + response.status + " پاسخ داد."
         );
       }
 
-      throw bridgeError instanceof Error
-        ? bridgeError
-        : jsonpError instanceof Error
-          ? jsonpError
-          : new Error("سامانه رزرو پاسخ قابل دریافت نداد.");
+      const text = await response.text();
+
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          "سامانه رزرو پاسخ JSON معتبر برنگرداند."
+        );
+      }
+
+      if (data?.ok === false) {
+        throw new Error(
+          data?.message ||
+          "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
+        );
+      }
+
+      return data;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error("BOOKING_TRANSPORT_TIMEOUT");
+      }
+
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      throw new Error("BOOKING_TRANSPORT_FAILED");
+    } finally {
+      window.clearTimeout(timeoutId);
     }
   };
 
