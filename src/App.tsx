@@ -4590,14 +4590,14 @@ function BookingPage({
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
   const backendServices: Service[] = (config?.services || [])
-    .map((item) => {
+    .map((item, index) => {
       const title = String(item.name ?? item.title ?? item.serviceName ?? "خدمت").trim();
       const category = cmsCategory(
         String(item.category ?? item.Category ?? ""),
         title
       );
       return {
-        id: String(item.id ?? item.ID ?? ""),
+        id: String(item.id ?? item.ID ?? "").trim() || "booking-" + cmsSlug(title) + "-" + (index + 1),
         title,
         category,
         price: String(item.price ?? item.Price ?? ""),
