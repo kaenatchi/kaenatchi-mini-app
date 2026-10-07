@@ -4280,236 +4280,81 @@ function BookingPage({
   type BookingState = "idle" | "loading" | "submitting" | "success" | "error";
 
   const ENDPOINT = "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
+  const BOOKING_TRANSPORT_VERSION = "v3";
+  const BOOKING_CONFIG_CACHE_KEY = "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
+  const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
+  const bookingInflight = new Map<string, Promise<any>>();
 
-  const [config, setConfig] = useState<BookingConfig | null>(null);
-  const [serviceId, setServiceId] = useState(initialService?.id || "");
-  const [date, setDate] = useState("");
-  const [bookingCategory, setBookingCategory] = useState<ServiceCategory | null>(
-    initialService?.category || null
-  );
-  const [time, setTime] = useState("");
-  const [slots, setSlots] = useState<Array<Record<string, unknown>>>([]);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [discountCode, setDiscountCode] = useState("");
-  const [discount, setDiscount] = useState<{valid:boolean; percent:number; amount:number}>({valid:false,percent:0,amount:0});
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [transactionNumber, setTransactionNumber] = useState("");
-  const [message, setMessage] = useState("");
-  const [state, setState] = useState<BookingState>("loading");
-  const [trackingCode, setTrackingCode] = useState("");
-  const [checkingDiscount, setCheckingDiscount] = useState(false);
-
-  const backendServices: Service[] = (config?.services || [])
-    .map((item) => {
-      const title = String(item.name ?? item.title ?? item.serviceName ?? "خدمت").trim();
-      const category = cmsCategory(
-        String(item.category ?? item.Category ?? ""),
-        title
-      );
-      return {
-        id: String(item.id ?? item.ID ?? ""),
-        title,
-        category,
-        price: String(item.price ?? item.Price ?? ""),
-        duration: String(item.duration ?? item.Duration ?? ""),
-        description: String(item.description ?? item.Description ?? ""),
-      };
-    })
-    .filter((service) => {
-      const normalizedTitle = service.title
-        .replace(/[\u200c\u200f\u200e\s_-]+/g, "")
-        .toLocaleLowerCase("fa");
-      return !(
-        (normalizedTitle === "انرژیخوانی" ||
-          normalizedTitle === "شمعتراپی" ||
-          normalizedTitle === "سایکوتراپی") &&
-        !service.price &&
-        !service.duration
-      );
-    });
-
-  // Booking is intentionally limited to the three customer-facing categories.
-  // The individual services remain CMS/backend driven and can be added or removed
-  // without changing this UI code.
-  const bookingServices = backendServices.filter((service) =>
-    ["energy", "candle", "psychotherapy"].includes(service.category)
-  );
-
-  const selectedService =
-    bookingServices.find((item) => item.id === serviceId) ||
-    initialService ||
-    null;
-  const basePrice =
-    Number(String(selectedService?.price || "").replace(/[,٬،\s]/g, "")) || 0;
-  const finalPrice = Math.max(0, basePrice - discount.amount);
-
-  const getTelegramId = () => {
+  const readBookingConfigCache = () => {
     try {
-      return String((window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id || "");
-    } catch {
-      return "";
-    }
+      const raw = window.localStorage.getItem(BOOKING_CONFIG_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.data || typeof parsed.savedAt !== "number") return null;
+      return { data: parsed.data, savedAt: parsed.savedAt, fresh: Date.now() - parsed.savedAt < BOOKING_CONFIG_CACHE_TTL };
+    } catch { return null; }
   };
 
-  const apiGetJsonp = (
-    action: string,
-    params: Record<string, string> = {}
-  ): Promise<any> => {
-    return new Promise((resolve, reject) => {
-      const callbackName =
-        "__kaenatchiBooking_" +
-        Date.now() +
-        "_" +
-        Math.random().toString(36).slice(2);
+  const writeBookingConfigCache = (data: any) => {
+    try { window.localStorage.setItem(BOOKING_CONFIG_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), data })); } catch {}
+  };
 
+  const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+
+  const apiGetJsonpOnce = (action: string, params: Record<string, string> = {}): Promise<any> =>
+    new Promise((resolve, reject) => {
+      const callbackName = "__kaenatchiBooking_" + Date.now() + "_" + Math.random().toString(36).slice(2);
       const script = document.createElement("script");
       const url = new URL(ENDPOINT);
-
       url.searchParams.set("action", action);
-      Object.entries(params).forEach(([key, value]) => {
-        url.searchParams.set(key, value);
-      });
+      Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
       url.searchParams.set("callback", callbackName);
       url.searchParams.set("_", String(Date.now()));
-
       let settled = false;
-      let timeoutId = 0;
-
-      const cleanup = () => {
-        window.clearTimeout(timeoutId);
-        script.remove();
-        try {
-          delete (window as any)[callbackName];
-        } catch {}
-      };
-
-      const finish = (fn: () => void) => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        fn();
-      };
-
-      (window as any)[callbackName] = (data: any) => {
-        finish(() => {
-          if (data?.ok === false) {
-            reject(
-              new Error(
-                data?.message ||
-                  "سامانه رزرو در مرحله «" +
-                    action +
-                    "» خطا برگرداند."
-              )
-            );
-            return;
-          }
-          resolve(data);
-        });
-      };
-
+      const cleanup = () => { window.clearTimeout(timeoutId); script.remove(); try { delete (window as any)[callbackName]; } catch {} };
+      const finish = (fn: () => void) => { if (settled) return; settled = true; cleanup(); fn(); };
+      (window as any)[callbackName] = (data: any) => finish(() => data?.ok === false ? reject(new Error(data?.message || "BOOKING_SERVER_ERROR")) : resolve(data));
       script.async = true;
       script.src = url.toString();
-
-      script.onerror = () => {
-        finish(() => reject(new Error("JSONP_TRANSPORT_FAILED")));
-      };
-
-      timeoutId = window.setTimeout(() => {
-        finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT")));
-      }, 12000);
-
+      script.onerror = () => finish(() => reject(new Error("JSONP_TRANSPORT_FAILED")));
+      const timeoutId = window.setTimeout(() => finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT"))), 9000);
       document.head.appendChild(script);
     });
-  };
 
-  const apiGet = async (
-    action: string,
-    params: Record<string, string> = {}
-  ): Promise<any> => {
-    const url = new URL(ENDPOINT);
+  const apiGet = async (action: string, params: Record<string, string> = {}): Promise<any> => {
+    const key = action + "?" + Object.entries(params).sort(([a],[b]) => a.localeCompare(b)).map(([k,v]) => k + "=" + v).join("&");
+    const existing = bookingInflight.get(key);
+    if (existing) return existing;
 
-    url.searchParams.set("action", action);
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.set(key, value);
-    });
-    url.searchParams.set("_", String(Date.now()));
-
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 10000);
-
-    try {
-      const response = await fetch(url.toString(), {
-        method: "GET",
-        mode: "cors",
-        credentials: "omit",
-        cache: "no-store",
-        redirect: "follow",
-        headers: {
-          Accept: "application/json, text/plain, */*",
-        },
-        signal: controller.signal,
-      });
-
-      const responseText = await response.text();
-
-      if (!response.ok) {
-        throw new Error(
-          "سامانه رزرو پاسخ HTTP " +
-            response.status +
-            " برگرداند."
-        );
+    const request = (async () => {
+      let lastError: unknown = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const url = new URL(ENDPOINT);
+          url.searchParams.set("action", action);
+          Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+          url.searchParams.set("_", String(Date.now()));
+          const controller = new AbortController();
+          const timeoutId = window.setTimeout(() => controller.abort(), 7000);
+          try {
+            const response = await fetch(url.toString(), { method:"GET", mode:"cors", credentials:"omit", cache:"no-store", redirect:"follow", headers:{Accept:"application/json, text/plain, */*"}, signal:controller.signal });
+            const text = await response.text();
+            if (!response.ok) throw new Error("HTTP_" + response.status);
+            const data = JSON.parse(text);
+            if (data?.ok === false) throw new Error(data?.message || "BOOKING_SERVER_ERROR");
+            return data;
+          } finally { window.clearTimeout(timeoutId); }
+        } catch (error) {
+          lastError = error;
+        }
+        if (attempt === 0) await sleep(350);
       }
+      try { return await apiGetJsonpOnce(action, params); }
+      catch (error) { throw new Error("BOOKING_TRANSPORT_FAILED:" + (lastError instanceof Error ? lastError.message : "NETWORK") + "|" + (error instanceof Error ? error.message : "JSONP")); }
+    })();
 
-      let data: any;
-
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        throw new Error("BOOKING_JSON_INVALID");
-      }
-
-      if (data?.ok === false) {
-        throw new Error(
-          data?.message ||
-            "سامانه رزرو در مرحله «" +
-              action +
-              "» خطا برگرداند."
-        );
-      }
-
-      return data;
-    } catch (error) {
-      /*
-       * Telegram WebView, Safari/WKWebView, Android WebView and desktop
-       * clients can reject or hide a cross-origin fetch even when the
-       * Worker is healthy. JSONP is the browser-native cross-origin
-       * script transport and therefore is the deterministic fallback.
-       *
-       * IMPORTANT: any fetch failure reaches this fallback. We do not
-       * depend on browser-specific error-message text.
-       */
-      try {
-        return await apiGetJsonp(action, params);
-      } catch (jsonpError) {
-        const firstError =
-          error instanceof Error ? error.message : "FETCH_FAILED";
-        const secondError =
-          jsonpError instanceof Error
-            ? jsonpError.message
-            : "JSONP_FAILED";
-
-        throw new Error(
-          "BOOKING_TRANSPORT_FAILED:" +
-            firstError +
-            "|" +
-            secondError
-        );
-      }
-    } finally {
-      window.clearTimeout(timeoutId);
-    }
+    bookingInflight.set(key, request);
+    try { return await request; } finally { bookingInflight.delete(key); }
   };
 
   const waitForBookingStatus = async (
