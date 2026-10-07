@@ -5171,9 +5171,19 @@ function BookingPage({
     })
     .slice(0, 3);
 
-  const availableSlots = slots.filter(
-    (slot) => slot.available === true || String(slot.available).toLowerCase() === "true"
-  );
+  /*
+   * Never hide an existing hold/confirmed slot. The backend is authoritative:
+   * anything that is not explicitly FREE is shown as unavailable so an old
+   * booking cannot accidentally appear selectable.
+   */
+  const visibleSlots = slots.filter((slot) => {
+    const status = String(slot.status || "").toUpperCase();
+    const isFree =
+      slot.available === true ||
+      String(slot.available).toLowerCase() === "true";
+
+    return isFree && (!status || status === "FREE");
+  });
 
   const categoryGroups: Array<{
     id: ServiceCategory;
@@ -5437,7 +5447,7 @@ function BookingPage({
           }}
         >
           <option value="">{date ? (slots.length ? "انتخاب ساعت" : "در حال دریافت ساعت‌ها...") : "ابتدا تاریخ را انتخاب کن"}</option>
-          {availableSlots.map((item) => (
+          {visibleSlots.map((item) => (
             <option key={String(item.time)} value={String(item.time)}>
               {String(item.time)}
             </option>
