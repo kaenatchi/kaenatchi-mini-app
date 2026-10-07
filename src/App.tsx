@@ -4392,7 +4392,7 @@ function BookingPage({
     url.searchParams.set("_", String(Date.now()));
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 10000);
 
     try {
       const response = await fetch(url.toString(), {
@@ -4422,9 +4422,7 @@ function BookingPage({
       try {
         data = JSON.parse(responseText);
       } catch {
-        throw new Error(
-          "پاسخ سامانه رزرو JSON معتبر نیست."
-        );
+        throw new Error("پاسخ سامانه رزرو JSON معتبر نیست.");
       }
 
       if (data?.ok === false) {
@@ -4438,23 +4436,21 @@ function BookingPage({
 
       return data;
     } catch (error) {
-      const shouldFallback =
-        error instanceof DOMException &&
-        error.name === "AbortError";
-
-      if (
-        !shouldFallback &&
-        !(
-          error instanceof TypeError &&
-          /fetch|network|failed/i.test(error.message)
-        )
-      ) {
-        throw error;
-      }
-
+      // Telegram iOS/WebView can reject or stall a normal cross-origin
+      // fetch even though the same Worker endpoint is reachable by script
+      // loading. Always give JSONP a chance before surfacing a transport
+      // error; this is the transport fallback, not a backend change.
       try {
         return await apiGetJsonp(action, params);
-      } catch {
+      } catch (jsonpError) {
+        if (jsonpError instanceof Error && jsonpError.message) {
+          throw jsonpError;
+        }
+
+        if (error instanceof Error && error.message) {
+          throw error;
+        }
+
         throw new Error("BOOKING_TRANSPORT_TIMEOUT");
       }
     } finally {
@@ -4600,16 +4596,10 @@ function BookingPage({
       setState("loading");
       setMessage("");
 
-      // مرحله ۱: فقط مسیر عمومی Web App + JSONP را تست می‌کنیم.
-      // اگر این مرحله رد شود، مشکل از حمل‌ونقل/Deployment است و
-      // دیگر نباید آن را با خطای Sheet یا getConfig قاطی کنیم.
-      const transport = await apiGet("transportTest");
-
-      if (transport?.transport !== true) {
-        throw new Error("اتصال عمومی به سامانه رزرو پاسخ معتبر نداد.");
-      }
-
-      // مرحله ۲: حالا خود getConfig را می‌خوانیم.
+      // مستقیماً getConfig را می‌خوانیم. transportTest یک درخواست
+      // اضافه بود و در Telegram iOS می‌توانست کل صفحه رزرو را بی‌دلیل
+      // در حالت BOOKING_TRANSPORT_TIMEOUT نگه دارد. خود getConfig از
+      // همان Worker و همان fallback JSONP عبور می‌کند.
       const data = await apiGet("getConfig");
 
       if (!data || data.ok === false) {
@@ -4671,7 +4661,7 @@ function BookingPage({
         setMessage(error instanceof Error ? error.message : "ساعت‌ها دریافت نشدند.");
       });
     return () => { active = false; };
-  }, [date]);
+  }, [date, serviceId]);
 
   const checkDiscount = async () => {
     const code = discountCode.trim();
