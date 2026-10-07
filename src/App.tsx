@@ -111,7 +111,7 @@ const BOOKING_TRANSPORT_ENDPOINT =
 const BOOKING_BACKEND_ENDPOINT =
   "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
 
-const BOOKING_TRANSPORT_VERSION = "v7-fetch-jsonp-backend-performance";
+const BOOKING_TRANSPORT_VERSION = "v6-fetch-jsonp-backend";
 const BOOKING_CONFIG_CACHE_KEY =
   "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
 const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
@@ -211,7 +211,7 @@ const apiGetJsonpOnce = (
 
     timeoutId = window.setTimeout(
       () => finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT"))),
-      30000
+      12000
     );
 
     document.head.appendChild(script);
@@ -230,7 +230,7 @@ const apiGetFetchOnce = async (
   url.searchParams.set("_", String(Date.now()));
 
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 30000);
+  const timeoutId = window.setTimeout(() => controller.abort(), 10000);
 
   try {
     const response = await fetch(url.toString(), {
