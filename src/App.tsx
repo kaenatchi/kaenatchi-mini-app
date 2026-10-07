@@ -4279,6 +4279,80 @@ function BookingPage({
 
   type BookingState = "idle" | "loading" | "submitting" | "success" | "error";
 
+
+
+  const [config, setConfig] = useState<BookingConfig | null>(null);
+  const [serviceId, setServiceId] = useState(initialService?.id || "");
+  const [date, setDate] = useState("");
+  const [bookingCategory, setBookingCategory] = useState<ServiceCategory | null>(
+    initialService?.category || null
+  );
+  const [time, setTime] = useState("");
+  const [slots, setSlots] = useState<Array<Record<string, unknown>>>([]);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
+  const [discount, setDiscount] = useState<{valid:boolean; percent:number; amount:number}>({valid:false,percent:0,amount:0});
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [transactionNumber, setTransactionNumber] = useState("");
+  const [message, setMessage] = useState("");
+  const [state, setState] = useState<BookingState>("loading");
+  const [trackingCode, setTrackingCode] = useState("");
+  const [checkingDiscount, setCheckingDiscount] = useState(false);
+
+  const backendServices: Service[] = (config?.services || [])
+    .map((item) => {
+      const title = String(item.name ?? item.title ?? item.serviceName ?? "خدمت").trim();
+      const category = cmsCategory(
+        String(item.category ?? item.Category ?? ""),
+        title
+      );
+      return {
+        id: String(item.id ?? item.ID ?? ""),
+        title,
+        category,
+        price: String(item.price ?? item.Price ?? ""),
+        duration: String(item.duration ?? item.Duration ?? ""),
+        description: String(item.description ?? item.Description ?? ""),
+      };
+    })
+    .filter((service) => {
+      const normalizedTitle = service.title
+        .replace(/[\u200c\u200f\u200e\s_-]+/g, "")
+        .toLocaleLowerCase("fa");
+      return !(
+        (normalizedTitle === "انرژیخوانی" ||
+          normalizedTitle === "شمعتراپی" ||
+          normalizedTitle === "سایکوتراپی") &&
+        !service.price &&
+        !service.duration
+      );
+    });
+
+  // Booking is intentionally limited to the three customer-facing categories.
+  // The individual services remain CMS/backend driven and can be added or removed
+  // without changing this UI code.
+  const bookingServices = backendServices.filter((service) =>
+    ["energy", "candle", "psychotherapy"].includes(service.category)
+  );
+
+  const selectedService =
+    bookingServices.find((item) => item.id === serviceId) ||
+    initialService ||
+    null;
+  const basePrice =
+    Number(String(selectedService?.price || "").replace(/[,٬،\s]/g, "")) || 0;
+  const finalPrice = Math.max(0, basePrice - discount.amount);
+
+  const getTelegramId = () => {
+    try {
+      return String((window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id || "");
+    } catch {
+      return "";
+    }
+  };
+
   const ENDPOINT = "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
   const BOOKING_TRANSPORT_VERSION = "v3";
   const BOOKING_CONFIG_CACHE_KEY = "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
