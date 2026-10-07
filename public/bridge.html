@@ -13,20 +13,61 @@
     data: null
   };
 
+  function decode(value) {
+    if (!value) return null;
+
+    var text = String(value).trim();
+
+    try {
+      return JSON.parse(text);
+    } catch (e) {}
+
+    try {
+      var normalized = text
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+
+      while (normalized.length % 4) {
+        normalized += "=";
+      }
+
+      var binary = atob(normalized);
+      var bytes = new Uint8Array(binary.length);
+
+      for (var i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      return JSON.parse(
+        new TextDecoder("utf-8").decode(bytes)
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
   try {
     var params = new URLSearchParams(window.location.search);
-    var payload = params.get("payload") || "";
-    var normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    while (normalized.length % 4) normalized += "=";
 
-    var binary = atob(normalized);
-    var bytes = new Uint8Array(binary.length);
-    for (var i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
+    var candidates = [
+      params.get("payload"),
+      params.get("data"),
+      params.get("response"),
+      params.get("result")
+    ];
+
+    for (var i = 0; i < candidates.length; i++) {
+      var decoded = decode(candidates[i]);
+
+      if (decoded !== null) {
+        message.data = decoded;
+        break;
+      }
     }
 
-    var json = new TextDecoder("utf-8").decode(bytes);
-    message.data = JSON.parse(json);
+    if (message.data === null) {
+      throw new Error("BRIDGE_PAYLOAD_MISSING");
+    }
   } catch (error) {
     message.data = {
       ok: false,
@@ -36,17 +77,21 @@
   }
 
   /*
-   * The parent Mini App is the same GitHub Pages origin after the
-   * Apps Script iframe redirects here. Store the decoded response in
-   * the DOM as a same-origin fallback, and also try postMessage.
+   * postMessage is the primary bridge contract.
+   * The DOM/global copies are kept as a harmless compatibility
+   * fallback for embedded WebViews.
    */
-  var node = document.createElement("pre");
-  node.id = "kaenatchi-bridge-data";
-  node.style.display = "none";
-  node.textContent = JSON.stringify(message.data);
-  document.body.appendChild(node);
+  try {
+    window.__KAENATCHI_BRIDGE_DATA__ = message.data;
+  } catch (e) {}
 
-  window.__KAENATCHI_BRIDGE_DATA__ = message.data;
+  try {
+    var node = document.createElement("pre");
+    node.id = "kaenatchi-bridge-data";
+    node.style.display = "none";
+    node.textContent = JSON.stringify(message.data);
+    document.body.appendChild(node);
+  } catch (e) {}
 
   try {
     window.parent.postMessage(message, "*");
