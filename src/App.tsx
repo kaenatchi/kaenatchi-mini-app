@@ -176,22 +176,9 @@ function cmsSlug(value: string): string {
 }
 
 function cmsCategory(value: string, title: string): ServiceCategory {
-  const text = (value + " " + title)
-    .toLocaleLowerCase("fa")
-    .replace(/[\u200c\u200d]/g, " ")
-    .replace(/ي/g, "ی")
-    .replace(/ك/g, "ک")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  // Backend Sheet/category names can vary slightly. Keep the booking
-  // categories compatible with the existing service data.
-  if (/شمع|شمع تراپی|شمع‌تراپی|candle|sham/.test(text)) return "candle";
-  if (/سایکو|سایکو تراپی|سایکو‌تراپی|سایکوتراپی|روان|مشاوره|psychotherapy|psycho|psych/.test(text)) {
-    return "psychotherapy";
-  }
-  // Everything else in the existing Services sheet is an energy-reading
-  // service unless explicitly matched above.
+  const text = (value + " " + title).toLocaleLowerCase("fa");
+  if (/شمع/.test(text)) return "candle";
+  if (/گفت.?وگو|سایکوتراپی|مشاوره/.test(text)) return "psychotherapy";
   return "energy";
 }
 
@@ -4279,10 +4266,6 @@ function BookingPage({
   const [state, setState] = useState<BookingState>("loading");
   const [trackingCode, setTrackingCode] = useState("");
   const [checkingDiscount, setCheckingDiscount] = useState(false);
-  const [serviceMenuOpen, setServiceMenuOpen] = useState(true);
-  const [expandedCategory, setExpandedCategory] = useState<ServiceCategory | null>(
-    initialService?.category || null
-  );
 
   const backendServices: Service[] = (config?.services || []).map((item) => ({
     id: String(item.id ?? item.ID ?? ""),
@@ -4295,38 +4278,9 @@ function BookingPage({
     duration: String(item.duration ?? item.Duration ?? ""),
     description: String(item.description ?? item.Description ?? ""),
   }));
-
-  // این‌ها همان ۱۰ خدمت انرژی‌خوانی قبلی کائنات‌چی هستند.
-  // فقط به‌عنوان fallback فرانت‌اند برمی‌گردند؛ اگر Backend همان ID را
-  // داشته باشد، داده‌ی Backend اولویت دارد و دوباره‌کاری نمی‌شود.
-  const legacyEnergyServices: Service[] = [
-    { id: "coffee", title: "قهوه", category: "energy", price: "۷۰۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "انرژی‌خوانی با نقش‌های فنجان قهوه برای بررسی مسیر و نشانه‌های پیش رو." },
-    { id: "playing-cards", title: "پاسور", category: "energy", price: "۶۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "انرژی‌خوانی با کارت‌های پاسور برای بررسی موضوع مورد نظر شما." },
-    { id: "rider-waite", title: "تاروت رایدر وایت", category: "energy", price: "۷۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش تاروت رایدر وایت برای بررسی انرژی‌ها، شرایط و مسیر پیش روی شما." },
-    { id: "rider-emotional", title: "رایدر احساسی", category: "energy", price: "۷۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش احساسی برای بررسی وضعیت عاطفی، احساسات و انرژی میان افراد." },
-    { id: "rider-career-financial", title: "رایدر شغلی - مالی", category: "energy", price: "۷۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش با تمرکز بر مسیر شغلی، مالی و انرژی‌های مرتبط با این حوزه." },
-    { id: "french-lenormand", title: "لنورماند فرانسوی", category: "energy", price: "۷۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "انرژی‌خوانی با کارت‌های لنورماند فرانسوی برای بررسی موضوع انتخابی شما." },
-    { id: "emotional-lenormand", title: "لنورماند احساسی", category: "energy", price: "۷۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش احساسی با لنورماند برای بررسی روابط و انرژی‌های عاطفی." },
-    { id: "greek-tarot-emotional", title: "تاروت یونانی احساسی", category: "energy", price: "۸۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش احساسی با تاروت یونانی با تمرکز بر روابط و احساسات." },
-    { id: "marseille-tarot-emotional", title: "تاروت مارسی احساسی", category: "energy", price: "۸۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش احساسی با تاروت مارسی برای بررسی انرژی و شرایط رابطه." },
-    { id: "gem-oracle", title: "جم اوراکل", category: "energy", price: "۷۰۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش اوراکل با تمرکز بر پیام‌ها و انرژی‌های مرتبط با موضوع شما." },
-  ];
-
-  const legacyOtherServices: Service[] = [
-    { id: "candle-therapy", title: "شمع‌تراپی", category: "candle", price: "۵۵۰,۰۰۰ تومان", duration: "۲۰ دقیقه", description: "جلسه شمع‌تراپی به‌صورت غیرحضوری و با تمرکز بر نیت و موضوع انتخابی شما." },
-    { id: "psychotherapy", title: "سایکوتراپی", category: "psychotherapy", price: "۶۰۰,۰۰۰ تومان", duration: "۴۵ دقیقه", description: "جلسه گفت‌وگومحور تلفنی برای صحبت درباره موضوع مورد نظر شما. این خدمت به‌عنوان روان‌درمانی یا خدمات درمانی بالینی ارائه نمی‌شود." },
-  ];
-
-  const mergedBackendServices = [...backendServices];
-  [...legacyEnergyServices, ...legacyOtherServices].forEach((fallback) => {
-    if (!mergedBackendServices.some((service) => service.id === fallback.id)) {
-      mergedBackendServices.push(fallback);
-    }
-  });
-
   const cmsClassServices = mapCmsBookableItems(cmsRows.courses, "class");
   const cmsEventServices = mapCmsBookableItems(cmsRows.events, "event");
-  const bookingServices = [...mergedBackendServices, ...cmsClassServices, ...cmsEventServices];
+  const bookingServices = [...backendServices, ...cmsClassServices, ...cmsEventServices];
 
   const selectedService =
     bookingServices.find((item) => item.id === serviceId) ||
@@ -4834,12 +4788,6 @@ function BookingPage({
   }
 
   const availableDates = config?.availableDates || [];
-  const isLongDateBooking =
-    selectedService?.category === "class" ||
-    selectedService?.category === "event";
-  const bookingDates = isLongDateBooking
-    ? availableDates
-    : availableDates.slice(0, 7);
   const availableSlots = slots.filter(
     (slot) => slot.available === true || String(slot.available).toLowerCase() === "true"
   );
@@ -4871,113 +4819,63 @@ function BookingPage({
           <span>{initialService ? "این نوبت برای خدمت انتخاب‌شده آماده شده است." : "دسته را انتخاب کن؛ سپس خدمت، کلاس یا ایونت موردنظرت را انتخاب کن."}</span>
         </div>
 
-        <div style={{marginTop:"12px"}}>
-          {selectedService && (
-            <div style={{marginBottom:"10px",padding:"14px",borderRadius:"16px",background:"rgba(36,99,71,.06)",border:"1px solid rgba(36,99,71,.10)"}}>
-              <div className="list-copy">
-                <strong>خدمت انتخاب‌شده</strong>
-                <span>{selectedService.title}</span>
-              </div>
+        {initialService ? (
+          <div style={{marginTop:"12px",padding:"15px",borderRadius:"17px",background:"rgba(36,99,71,.06)",border:"1px solid rgba(36,99,71,.10)"}}>
+            <div className="list-copy">
+              <strong>{selectedService?.title || initialService.title}</strong>
+              <span>{selectedService?.description || initialService.description}</span>
             </div>
-          )}
-            <button
-              type="button"
-              onClick={() => setServiceMenuOpen((value) => !value)}
-              aria-expanded={serviceMenuOpen}
-              style={{
-                width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
-                gap:"12px",padding:"15px 16px",border:"1px solid rgba(53,59,50,.12)",
-                borderRadius:"17px",background:"rgba(255,255,255,.78)",fontFamily:"inherit",
-                boxShadow:"0 8px 20px rgba(53,59,50,.07)",cursor:"pointer",textAlign:"right",
-              }}
-            >
-              <span style={{display:"flex",alignItems:"center",gap:"10px"}}>
-                <span style={{
-                  width:"38px",height:"38px",borderRadius:"13px",display:"grid",placeItems:"center",
-                  background:"rgba(36,99,71,.08)",color:"#246347"
-                }}><Icon name="menu" /></span>
-                <span className="list-copy">
-                  <strong>لیست خدمات</strong>
-                  <span>{selectedService ? selectedService.title : "برای انتخاب خدمت باز کن"}</span>
-                </span>
-              </span>
-              <span style={{fontSize:"18px",color:"#246347",transform:serviceMenuOpen ? "rotate(180deg)" : "none",transition:"transform .2s"}}>⌄</span>
-            </button>
+            <button type="button" onClick={() => {
+              setServiceId("");
+              setBookingCategory(null);
+              setDiscount({valid:false,percent:0,amount:0});
+            }} style={{marginTop:"12px",width:"100%"}}>تغییر خدمت</button>
+          </div>
+        ) : (
+          <>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:"10px",marginTop:"12px"}}>
+              {categoryGroups.map((group) => (
+                <button key={group.id} type="button"
+                  onClick={() => setBookingCategory((current) => current === group.id ? null : group.id)}
+                  style={{
+                    minHeight:"72px",border:"1px solid rgba(53,59,50,.12)",borderRadius:"17px",
+                    background:bookingCategory === group.id ? "rgba(36,99,71,.10)" : "rgba(255,255,255,.72)",
+                    fontFamily:"inherit",boxShadow:"0 8px 20px rgba(53,59,50,.07)",cursor:"pointer",
+                  }}>
+                  <span style={{display:"block",marginBottom:"5px"}}><Icon name={group.icon} /></span>
+                  <strong>{group.title}</strong>
+                  <small style={{display:"block",marginTop:"3px",opacity:.65}}>{group.items.length} گزینه</small>
+                </button>
+              ))}
+            </div>
 
-            {serviceMenuOpen && (
-              <div style={{display:"grid",gap:"8px",marginTop:"10px"}}>
-                {categoryGroups.map((group) => {
-                  const open = expandedCategory === group.id;
-                  return (
-                    <div key={group.id} style={{
-                      border:"1px solid rgba(53,59,50,.10)",borderRadius:"16px",
-                      background:"rgba(255,255,255,.66)",overflow:"hidden",
-                      boxShadow:"0 6px 16px rgba(53,59,50,.05)"
+            {activeGroup && (
+              <div style={{display:"grid",gap:"9px",marginTop:"12px"}}>
+                {activeGroup.items.length > 0 ? activeGroup.items.map((service) => (
+                  <button key={service.id} type="button"
+                    onClick={() => {
+                      setServiceId(service.id);
+                      setBookingCategory(service.category);
+                      setDiscount({valid:false,percent:0,amount:0});
+                      setMessage("");
+                    }}
+                    style={{
+                      width:"100%",textAlign:"right",padding:"14px",border:"1px solid rgba(53,59,50,.12)",
+                      borderRadius:"16px",background:serviceId === service.id ? "rgba(36,99,71,.10)" : "rgba(255,255,255,.78)",
+                      fontFamily:"inherit",boxShadow:"0 7px 18px rgba(53,59,50,.06)",cursor:"pointer",
                     }}>
-                      <button
-                        type="button"
-                        onClick={() => setExpandedCategory(open ? null : group.id)}
-                        style={{
-                          width:"100%",border:"none",background:"transparent",padding:"14px",
-                          display:"flex",alignItems:"center",gap:"11px",fontFamily:"inherit",
-                          cursor:"pointer",textAlign:"right"
-                        }}
-                      >
-                        <span style={{
-                          width:"36px",height:"36px",borderRadius:"12px",display:"grid",placeItems:"center",
-                          background:"rgba(36,99,71,.07)",color:"#246347",flex:"0 0 auto"
-                        }}><Icon name={group.icon} /></span>
-                        <span style={{flex:1}}>
-                          <strong style={{display:"block",fontSize:"14px"}}>{group.title}</strong>
-                          <small style={{display:"block",marginTop:"3px",color:"#73786f"}}>{group.items.length} گزینه قابل رزرو</small>
-                        </span>
-                        <span style={{color:"#246347",fontSize:"17px"}}>{open ? "−" : "+"}</span>
-                      </button>
-
-                      {open && (
-                        <div style={{display:"grid",gap:"8px",padding:"0 10px 10px"}}>
-                          {group.items.length > 0 ? group.items.map((service) => (
-                            <button
-                              key={service.id}
-                              type="button"
-                              onClick={() => {
-                                setServiceId(service.id);
-                                setBookingCategory(service.category);
-                                setExpandedCategory(service.category);
-                                setServiceMenuOpen(false);
-                                setDate("");
-                                setTime("");
-                                setSlots([]);
-                                setDiscount({valid:false,percent:0,amount:0});
-                                setMessage("");
-                              }}
-                              style={{
-                                width:"100%",textAlign:"right",padding:"13px",
-                                border:"1px solid rgba(53,59,50,.10)",borderRadius:"14px",
-                                background:serviceId === service.id ? "rgba(36,99,71,.10)" : "rgba(255,255,255,.82)",
-                                fontFamily:"inherit",boxShadow:"0 5px 14px rgba(53,59,50,.05)",cursor:"pointer"
-                              }}
-                            >
-                              <strong style={{display:"block"}}>{service.title}</strong>
-                              {service.price && (
-                                <span style={{display:"block",marginTop:"5px",fontSize:"12px",color:"#73786f"}}>
-                                  {service.price} تومان
-                                </span>
-                              )}
-                            </button>
-                          )) : (
-                            <div style={{padding:"12px",borderRadius:"13px",background:"rgba(53,59,50,.05)",fontSize:"12px",color:"#73786f"}}>
-                              هنوز گزینه فعالی در این بخش ثبت نشده است.
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                    <strong style={{display:"block"}}>{service.title}</strong>
+                    {service.price && <span style={{display:"block",marginTop:"5px",fontSize:"12px",opacity:.72}}>{service.price} تومان</span>}
+                  </button>
+                )) : (
+                  <div style={{padding:"13px",borderRadius:"15px",background:"rgba(53,59,50,.05)",fontSize:"12px"}}>
+                    هنوز گزینه فعالی در این بخش ثبت نشده است.
+                  </div>
+                )}
               </div>
             )}
-        </div>
+          </>
+        )}
 
         {selectedService && (
           <div style={{marginTop:"12px",fontSize:"12px",lineHeight:1.9,color:"#73786f"}}>
@@ -4990,7 +4888,7 @@ function BookingPage({
         <div className="list-copy"><strong>۲. انتخاب زمان</strong><span>تاریخ‌ها و ساعت‌ها مستقیماً از سامانه نوبت‌دهی خوانده می‌شوند.</span></div>
         <select value={date} onChange={(e)=>setDate(e.target.value)} style={{marginTop:"12px",width:"100%",padding:"14px",borderRadius:"15px",border:"1px solid rgba(53,59,50,.12)",background:"rgba(255,255,255,.72)",fontFamily:"inherit",fontSize:"14px"}}>
           <option value="">انتخاب تاریخ</option>
-          {bookingDates.map((item) => {
+          {availableDates.map((item) => {
             const value=String(item.date||"");
             const label=String(item.dayOfWeek||"") + (item.dayOfWeek ? " — " : "") + value;
             return <option key={value} value={value}>{label}</option>;
