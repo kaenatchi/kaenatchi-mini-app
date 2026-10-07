@@ -102,8 +102,263 @@ const TELEGRAM_WEBAPP_SCRIPT =
 const MAIN_APP_URL =
   "https://kaenatchi.github.io/kaenatchi-mini-app/";
 
+
 const BOOKING_APP_URL =
   "https://kaenatchi.github.io/booking/";
+
+const BOOKING_TRANSPORT_ENDPOINT =
+  "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
+const BOOKING_TRANSPORT_VERSION = "v4";
+const BOOKING_CONFIG_CACHE_KEY =
+  "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
+const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
+
+const bookingInflight = new Map<string, Promise<any>>();
+
+const readBookingConfigCache = () => {
+  try {
+    const raw = window.localStorage.getItem(BOOKING_CONFIG_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.data || typeof parsed.savedAt !== "number") return null;
+
+    return {
+      data: parsed.data,
+      savedAt: parsed.savedAt,
+      fresh:
+        Date.now() - parsed.savedAt < BOOKING_CONFIG_CACHE_TTL,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const writeBookingConfigCache = (data: any) => {
+  try {
+    window.localStorage.setItem(
+      BOOKING_CONFIG_CACHE_KEY,
+      JSON.stringify({
+        savedAt: Date.now(),
+        data,
+      })
+    );
+  } catch {}
+};
+
+const bookingSleep = (ms: number) =>
+  new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+
+const apiGetJsonpOnce = (
+  action: string,
+  params: Record<string, string> = {}
+): Promise<any> =>
+  new Promise((resolve, reject) => {
+    const callbackName =
+      "__kaenatchiBooking_" +
+      Date.now() +
+      "_" +
+      Math.random().toString(36).slice(2);
+
+    const script = document.createElement("script");
+    const url = new URL(BOOKING_TRANSPORT_ENDPOINT);
+
+    url.searchParams.set("action", action);
+    Object.entries(params).forEach(([key, value]) =>
+      url.searchParams.set(key, value)
+    );
+    url.searchParams.set("callback", callbackName);
+    url.searchParams.set("_", String(Date.now()));
+
+    let settled = false;
+    let timeoutId = 0;
+
+    const cleanup = () => {
+      window.clearTimeout(timeoutId);
+      script.remove();
+      try {
+        delete (window as any)[callbackName];
+      } catch {}
+    };
+
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      fn();
+    };
+
+    (window as any)[callbackName] = (data: any) =>
+      finish(() => {
+        if (data?.ok === false) {
+          reject(
+            new Error(
+              data?.message ||
+                "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
+            )
+          );
+          return;
+        }
+
+        resolve(data);
+      });
+
+    script.async = true;
+    script.src = url.toString();
+
+    script.onerror = () =>
+      finish(() => reject(new Error("JSONP_TRANSPORT_FAILED")));
+
+    timeoutId = window.setTimeout(
+      () => finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT"))),
+      15000
+    );
+
+    document.head.appendChild(script);
+  });
+
+const apiGetFetchOnce = async (
+  action: string,
+  params: Record<string, string> = {}
+): Promise<any> => {
+  const url = new URL(BOOKING_TRANSPORT_ENDPOINT);
+
+  url.searchParams.set("action", action);
+  Object.entries(params).forEach(([key, value]) =>
+    url.searchParams.set(key, value)
+  );
+  url.searchParams.set("_", String(Date.now()));
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      mode: "cors",
+      credentials: "omit",
+      cache: "no-store",
+      redirect: "follow",
+      headers: {
+        Accept: "application/json, text/plain, */*",
+      },
+      signal: controller.signal,
+    });
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      throw new Error("HTTP_" + response.status);
+    }
+
+    const data = JSON.parse(responseText);
+
+    if (data?.ok === false) {
+      throw new Error(data?.message || "BOOKING_SERVER_ERROR");
+    }
+
+    return data;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+};
+
+const apiGet = async (
+  action: string,
+  params: Record<string, string> = {}
+): Promise<any> => {
+  const key =
+    action +
+    "?" +
+    Object.entries(params)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => k + "=" + v)
+      .join("&");
+
+  const existing = bookingInflight.get(key);
+  if (existing) return existing;
+
+  const request = (async () => {
+    if (action === "getConfig") {
+      const cached = readBookingConfigCache();
+
+      if (cached?.data) {
+        if (cached.fresh) {
+          return cached.data;
+        }
+
+        void (async () => {
+          try {
+            const fresh = await apiGetLive(action, params);
+            writeBookingConfigCache(fresh);
+          } catch (error) {
+            console.warn("[KaenatChi Booking] background config refresh failed", error);
+          }
+        })();
+
+        return cached.data;
+      }
+    }
+
+    return apiGetLive(action, params);
+  })();
+
+  bookingInflight.set(key, request);
+
+  try {
+    return await request;
+  } finally {
+    bookingInflight.delete(key);
+  }
+};
+
+const apiGetLive = async (
+  action: string,
+  params: Record<string, string> = {}
+): Promise<any> => {
+  let jsonpError: unknown = null;
+
+  // Telegram iOS/WebView has historically been reliable with script/JSONP
+  // transport while cross-origin fetch can stall or abort. Keep JSONP first.
+  try {
+    const data = await apiGetJsonpOnce(action, params);
+
+    if (action === "getConfig") {
+      writeBookingConfigCache(data);
+    }
+
+    return data;
+  } catch (error) {
+    jsonpError = error;
+  }
+
+  // Fetch is a secondary fallback for browsers/WebViews where JSONP is blocked.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const data = await apiGetFetchOnce(action, params);
+
+      if (action === "getConfig") {
+        writeBookingConfigCache(data);
+      }
+
+      return data;
+    } catch (error) {
+      if (attempt === 0) {
+        await bookingSleep(250);
+      }
+    }
+  }
+
+  console.warn(
+    "[KaenatChi Booking] transport failed",
+    action,
+    jsonpError
+  );
+
+  throw new Error(
+    "ارتباط با سامانه رزرو برقرار نشد. لطفاً چند لحظه بعد دوباره تلاش کن."
+  );
+};
+
 
 const CMS_API_URL =
   "https://script.google.com/macros/s/AKfycbzgocb54x4FDoQl3C8-o2WnipZuQYkM1j1juV-ZZKHoieN7DbrybTj3WyXbJe5I2nMhXw/exec";
@@ -4353,83 +4608,7 @@ function BookingPage({
     }
   };
 
-  const ENDPOINT = "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
-  const BOOKING_TRANSPORT_VERSION = "v3";
-  const BOOKING_CONFIG_CACHE_KEY = "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
-  const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
-  const bookingInflight = new Map<string, Promise<any>>();
-
-  const readBookingConfigCache = () => {
-    try {
-      const raw = window.localStorage.getItem(BOOKING_CONFIG_CACHE_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed?.data || typeof parsed.savedAt !== "number") return null;
-      return { data: parsed.data, savedAt: parsed.savedAt, fresh: Date.now() - parsed.savedAt < BOOKING_CONFIG_CACHE_TTL };
-    } catch { return null; }
-  };
-
-  const writeBookingConfigCache = (data: any) => {
-    try { window.localStorage.setItem(BOOKING_CONFIG_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), data })); } catch {}
-  };
-
-  const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
-
-  const apiGetJsonpOnce = (action: string, params: Record<string, string> = {}): Promise<any> =>
-    new Promise((resolve, reject) => {
-      const callbackName = "__kaenatchiBooking_" + Date.now() + "_" + Math.random().toString(36).slice(2);
-      const script = document.createElement("script");
-      const url = new URL(ENDPOINT);
-      url.searchParams.set("action", action);
-      Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
-      url.searchParams.set("callback", callbackName);
-      url.searchParams.set("_", String(Date.now()));
-      let settled = false;
-      const cleanup = () => { window.clearTimeout(timeoutId); script.remove(); try { delete (window as any)[callbackName]; } catch {} };
-      const finish = (fn: () => void) => { if (settled) return; settled = true; cleanup(); fn(); };
-      (window as any)[callbackName] = (data: any) => finish(() => data?.ok === false ? reject(new Error(data?.message || "BOOKING_SERVER_ERROR")) : resolve(data));
-      script.async = true;
-      script.src = url.toString();
-      script.onerror = () => finish(() => reject(new Error("JSONP_TRANSPORT_FAILED")));
-      const timeoutId = window.setTimeout(() => finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT"))), 9000);
-      document.head.appendChild(script);
-    });
-
-  const apiGet = async (action: string, params: Record<string, string> = {}): Promise<any> => {
-    const key = action + "?" + Object.entries(params).sort(([a],[b]) => a.localeCompare(b)).map(([k,v]) => k + "=" + v).join("&");
-    const existing = bookingInflight.get(key);
-    if (existing) return existing;
-
-    const request = (async () => {
-      let lastError: unknown = null;
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const url = new URL(ENDPOINT);
-          url.searchParams.set("action", action);
-          Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
-          url.searchParams.set("_", String(Date.now()));
-          const controller = new AbortController();
-          const timeoutId = window.setTimeout(() => controller.abort(), 7000);
-          try {
-            const response = await fetch(url.toString(), { method:"GET", mode:"cors", credentials:"omit", cache:"no-store", redirect:"follow", headers:{Accept:"application/json, text/plain, */*"}, signal:controller.signal });
-            const text = await response.text();
-            if (!response.ok) throw new Error("HTTP_" + response.status);
-            const data = JSON.parse(text);
-            if (data?.ok === false) throw new Error(data?.message || "BOOKING_SERVER_ERROR");
-            return data;
-          } finally { window.clearTimeout(timeoutId); }
-        } catch (error) {
-          lastError = error;
-        }
-        if (attempt === 0) await sleep(350);
-      }
-      try { return await apiGetJsonpOnce(action, params); }
-      catch (error) { throw new Error("BOOKING_TRANSPORT_FAILED:" + (lastError instanceof Error ? lastError.message : "NETWORK") + "|" + (error instanceof Error ? error.message : "JSONP")); }
-    })();
-
-    bookingInflight.set(key, request);
-    try { return await request; } finally { bookingInflight.delete(key); }
-  };
+  const ENDPOINT = BOOKING_TRANSPORT_ENDPOINT;
 
   const waitForBookingStatus = async (
     requestId: string,
