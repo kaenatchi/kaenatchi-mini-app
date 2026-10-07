@@ -176,9 +176,12 @@ function cmsSlug(value: string): string {
 }
 
 function cmsCategory(value: string, title: string): ServiceCategory {
-  const text = (value + " " + title).toLocaleLowerCase("fa");
-  if (/شمع/.test(text)) return "candle";
-  if (/گفت.?وگو|سایکوتراپی|مشاوره/.test(text)) return "psychotherapy";
+  const text = (value + " " + title)
+    .toLocaleLowerCase("fa")
+    .replace(/[\u200c\u200f\u200e\s_-]+/g, "");
+
+  if (/شمعتراپی|شمع/.test(text)) return "candle";
+  if (/سایکو?تراپی|سایکوتراپی|مشاوره|گفتوگو/.test(text)) return "psychotherapy";
   return "energy";
 }
 
@@ -603,6 +606,37 @@ function getTodayJalali() {
   } catch {
     return "امروز";
   }
+}
+
+
+function getTodayJalaliKey() {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+
+    const year = parts.find((part) => part.type === "year")?.value ?? "";
+    const month = parts.find((part) => part.type === "month")?.value ?? "";
+    const day = parts.find((part) => part.type === "day")?.value ?? "";
+
+    return year && month && day
+      ? year + "/" + month.padStart(2, "0") + "/" + day.padStart(2, "0")
+      : "";
+  } catch {
+    return "";
+  }
+}
+
+function normalizeJalaliKey(value: unknown) {
+  return String(value ?? "")
+    .trim()
+    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/-/g, "/")
+    .split("/")
+    .map((part) => part.padStart(2, "0"))
+    .join("/");
 }
 
 function SectionHeaderCard({
@@ -4267,20 +4301,41 @@ function BookingPage({
   const [trackingCode, setTrackingCode] = useState("");
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
-  const backendServices: Service[] = (config?.services || []).map((item) => ({
-    id: String(item.id ?? item.ID ?? ""),
-    title: String(item.name ?? item.title ?? item.serviceName ?? "خدمت"),
-    category: cmsCategory(
-      String(item.category ?? item.Category ?? ""),
-      String(item.name ?? item.title ?? item.serviceName ?? "")
-    ),
-    price: String(item.price ?? item.Price ?? ""),
-    duration: String(item.duration ?? item.Duration ?? ""),
-    description: String(item.description ?? item.Description ?? ""),
-  }));
-  const cmsClassServices = mapCmsBookableItems(cmsRows.courses, "class");
-  const cmsEventServices = mapCmsBookableItems(cmsRows.events, "event");
-  const bookingServices = [...backendServices, ...cmsClassServices, ...cmsEventServices];
+  const backendServices: Service[] = (config?.services || [])
+    .map((item) => {
+      const title = String(item.name ?? item.title ?? item.serviceName ?? "خدمت").trim();
+      const category = cmsCategory(
+        String(item.category ?? item.Category ?? ""),
+        title
+      );
+      return {
+        id: String(item.id ?? item.ID ?? ""),
+        title,
+        category,
+        price: String(item.price ?? item.Price ?? ""),
+        duration: String(item.duration ?? item.Duration ?? ""),
+        description: String(item.description ?? item.Description ?? ""),
+      };
+    })
+    .filter((service) => {
+      const normalizedTitle = service.title
+        .replace(/[\u200c\u200f\u200e\s_-]+/g, "")
+        .toLocaleLowerCase("fa");
+      return !(
+        (normalizedTitle === "انرژیخوانی" ||
+          normalizedTitle === "شمعتراپی" ||
+          normalizedTitle === "سایکوتراپی") &&
+        !service.price &&
+        !service.duration
+      );
+    });
+
+  // Booking is intentionally limited to the three customer-facing categories.
+  // The individual services remain CMS/backend driven and can be added or removed
+  // without changing this UI code.
+  const bookingServices = backendServices.filter((service) =>
+    ["energy", "candle", "psychotherapy"].includes(service.category)
+  );
 
   const selectedService =
     bookingServices.find((item) => item.id === serviceId) ||
@@ -4647,20 +4702,36 @@ function BookingPage({
       setTime("");
       return;
     }
+
     let active = true;
     setTime("");
-    apiGet("getAvailableSlots", {date, ...(serviceId ? {serviceId} : {})})
+    setMessage("در حال دریافت ساعت‌های قابل رزرو...");
+
+    // The backend resolves the daily schedule from the Jalali date.
+    // serviceId is not required by getAvailableSlots_ and is deliberately
+    // omitted so the slot request stays compatible with the locked backend.
+    apiGet("getAvailableSlots", { date })
       .then((data) => {
         if (!active) return;
         setSlots(Array.isArray(data.slots) ? data.slots : []);
+        setMessage(
+          Array.isArray(data.slots) && data.slots.length
+            ? ""
+            : "برای این تاریخ ساعت آزادی وجود ندارد."
+        );
       })
       .catch((error) => {
         if (!active) return;
         setSlots([]);
-        setMessage(error instanceof Error ? error.message : "ساعت‌ها دریافت نشدند.");
+        setMessage(
+          error instanceof Error ? error.message : "ساعت‌ها دریافت نشدند."
+        );
       });
-    return () => { active = false; };
-  }, [date, serviceId]);
+
+    return () => {
+      active = false;
+    };
+  }, [date]);
 
   const checkDiscount = async () => {
     const code = discountCode.trim();
@@ -4786,7 +4857,14 @@ function BookingPage({
     );
   }
 
-  const availableDates = config?.availableDates || [];
+  const availableDates = (config?.availableDates || [])
+    .filter((item) => {
+      const value = normalizeJalaliKey(item.date);
+      const today = normalizeJalaliKey(getTodayJalaliKey());
+      return value && (!today || value > today);
+    })
+    .slice(0, 3);
+
   const availableSlots = slots.filter(
     (slot) => slot.available === true || String(slot.available).toLowerCase() === "true"
   );
@@ -4797,95 +4875,241 @@ function BookingPage({
     icon: IconName;
     items: Service[];
   }> = [
-    { id: "energy", title: "انرژی‌خوانی", icon: "energy", items: bookingServices.filter((s) => s.category === "energy") },
-    { id: "candle", title: "شمع‌تراپی", icon: "candle", items: bookingServices.filter((s) => s.category === "candle") },
-    { id: "psychotherapy", title: "سایکو تراپی", icon: "conversation", items: bookingServices.filter((s) => s.category === "psychotherapy") },
-    { id: "class", title: "کلاس", icon: "class", items: cmsClassServices },
-    { id: "event", title: "ایونت", icon: "event", items: cmsEventServices },
+    {
+      id: "energy",
+      title: "انرژی‌خوانی",
+      icon: "energy",
+      items: bookingServices.filter((service) => service.category === "energy"),
+    },
+    {
+      id: "candle",
+      title: "شمع‌تراپی",
+      icon: "candle",
+      items: bookingServices.filter((service) => service.category === "candle"),
+    },
+    {
+      id: "psychotherapy",
+      title: "سایکو تراپی",
+      icon: "conversation",
+      items: bookingServices.filter((service) => service.category === "psychotherapy"),
+    },
   ];
+
   const activeGroup = bookingCategory
     ? categoryGroups.find((group) => group.id === bookingCategory) || null
     : null;
 
+  const paymentCardNumber =
+    cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || "";
+  const paymentBank =
+    cmsSetting(["booking_bank_name", "نام بانک", "بانک"]) || "";
+  const paymentHolder =
+    cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || "";
+  const paymentNote =
+    cmsSetting(["booking_payment_text", "توضیح پرداخت", "متن پرداخت"]) ||
+    "پس از پرداخت، تصویر فیش یا کد پیگیری پرداخت را ارسال کن.";
+
+  const inputBaseStyle: React.CSSProperties = {
+    width: "100%",
+    boxSizing: "border-box",
+    marginTop: "10px",
+    padding: "14px 15px",
+    borderRadius: "18px",
+    border: "1px solid rgba(53,59,50,.14)",
+    background: "rgba(255,255,255,.78)",
+    color: "#253128",
+    fontFamily: "inherit",
+    fontSize: "14px",
+    outline: "none",
+    transition: "transform .18s ease, box-shadow .18s ease, border-color .18s ease",
+  };
+
+  const tapHandlers = {
+    onFocus: (event: React.FocusEvent<HTMLInputElement>) => {
+      event.currentTarget.style.transform = "translateY(-1px)";
+      event.currentTarget.style.boxShadow = "0 8px 20px rgba(53,59,50,.10)";
+    },
+    onBlur: (event: React.FocusEvent<HTMLInputElement>) => {
+      event.currentTarget.style.transform = "translateY(0)";
+      event.currentTarget.style.boxShadow = "none";
+    },
+  };
+
+  const hideKeyboard = (event: React.FocusEvent<HTMLInputElement>) => {
+    // Telegram/WebKit does not expose a universal keyboard API. Blurring the
+    // active input is the cross-platform native way to dismiss it.
+    window.setTimeout(() => {
+      try {
+        (event.currentTarget as HTMLInputElement).blur();
+      } catch {}
+    }, 0);
+  };
+
   return (
     <div className="inner-page">
       <button type="button" onClick={onBack} style={backButtonStyle}>← بازگشت</button>
-      <SectionHeaderCard kicker="KAENATCHI" title="رزرو نوبت" description="خدمت، تاریخ و ساعت موردنظر را انتخاب کن؛ مبلغ نهایی از سامانه محاسبه می‌شود." icon="calendar" />
+      <SectionHeaderCard
+        kicker="KAENATCHI"
+        title="رزرو نوبت"
+        description="خدمت، تاریخ و ساعت موردنظر را انتخاب کن؛ مبلغ نهایی از سامانه محاسبه می‌شود."
+        icon="calendar"
+      />
 
-      <div className="glass-list-card" style={{display:"block"}}>
+      <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
           <strong>۱. انتخاب خدمت</strong>
-          <span>{initialService ? "این نوبت برای خدمت انتخاب‌شده آماده شده است." : "دسته را انتخاب کن؛ سپس خدمت، کلاس یا ایونت موردنظرت را انتخاب کن."}</span>
+          <span>یکی از سه دسته را باز کن و خدمت موردنظرت را انتخاب کن.</span>
         </div>
 
-        {initialService ? (
-          <div style={{marginTop:"12px",padding:"15px",borderRadius:"17px",background:"rgba(36,99,71,.06)",border:"1px solid rgba(36,99,71,.10)"}}>
+        {initialService && selectedService ? (
+          <div style={{marginTop:"12px",padding:"15px",borderRadius:"20px",background:"rgba(36,99,71,.07)",border:"1px solid rgba(36,99,71,.12)"}}>
             <div className="list-copy">
-              <strong>{selectedService?.title || initialService.title}</strong>
-              <span>{selectedService?.description || initialService.description}</span>
+              <strong>{selectedService.title}</strong>
+              <span>{selectedService.description || "خدمت انتخاب‌شده"}</span>
+              {selectedService.price && (
+                <span style={{marginTop:"5px",fontWeight:700}}>
+                  {selectedService.price} تومان
+                </span>
+              )}
             </div>
-            <button type="button" onClick={() => {
-              setServiceId("");
-              setBookingCategory(null);
-              setDiscount({valid:false,percent:0,amount:0});
-            }} style={{marginTop:"12px",width:"100%"}}>تغییر خدمت</button>
+            <button
+              type="button"
+              onClick={() => {
+                setServiceId("");
+                setBookingCategory(null);
+                setDiscount({valid:false,percent:0,amount:0});
+              }}
+              style={{marginTop:"12px",width:"100%"}}
+            >
+              تغییر خدمت
+            </button>
           </div>
         ) : (
-          <>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:"10px",marginTop:"12px"}}>
-              {categoryGroups.map((group) => (
-                <button key={group.id} type="button"
-                  onClick={() => setBookingCategory((current) => current === group.id ? null : group.id)}
+          <div style={{display:"grid",gap:"10px",marginTop:"12px"}}>
+            {categoryGroups.map((group, index) => (
+              <div key={group.id} className="booking-category-shell">
+                <button
+                  type="button"
+                  className="booking-category-trigger"
+                  onClick={() =>
+                    setBookingCategory((current) =>
+                      current === group.id ? null : group.id
+                    )
+                  }
                   style={{
-                    minHeight:"72px",border:"1px solid rgba(53,59,50,.12)",borderRadius:"17px",
-                    background:bookingCategory === group.id ? "rgba(36,99,71,.10)" : "rgba(255,255,255,.72)",
-                    fontFamily:"inherit",boxShadow:"0 8px 20px rgba(53,59,50,.07)",cursor:"pointer",
-                  }}>
-                  <span style={{display:"block",marginBottom:"5px"}}><Icon name={group.icon} /></span>
+                    width:"100%",
+                    minHeight:"64px",
+                    border:"1px solid rgba(53,59,50,.12)",
+                    borderRadius:"20px",
+                    background: bookingCategory === group.id
+                      ? "rgba(36,99,71,.12)"
+                      : "rgba(255,255,255,.66)",
+                    color:"#26342b",
+                    fontFamily:"inherit",
+                    boxShadow:"0 8px 22px rgba(53,59,50,.07)",
+                    cursor:"pointer",
+                    textAlign:"right",
+                    padding:"13px 15px",
+                    transition:"transform .18s ease, box-shadow .18s ease, background .18s ease",
+                  }}
+                >
+                  <span style={{display:"inline-flex",verticalAlign:"middle",marginLeft:"8px",color:"#246347"}}>
+                    <Icon name={group.icon} />
+                  </span>
                   <strong>{group.title}</strong>
-                  <small style={{display:"block",marginTop:"3px",opacity:.65}}>{group.items.length} گزینه</small>
+                  <span style={{display:"block",marginTop:"4px",fontSize:"11px",opacity:.68}}>
+                    {group.items.length} خدمت
+                  </span>
                 </button>
-              ))}
-            </div>
 
-            {activeGroup && (
-              <div style={{display:"grid",gap:"9px",marginTop:"12px"}}>
-                {activeGroup.items.length > 0 ? activeGroup.items.map((service) => (
-                  <button key={service.id} type="button"
-                    onClick={() => {
-                      setServiceId(service.id);
-                      setBookingCategory(service.category);
-                      setDiscount({valid:false,percent:0,amount:0});
-                      setMessage("");
-                    }}
+                {bookingCategory === group.id && (
+                  <div
+                    className="booking-service-menu"
                     style={{
-                      width:"100%",textAlign:"right",padding:"14px",border:"1px solid rgba(53,59,50,.12)",
-                      borderRadius:"16px",background:serviceId === service.id ? "rgba(36,99,71,.10)" : "rgba(255,255,255,.78)",
-                      fontFamily:"inherit",boxShadow:"0 7px 18px rgba(53,59,50,.06)",cursor:"pointer",
-                    }}>
-                    <strong style={{display:"block"}}>{service.title}</strong>
-                    {service.price && <span style={{display:"block",marginTop:"5px",fontSize:"12px",opacity:.72}}>{service.price} تومان</span>}
-                  </button>
-                )) : (
-                  <div style={{padding:"13px",borderRadius:"15px",background:"rgba(53,59,50,.05)",fontSize:"12px"}}>
-                    هنوز گزینه فعالی در این بخش ثبت نشده است.
+                      display:"grid",
+                      gap:"8px",
+                      marginTop:"8px",
+                      padding:"8px",
+                      borderRadius:"20px",
+                      background:"rgba(255,255,255,.42)",
+                      border:"1px solid rgba(255,255,255,.58)",
+                      backdropFilter:"blur(18px)",
+                      WebkitBackdropFilter:"blur(18px)",
+                      boxShadow:"inset 0 1px 0 rgba(255,255,255,.62), 0 10px 25px rgba(53,59,50,.06)",
+                    }}
+                  >
+                    {group.items.length ? group.items.map((service) => (
+                      <button
+                        key={service.id}
+                        type="button"
+                        className="booking-service-option"
+                        onClick={() => {
+                          setServiceId(service.id);
+                          setBookingCategory(group.id);
+                          setDiscount({valid:false,percent:0,amount:0});
+                          setMessage("");
+                        }}
+                        style={{
+                          width:"100%",
+                          textAlign:"right",
+                          padding:"13px 14px",
+                          border:"1px solid rgba(53,59,50,.09)",
+                          borderRadius:"17px",
+                          background: serviceId === service.id
+                            ? "rgba(36,99,71,.12)"
+                            : "rgba(255,255,255,.70)",
+                          color:"#26342b",
+                          fontFamily:"inherit",
+                          boxShadow:"0 6px 17px rgba(53,59,50,.05)",
+                          cursor:"pointer",
+                          transition:"transform .18s ease, box-shadow .18s ease, background .18s ease",
+                        }}
+                      >
+                        <strong style={{display:"block"}}>{service.title}</strong>
+                        {service.price && (
+                          <span style={{display:"block",marginTop:"4px",fontSize:"12px",opacity:.76}}>
+                            {service.price} تومان
+                          </span>
+                        )}
+                      </button>
+                    )) : (
+                      <div style={{padding:"13px",borderRadius:"16px",background:"rgba(53,59,50,.06)",fontSize:"12px",color:"#4b564e"}}>
+                        هنوز خدمتی در این دسته فعال نیست.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
 
         {selectedService && (
-          <div style={{marginTop:"12px",fontSize:"12px",lineHeight:1.9,color:"#73786f"}}>
+          <div style={{marginTop:"12px",fontSize:"12px",lineHeight:1.9,color:"#59655d"}}>
             {selectedService.description}
           </div>
         )}
       </div>
 
-      <div className="glass-list-card" style={{display:"block"}}>
-        <div className="list-copy"><strong>۲. انتخاب زمان</strong><span>تاریخ‌ها و ساعت‌ها مستقیماً از سامانه نوبت‌دهی خوانده می‌شوند.</span></div>
-        <select value={date} onChange={(e)=>setDate(e.target.value)} style={{marginTop:"12px",width:"100%",padding:"14px",borderRadius:"15px",border:"1px solid rgba(53,59,50,.12)",background:"rgba(255,255,255,.72)",fontFamily:"inherit",fontSize:"14px"}}>
+      <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
+        <div className="list-copy">
+          <strong>۲. انتخاب زمان</strong>
+          <span>فقط سه تاریخ آینده نمایش داده می‌شود و هر روز خودکار به‌روزرسانی خواهد شد.</span>
+        </div>
+
+        <select
+          value={date}
+          onChange={(e)=>{
+            setDate(e.target.value);
+            setTime("");
+          }}
+          style={{
+            ...inputBaseStyle,
+            appearance:"none",
+            WebkitAppearance:"none",
+            marginTop:"12px",
+          }}
+        >
           <option value="">انتخاب تاریخ</option>
           {availableDates.map((item) => {
             const value=String(item.date||"");
@@ -4893,48 +5117,195 @@ function BookingPage({
             return <option key={value} value={value}>{label}</option>;
           })}
         </select>
-        <select value={time} onChange={(e)=>setTime(e.target.value)} disabled={!date} style={{marginTop:"4px",width:"100%",padding:"14px",borderRadius:"15px",border:"1px solid rgba(53,59,50,.12)",background:"rgba(255,255,255,.72)",fontFamily:"inherit",fontSize:"14px"}}>
-          <option value="">{date ? "انتخاب ساعت" : "ابتدا تاریخ را انتخاب کن"}</option>
-          {availableSlots.map((item) => <option key={String(item.time)} value={String(item.time)}>{String(item.time)}</option>)}
+
+        <select
+          value={time}
+          onChange={(e)=>setTime(e.target.value)}
+          disabled={!date}
+          style={{
+            ...inputBaseStyle,
+            appearance:"none",
+            WebkitAppearance:"none",
+            marginTop:"10px",
+            opacity: date ? 1 : .6,
+          }}
+        >
+          <option value="">{date ? (slots.length ? "انتخاب ساعت" : "در حال دریافت ساعت‌ها...") : "ابتدا تاریخ را انتخاب کن"}</option>
+          {availableSlots.map((item) => (
+            <option key={String(item.time)} value={String(item.time)}>
+              {String(item.time)}
+            </option>
+          ))}
         </select>
       </div>
 
-      <div className="glass-list-card" style={{display:"block"}}>
-        <div className="list-copy"><strong>۳. اطلاعات شما</strong><span>نام و شماره موبایل برای ثبت نوبت لازم است.</span></div>
-        <input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder="نام" autoComplete="given-name" />
-        <input value={lastName} onChange={e=>setLastName(e.target.value)} placeholder="نام خانوادگی" autoComplete="family-name" />
-        <input value={mobile} onChange={e=>setMobile(e.target.value)} placeholder="09xxxxxxxxx" inputMode="tel" autoComplete="tel" />
+      <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
+        <div className="list-copy">
+          <strong>۳. اطلاعات شما</strong>
+          <span>اطلاعات واقعی وارد کن؛ این بخش برای جلوگیری از رزروهای تکراری و پرداخت‌های جعلی کنترل می‌شود.</span>
+        </div>
+
+        <input
+          value={firstName}
+          onChange={e=>setFirstName(e.target.value)}
+          placeholder="نام"
+          autoComplete="given-name"
+          enterKeyHint="next"
+          style={inputBaseStyle}
+          {...tapHandlers}
+          onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
+        />
+        <input
+          value={lastName}
+          onChange={e=>setLastName(e.target.value)}
+          placeholder="نام خانوادگی"
+          autoComplete="family-name"
+          enterKeyHint="next"
+          style={inputBaseStyle}
+          {...tapHandlers}
+          onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
+        />
+        <input
+          value={mobile}
+          onChange={e=>setMobile(e.target.value)}
+          placeholder="09xxxxxxxxx"
+          inputMode="tel"
+          autoComplete="tel"
+          enterKeyHint="done"
+          style={inputBaseStyle}
+          {...tapHandlers}
+          onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
+        />
       </div>
 
-      <div className="glass-list-card" style={{display:"block"}}>
-        <div className="list-copy"><strong>۴. کد تخفیف VIP</strong><span>اگر توکن VIP داری، قبل از پرداخت بررسی‌اش کن.</span></div>
-        <div style={{display:"flex",gap:"8px",marginTop:"12px"}}>
-          <input value={discountCode} onChange={e=>{setDiscountCode(e.target.value.toUpperCase());setDiscount({valid:false,percent:0,amount:0});}} placeholder="کد تخفیف" style={{marginBottom:0,flex:1}} />
-          <button type="button" onClick={()=>void checkDiscount()} disabled={checkingDiscount || !discountCode.trim() || !basePrice} style={{width:"120px",marginTop:0}}>{checkingDiscount ? "..." : "بررسی"}</button>
+      <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
+        <div className="list-copy">
+          <strong>۴. کد تخفیف VIP</strong>
+          <span>اگر توکن VIP داری، قبل از پرداخت بررسی‌اش کن.</span>
         </div>
-        {discount.valid && <div style={{marginTop:"10px",fontSize:"12px",color:"#246347"}}>تخفیف {discount.percent}% اعمال شد.</div>}
+
+        <div style={{display:"flex",gap:"8px",marginTop:"12px",alignItems:"stretch"}}>
+          <input
+            value={discountCode}
+            onChange={e=>{setDiscountCode(e.target.value.toUpperCase());setDiscount({valid:false,percent:0,amount:0});}}
+            placeholder="کد تخفیف"
+            enterKeyHint="done"
+            style={{...inputBaseStyle,marginTop:0,flex:1}}
+            {...tapHandlers}
+            onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
+          />
+          <button
+            type="button"
+            onClick={()=>void checkDiscount()}
+            disabled={checkingDiscount || !discountCode.trim() || !basePrice}
+            style={{
+              width:"112px",
+              marginTop:0,
+              border:"1px solid rgba(36,99,71,.18)",
+              borderRadius:"18px",
+              background:"linear-gradient(135deg,#174b38,#2c7658)",
+              color:"#fff",
+              fontFamily:"inherit",
+              fontSize:"13px",
+              boxShadow:"0 8px 18px rgba(23,75,56,.16)",
+              cursor:"pointer",
+            }}
+          >
+            {checkingDiscount ? "..." : "بررسی"}
+          </button>
+        </div>
+
+        {discount.valid && (
+          <div style={{marginTop:"10px",fontSize:"12px",color:"#246347",fontWeight:600}}>
+            تخفیف {discount.percent}% اعمال شد.
+          </div>
+        )}
+
         {basePrice > 0 && (
-          <div style={{marginTop:"14px",padding:"14px",borderRadius:"16px",background:"rgba(36,99,71,.06)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:"12px",marginBottom:"7px"}}><span>مبلغ خدمت</span><strong>{basePrice.toLocaleString("fa-IR")} تومان</strong></div>
-            {discount.valid && <div style={{display:"flex",justifyContent:"space-between",fontSize:"12px",marginBottom:"7px"}}><span>تخفیف</span><strong>{discount.amount.toLocaleString("fa-IR")} تومان</strong></div>}
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:"15px",color:"#174b38"}}><strong>مبلغ نهایی</strong><strong>{finalPrice.toLocaleString("fa-IR")} تومان</strong></div>
+          <div style={{marginTop:"14px",padding:"14px",borderRadius:"18px",background:"rgba(36,99,71,.06)",color:"#26342b"}}>
+            <div style={{display:"flex",justifyContent:"space-between",gap:"12px",fontSize:"12px",marginBottom:"7px"}}>
+              <span>مبلغ خدمت</span><strong>{basePrice.toLocaleString("fa-IR")} تومان</strong>
+            </div>
+            {discount.valid && (
+              <div style={{display:"flex",justifyContent:"space-between",gap:"12px",fontSize:"12px",marginBottom:"7px"}}>
+                <span>تخفیف</span><strong>{discount.amount.toLocaleString("fa-IR")} تومان</strong>
+              </div>
+            )}
+            <div style={{display:"flex",justifyContent:"space-between",gap:"12px",fontSize:"15px",color:"#174b38"}}>
+              <strong>مبلغ نهایی</strong><strong>{finalPrice.toLocaleString("fa-IR")} تومان</strong>
+            </div>
           </div>
         )}
       </div>
 
-      <div className="glass-list-card" style={{display:"block"}}>
-        <div className="list-copy"><strong>۵. پرداخت و رسید</strong><span>پس از پرداخت، تصویر فیش یا کد پیگیری پرداخت را ارسال کن.</span></div>
-        <div style={{marginTop:"12px",padding:"13px",borderRadius:"15px",background:"rgba(165,139,91,.08)",fontSize:"12px",lineHeight:1.9}}>
-          شماره کارت: <b dir="ltr">6219 - 8619 - 7737 - 8974</b><br />
-          بانک سامان · بنام آرشام نظری
+      <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
+        <div className="list-copy">
+          <strong>۵. پرداخت و رسید</strong>
+          <span>{paymentNote}</span>
         </div>
-        <input value={transactionNumber} onChange={e=>setTransactionNumber(e.target.value)} placeholder="کد پیگیری پرداخت (اختیاری)" inputMode="numeric" />
-        <label style={{display:"block",padding:"14px",borderRadius:"15px",border:"1px dashed rgba(36,99,71,.35)",background:"rgba(36,99,71,.05)",textAlign:"center",cursor:"pointer"}}>
+
+        <div style={{
+          marginTop:"14px",
+          padding:"16px",
+          borderRadius:"20px",
+          background:"rgba(165,139,91,.09)",
+          border:"1px solid rgba(165,139,91,.18)",
+          color:"#26342b",
+          boxShadow:"0 8px 20px rgba(53,59,50,.06)",
+        }}>
+          {paymentCardNumber ? (
+            <>
+              <div style={{fontSize:"11px",opacity:.68,marginBottom:"5px"}}>شماره کارت</div>
+              <b dir="ltr" style={{fontSize:"16px",letterSpacing:"1px"}}>{paymentCardNumber}</b>
+              {(paymentBank || paymentHolder) && (
+                <div style={{marginTop:"8px",fontSize:"12px"}}>
+                  {[paymentBank,paymentHolder].filter(Boolean).join(" · ")}
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{fontSize:"12px",lineHeight:1.9}}>
+              اطلاعات کارت هنوز در CMS ثبت نشده است.
+            </div>
+          )}
+        </div>
+
+        <input
+          value={transactionNumber}
+          onChange={e=>setTransactionNumber(e.target.value)}
+          placeholder="کد پیگیری پرداخت (اختیاری)"
+          inputMode="numeric"
+          enterKeyHint="done"
+          style={inputBaseStyle}
+          {...tapHandlers}
+          onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
+        />
+
+        <label
+          style={{
+            display:"block",
+            marginTop:"14px",
+            padding:"16px",
+            borderRadius:"20px",
+            border:"1px dashed rgba(36,99,71,.35)",
+            background:"rgba(36,99,71,.05)",
+            color:"#26342b",
+            textAlign:"center",
+            cursor:"pointer",
+            transition:"transform .18s ease, box-shadow .18s ease, background .18s ease",
+          }}
+          onTouchStart={(e)=>{e.currentTarget.style.transform="scale(.985)";}}
+          onTouchEnd={(e)=>{e.currentTarget.style.transform="scale(1)";}}
+        >
           📎 {receiptFile ? receiptFile.name : "انتخاب تصویر فیش"}
-          <input type="file" accept="image/*" onChange={e=>setReceiptFile(e.target.files?.[0] || null)} style={{display:"none"}} />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={e=>setReceiptFile(e.target.files?.[0] || null)}
+            style={{display:"none"}}
+          />
         </label>
       </div>
-
       {message && (
         <div style={{padding:"13px",borderRadius:"15px",marginTop:"12px",background:state==="error"?"rgba(165,45,45,.08)":"rgba(36,99,71,.08)",color:state==="error"?"#a52d2d":"#246347",fontSize:"13px",lineHeight:1.9,whiteSpace:"pre-line"}}>
           {message}
@@ -5296,7 +5667,8 @@ function App() {
   if (vipOpen) {
     return (
       <div className="app-shell app-shell-special">
-        <div className="ambient ambient-one" />
+        {bookingThemeStyle}
+      <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
         <VipPage onBack={() => setVipOpen(false)} />
         <AppFooter />
@@ -5337,6 +5709,29 @@ function App() {
       </div>
     );
   }
+
+  const bookingThemeStyle = (
+    <style>{`
+      .booking-glass-card input::placeholder { color: #69746d; opacity: 1; }
+      .booking-glass-card select { color: #253128; }
+      .booking-glass-card option { color: #253128; background: #ffffff; }
+      @media (prefers-color-scheme: dark) {
+        .booking-glass-card input,
+        .booking-glass-card select {
+          color: #f2f5f1 !important;
+          background: rgba(42,48,43,.88) !important;
+          border-color: rgba(255,255,255,.14) !important;
+        }
+        .booking-glass-card input::placeholder { color: #b9c2bb !important; }
+        .booking-glass-card select { color-scheme: dark; }
+        .booking-glass-card option { color: #f2f5f1; background: #2a302b; }
+        .booking-glass-card .list-copy strong,
+        .booking-glass-card .list-copy span,
+        .booking-glass-card label,
+        .booking-glass-card button { text-shadow: none; }
+      }
+    `}</style>
+  );
 
   return (
     <div
