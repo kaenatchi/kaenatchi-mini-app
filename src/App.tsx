@@ -4230,6 +4230,87 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     }
   };
 
+  const apiGetJsonp = (
+    action: string,
+    params: Record<string, string> = {}
+  ): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      const callbackName =
+        "__kaenatchiBooking_" +
+        Date.now() +
+        "_" +
+        Math.random().toString(36).slice(2);
+
+      const script = document.createElement("script");
+      const url = new URL(ENDPOINT);
+
+      url.searchParams.set("action", action);
+      Object.entries(params).forEach(([key, value]) => {
+        url.searchParams.set(key, value);
+      });
+      url.searchParams.set("callback", callbackName);
+      url.searchParams.set("_", String(Date.now()));
+
+      let settled = false;
+
+      const cleanup = () => {
+        window.clearTimeout(timeoutId);
+        script.remove();
+        try {
+          delete (window as any)[callbackName];
+        } catch {}
+      };
+
+      const finish = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        fn();
+      };
+
+      const timeoutId = window.setTimeout(() => {
+        finish(() =>
+          reject(
+            new Error(
+              "BOOKING_TRANSPORT_TIMEOUT"
+            )
+          )
+        );
+      }, 20000);
+
+      (window as any)[callbackName] = (data: any) => {
+        finish(() => {
+          if (data?.ok === false) {
+            reject(
+              new Error(
+                data?.message ||
+                  "سامانه رزرو در مرحله «" +
+                    action +
+                    "» خطا برگرداند."
+              )
+            );
+            return;
+          }
+          resolve(data);
+        });
+      };
+
+      script.async = true;
+      script.src = url.toString();
+      script.onerror = () => {
+        finish(() =>
+          reject(
+            new Error(
+              "ارتباط با سامانه رزرو برقرار نشد."
+            )
+          )
+        );
+      };
+
+      document.head.appendChild(script);
+    });
+  };
+
   const apiGet = async (
     action: string,
     params: Record<string, string> = {}
@@ -4243,7 +4324,7 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     url.searchParams.set("_", String(Date.now()));
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 12000);
 
     try {
       const response = await fetch(url.toString(), {
@@ -4289,20 +4370,25 @@ function BookingPage({ onBack }: { onBack: () => void }) {
 
       return data;
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        throw new Error("BOOKING_TRANSPORT_TIMEOUT");
-      }
+      const shouldFallback =
+        error instanceof DOMException &&
+        error.name === "AbortError";
 
       if (
-        error instanceof TypeError &&
-        /fetch|network|failed/i.test(error.message)
+        !shouldFallback &&
+        !(
+          error instanceof TypeError &&
+          /fetch|network|failed/i.test(error.message)
+        )
       ) {
-        throw new Error(
-          "ارتباط با سامانه رزرو برقرار نشد. لطفاً دوباره تلاش کن."
-        );
+        throw error;
       }
 
-      throw error;
+      try {
+        return await apiGetJsonp(action, params);
+      } catch {
+        throw new Error("BOOKING_TRANSPORT_TIMEOUT");
+      }
     } finally {
       window.clearTimeout(timeoutId);
     }
