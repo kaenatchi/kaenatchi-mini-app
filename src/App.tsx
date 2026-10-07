@@ -4283,18 +4283,12 @@ function BookingPage({ onBack }: { onBack: () => void }) {
       const onMessage = (event: MessageEvent) => {
         const data = event?.data;
 
-        if (!data || data.source !== "kaenatсhi-booking-bridge") {
-          /*
-           * The bridge source is checked below with the correctly spelled
-           * value as well. This first guard intentionally rejects unrelated
-           * Telegram/WebView postMessage traffic.
-           */
-          if (!data || data.source !== "kaenatchi-booking-bridge") return;
-        }
-
-        if (iframe.contentWindow && event.source !== iframe.contentWindow) {
-          return;
-        }
+        /*
+         * The bridge source is unique to KaenatChi. We intentionally do not
+         * compare event.source here because Telegram iOS WebView can expose
+         * a null/different WindowProxy for cross-origin iframe messages.
+         */
+        if (!data || data.source !== "kaenatchi-booking-bridge") return;
 
         const payload = data.data;
 
@@ -4319,10 +4313,13 @@ function BookingPage({ onBack }: { onBack: () => void }) {
       iframe.style.width = "1px";
       iframe.style.height = "1px";
       iframe.style.border = "0";
-      iframe.style.opacity = "0";
+      /*
+       * Keep the iframe off-screen rather than opacity:0. Some iOS WebViews
+       * are stricter about executing scripts in fully hidden frames.
+       */
       iframe.style.pointerEvents = "none";
-      iframe.style.left = "-10px";
-      iframe.style.top = "-10px";
+      iframe.style.left = "-10000px";
+      iframe.style.top = "0";
       iframe.src = url;
 
       const timeoutId = window.setTimeout(() => {
