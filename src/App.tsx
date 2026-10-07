@@ -176,9 +176,18 @@ function cmsSlug(value: string): string {
 }
 
 function cmsCategory(value: string, title: string): ServiceCategory {
-  const text = (value + " " + title).toLocaleLowerCase("fa");
-  if (/شمع/.test(text)) return "candle";
-  if (/گفت.?وگو|سایکوتراپی|مشاوره/.test(text)) return "psychotherapy";
+  const text = (value + " " + title)
+    .toLocaleLowerCase("fa")
+    .replace(/[\u200c\u200d]/g, " ")
+    .replace(/ي/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (/شمع|candle/.test(text)) return "candle";
+  if (/سایکو|سایکو تراپی|سایکوتراپی|روان|مشاوره|psychotherapy|psycho/.test(text)) {
+    return "psychotherapy";
+  }
   return "energy";
 }
 
@@ -4266,7 +4275,7 @@ function BookingPage({
   const [state, setState] = useState<BookingState>("loading");
   const [trackingCode, setTrackingCode] = useState("");
   const [checkingDiscount, setCheckingDiscount] = useState(false);
-  const [serviceMenuOpen, setServiceMenuOpen] = useState(!initialService);
+  const [serviceMenuOpen, setServiceMenuOpen] = useState(true);
   const [expandedCategory, setExpandedCategory] = useState<ServiceCategory | null>(
     initialService?.category || null
   );
@@ -4829,22 +4838,15 @@ function BookingPage({
           <span>{initialService ? "این نوبت برای خدمت انتخاب‌شده آماده شده است." : "دسته را انتخاب کن؛ سپس خدمت، کلاس یا ایونت موردنظرت را انتخاب کن."}</span>
         </div>
 
-        {initialService ? (
-          <div style={{marginTop:"12px",padding:"15px",borderRadius:"17px",background:"rgba(36,99,71,.06)",border:"1px solid rgba(36,99,71,.10)"}}>
-            <div className="list-copy">
-              <strong>{selectedService?.title || initialService.title}</strong>
-              <span>{selectedService?.description || initialService.description}</span>
+        <div style={{marginTop:"12px"}}>
+          {selectedService && (
+            <div style={{marginBottom:"10px",padding:"14px",borderRadius:"16px",background:"rgba(36,99,71,.06)",border:"1px solid rgba(36,99,71,.10)"}}>
+              <div className="list-copy">
+                <strong>خدمت انتخاب‌شده</strong>
+                <span>{selectedService.title}</span>
+              </div>
             </div>
-            <button type="button" onClick={() => {
-              setServiceId("");
-              setBookingCategory(null);
-              setExpandedCategory(null);
-              setServiceMenuOpen(true);
-              setDiscount({valid:false,percent:0,amount:0});
-            }} style={{marginTop:"12px",width:"100%"}}>تغییر خدمت</button>
-          </div>
-        ) : (
-          <div style={{marginTop:"12px"}}>
+          )}
             <button
               type="button"
               onClick={() => setServiceMenuOpen((value) => !value)}
@@ -4942,8 +4944,7 @@ function BookingPage({
                 })}
               </div>
             )}
-          </div>
-        )}
+        </div>
 
         {selectedService && (
           <div style={{marginTop:"12px",fontSize:"12px",lineHeight:1.9,color:"#73786f"}}>
