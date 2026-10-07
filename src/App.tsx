@@ -4232,93 +4232,109 @@ function BookingPage({ onBack }: { onBack: () => void }) {
   };
 
   const apiGet = async (
-  action: string,
-  params: Record<string,string> = {}
-): Promise<any> => {
-  /*
-   * Booking transport v4:
-   *
-   * Telegram iOS WebView can be stricter than a normal browser around
-   * cross-origin fetches. GET requests therefore use JSONP through the
-   * Cloudflare Worker. The Worker remains the transport layer and the
-   * existing Google Apps Script booking backend remains untouched.
-   */
-  const queryParams = {
-    action,
-    ...params,
-    _: String(Date.now()),
-  };
-
-  const query = new URLSearchParams(queryParams);
-
-  return new Promise((resolve, reject) => {
-    const callbackName =
-      "__kaenatchiBookingCallback_" +
-      Date.now() +
-      "_" +
-      Math.random().toString(36).slice(2);
-
-    const script = document.createElement("script");
-    let settled = false;
-
-    const cleanup = () => {
-      window.clearTimeout(timeoutId);
-      script.remove();
-
-      try {
-        delete (window as any)[callbackName];
-      } catch {
-        (window as any)[callbackName] = undefined;
-      }
+    action: string,
+    params: Record<string, string> = {}
+  ): Promise<any> => {
+    /*
+     * Booking transport v5:
+     *
+     * Telegram iOS WebView was timing out on both cross-origin fetch()
+     * and dynamic JSONP <script> loading. The Worker itself is healthy.
+     *
+     * GET requests therefore use the existing iframe bridge supported by
+     * the unchanged Apps Script backend. The iframe is allowed to load the
+     * cross-origin Worker, and the Worker forwards the backend bridge HTML.
+     * The response sends its data to this page with postMessage().
+     *
+     * Booking/CMS/VIP/business logic is untouched.
+     */
+    const queryParams = {
+      action,
+      ...params,
+      bridge: "iframe",
+      _: String(Date.now()),
     };
 
-    const finish = (fn: (value: any) => void, value: any) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      fn(value);
-    };
+    const query = new URLSearchParams(queryParams);
+    const url = ENDPOINT + "?" + query.toString();
 
-    (window as any)[callbackName] = (data: any) => {
-      if (data?.ok === false) {
+    return new Promise((resolve, reject) => {
+      const iframe = document.createElement("iframe");
+      let settled = false;
+
+      const cleanup = () => {
+        window.clearTimeout(timeoutId);
+        window.removeEventListener("message", onMessage);
+
+        try {
+          iframe.src = "about:blank";
+        } catch {}
+
+        iframe.remove();
+      };
+
+      const finish = (fn: (value: any) => void, value: any) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        fn(value);
+      };
+
+      const onMessage = (event: MessageEvent) => {
+        const data = event?.data;
+
+        if (!data || data.source !== "kaenatсhi-booking-bridge") {
+          /*
+           * The bridge source is checked below with the correctly spelled
+           * value as well. This first guard intentionally rejects unrelated
+           * Telegram/WebView postMessage traffic.
+           */
+          if (!data || data.source !== "kaenatchi-booking-bridge") return;
+        }
+
+        if (iframe.contentWindow && event.source !== iframe.contentWindow) {
+          return;
+        }
+
+        const payload = data.data;
+
+        if (payload?.ok === false) {
+          finish(
+            reject,
+            new Error(
+              payload?.message ||
+              "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
+            )
+          );
+          return;
+        }
+
+        finish(resolve, payload);
+      };
+
+      window.addEventListener("message", onMessage);
+
+      iframe.setAttribute("aria-hidden", "true");
+      iframe.style.position = "fixed";
+      iframe.style.width = "1px";
+      iframe.style.height = "1px";
+      iframe.style.border = "0";
+      iframe.style.opacity = "0";
+      iframe.style.pointerEvents = "none";
+      iframe.style.left = "-10px";
+      iframe.style.top = "-10px";
+      iframe.src = url;
+
+      const timeoutId = window.setTimeout(() => {
         finish(
           reject,
-          new Error(
-            data?.message ||
-            "سامانه رزرو در مرحله «" + action + "» خطا برگرداند."
-          )
+          new Error("BOOKING_TRANSPORT_TIMEOUT")
         );
-        return;
-      }
+      }, 15000);
 
-      finish(resolve, data);
-    };
-
-    script.async = true;
-    script.src =
-      ENDPOINT +
-      "?" +
-      query.toString() +
-      "&callback=" +
-      encodeURIComponent(callbackName);
-
-    script.onerror = () => {
-      finish(
-        reject,
-        new Error("BOOKING_TRANSPORT_FAILED")
-      );
-    };
-
-    const timeoutId = window.setTimeout(() => {
-      finish(
-        reject,
-        new Error("BOOKING_TRANSPORT_TIMEOUT")
-      );
-    }, 15000);
-
-    document.head.appendChild(script);
-  });
-};
+      document.body.appendChild(iframe);
+    });
+  };
 
 const waitForBookingStatus = async (requestId: string, mode: "created" | "paid") => {
     const started = Date.now();
