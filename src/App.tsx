@@ -268,14 +268,26 @@ const apiGetLive = async (
   params: Record<string, string> = {}
 ): Promise<any> => {
   /*
-   * Telegram WebView transport:
-   * JSONP is the primary read path because the Worker JSONP endpoint
-   * has been verified directly and does not depend on CORS/fetch
-   * behavior inside the Telegram WebView.
-   *
-   * Fetch remains the first fallback, followed by direct Backend JSONP.
-   * This keeps the existing Worker + Backend architecture unchanged.
+   * Slot reads use the verified Apps Script JSONP path first.
+   * The Worker remains the transport for config/date reads and
+   * remains available as fallback for slots. This isolates the
+   * slot-loading path without changing the booking architecture.
    */
+  if (action === "getAvailableSlots") {
+    try {
+      return await apiGetJsonpOnce(
+        action,
+        params,
+        BOOKING_BACKEND_ENDPOINT
+      );
+    } catch (backendFirstError) {
+      console.warn(
+        "[KaenatChi Booking] direct backend slot read failed; falling back to Worker",
+        backendFirstError
+      );
+    }
+  }
+
   let workerJsonpError: unknown = null;
 
   try {
