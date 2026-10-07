@@ -28,7 +28,9 @@ type IconName =
 type ServiceCategory =
   | "energy"
   | "candle"
-  | "psychotherapy";
+  | "psychotherapy"
+  | "class"
+  | "event";
 
 type Service = {
   id: string;
@@ -208,6 +210,40 @@ function mapCmsServices(rows: CmsRow[]): Service[] {
         price: cmsText(row, ["قیمت", "هزینه", "price"]),
         duration: cmsText(row, ["مدت", "مدت زمان", "duration"]),
         description,
+      };
+    });
+}
+
+function mapCmsBookableItems(
+  rows: CmsRow[],
+  type: "class" | "event"
+): Service[] {
+  return rows
+    .filter(cmsActive)
+    .map((row, index) => {
+      const title =
+        cmsText(row, [
+          type === "class" ? "نام دوره" : "نام ایونت",
+          "عنوان",
+          "نام",
+          "title",
+        ]) || (type === "class" ? "کلاس" : "ایونت");
+      const rawId = cmsText(row, ["شناسه", "id", "slug"]);
+      const id =
+        "cms-" +
+        type +
+        "-" +
+        (rawId ? cmsSlug(rawId) : cmsSlug(title) + "-" + (index + 1));
+      return {
+        id,
+        title,
+        category: type,
+        price: cmsText(row, ["قیمت", "هزینه", "price", "base price"]),
+        duration: cmsText(row, ["مدت", "مدت زمان", "duration"]),
+        description: cmsText(row, [
+          "توضیحات کامل", "توضیحات", "توضیح کوتاه", "توضیح",
+          "متن", "description", "text",
+        ]),
       };
     });
 }
@@ -964,7 +1000,11 @@ function ServiceCard({
       ? "energy"
       : service.category === "candle"
         ? "candle"
-        : "conversation";
+        : service.category === "psychotherapy"
+          ? "conversation"
+          : service.category === "class"
+            ? "class"
+            : "event";
 
   return (
     <button
@@ -1024,7 +1064,7 @@ function ServiceDetail({
 }: {
   service: Service;
   onBack: () => void;
-  onOpenBooking: () => void;
+  onOpenBooking: (service?: Service) => void;
 }) {
   const icon =
     service.category === "energy"
@@ -4190,7 +4230,13 @@ function MorePage({
   );
 }
 
-function BookingPage({ onBack }: { onBack: () => void }) {
+function BookingPage({
+  onBack,
+  initialService,
+}: {
+  onBack: () => void;
+  initialService?: Service | null;
+}) {
   type BookingConfig = {
     services: Array<Record<string, unknown>>;
     availableDates: Array<Record<string, unknown>>;
@@ -4202,8 +4248,11 @@ function BookingPage({ onBack }: { onBack: () => void }) {
   const ENDPOINT = "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
 
   const [config, setConfig] = useState<BookingConfig | null>(null);
-  const [serviceId, setServiceId] = useState("");
+  const [serviceId, setServiceId] = useState(initialService?.id || "");
   const [date, setDate] = useState("");
+  const [bookingCategory, setBookingCategory] = useState<ServiceCategory | null>(
+    initialService?.category || null
+  );
   const [time, setTime] = useState("");
   const [slots, setSlots] = useState<Array<Record<string, unknown>>>([]);
   const [firstName, setFirstName] = useState("");
@@ -4218,8 +4267,27 @@ function BookingPage({ onBack }: { onBack: () => void }) {
   const [trackingCode, setTrackingCode] = useState("");
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
-  const selectedService = config?.services.find((item) => String(item.id ?? item.ID ?? "") === serviceId);
-  const basePrice = Number(selectedService?.price ?? selectedService?.Price ?? 0) || 0;
+  const backendServices: Service[] = (config?.services || []).map((item) => ({
+    id: String(item.id ?? item.ID ?? ""),
+    title: String(item.name ?? item.title ?? item.serviceName ?? "خدمت"),
+    category: cmsCategory(
+      String(item.category ?? item.Category ?? ""),
+      String(item.name ?? item.title ?? item.serviceName ?? "")
+    ),
+    price: String(item.price ?? item.Price ?? ""),
+    duration: String(item.duration ?? item.Duration ?? ""),
+    description: String(item.description ?? item.Description ?? ""),
+  }));
+  const cmsClassServices = mapCmsBookableItems(cmsRows.courses, "class");
+  const cmsEventServices = mapCmsBookableItems(cmsRows.events, "event");
+  const bookingServices = [...backendServices, ...cmsClassServices, ...cmsEventServices];
+
+  const selectedService =
+    bookingServices.find((item) => item.id === serviceId) ||
+    initialService ||
+    null;
+  const basePrice =
+    Number(String(selectedService?.price || "").replace(/[,٬،\s]/g, "")) || 0;
   const finalPrice = Math.max(0, basePrice - discount.amount);
 
   const getTelegramId = () => {
@@ -4561,6 +4629,10 @@ function BookingPage({ onBack }: { onBack: () => void }) {
       };
 
       setConfig(next);
+      if (initialService) {
+        setServiceId(initialService.id);
+        setBookingCategory(initialService.category);
+      }
       setState("idle");
     } catch (error) {
       setState("error");
@@ -4588,7 +4660,7 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     }
     let active = true;
     setTime("");
-    apiGet("getAvailableSlots", {date})
+    apiGet("getAvailableSlots", {date, ...(serviceId ? {serviceId} : {})})
       .then((data) => {
         if (!active) return;
         setSlots(Array.isArray(data.slots) ? data.slots : []);
@@ -4725,9 +4797,26 @@ function BookingPage({ onBack }: { onBack: () => void }) {
     );
   }
 
-  const availableServices = config?.services || [];
   const availableDates = config?.availableDates || [];
-  const availableSlots = slots.filter((slot) => slot.available === true);
+  const availableSlots = slots.filter(
+    (slot) => slot.available === true || String(slot.available).toLowerCase() === "true"
+  );
+
+  const categoryGroups: Array<{
+    id: ServiceCategory;
+    title: string;
+    icon: IconName;
+    items: Service[];
+  }> = [
+    { id: "energy", title: "انرژی‌خوانی", icon: "energy", items: bookingServices.filter((s) => s.category === "energy") },
+    { id: "candle", title: "شمع‌تراپی", icon: "candle", items: bookingServices.filter((s) => s.category === "candle") },
+    { id: "psychotherapy", title: "سایکو تراپی", icon: "conversation", items: bookingServices.filter((s) => s.category === "psychotherapy") },
+    { id: "class", title: "کلاس", icon: "class", items: cmsClassServices },
+    { id: "event", title: "ایونت", icon: "event", items: cmsEventServices },
+  ];
+  const activeGroup = bookingCategory
+    ? categoryGroups.find((group) => group.id === bookingCategory) || null
+    : null;
 
   return (
     <div className="inner-page">
@@ -4737,19 +4826,70 @@ function BookingPage({ onBack }: { onBack: () => void }) {
       <div className="glass-list-card" style={{display:"block"}}>
         <div className="list-copy">
           <strong>۱. انتخاب خدمت</strong>
-          <span>خدمت موردنظر را انتخاب کن.</span>
+          <span>{initialService ? "این نوبت برای خدمت انتخاب‌شده آماده شده است." : "دسته را انتخاب کن؛ سپس خدمت، کلاس یا ایونت موردنظرت را انتخاب کن."}</span>
         </div>
-        <select value={serviceId} onChange={(e) => {setServiceId(e.target.value);setDiscount({valid:false,percent:0,amount:0});}} style={{marginTop:"12px",width:"100%",padding:"14px",borderRadius:"15px",border:"1px solid rgba(53,59,50,.12)",background:"rgba(255,255,255,.72)",fontFamily:"inherit",fontSize:"14px"}}>
-          <option value="">انتخاب خدمت</option>
-          {availableServices.map((item) => {
-            const id = String(item.id ?? item.ID ?? "");
-            const name = String(item.name ?? item.title ?? item.serviceName ?? "خدمت");
-            return <option key={id} value={id}>{name}</option>;
-          })}
-        </select>
+
+        {initialService ? (
+          <div style={{marginTop:"12px",padding:"15px",borderRadius:"17px",background:"rgba(36,99,71,.06)",border:"1px solid rgba(36,99,71,.10)"}}>
+            <div className="list-copy">
+              <strong>{selectedService?.title || initialService.title}</strong>
+              <span>{selectedService?.description || initialService.description}</span>
+            </div>
+            <button type="button" onClick={() => {
+              setServiceId("");
+              setBookingCategory(null);
+              setDiscount({valid:false,percent:0,amount:0});
+            }} style={{marginTop:"12px",width:"100%"}}>تغییر خدمت</button>
+          </div>
+        ) : (
+          <>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:"10px",marginTop:"12px"}}>
+              {categoryGroups.map((group) => (
+                <button key={group.id} type="button"
+                  onClick={() => setBookingCategory((current) => current === group.id ? null : group.id)}
+                  style={{
+                    minHeight:"72px",border:"1px solid rgba(53,59,50,.12)",borderRadius:"17px",
+                    background:bookingCategory === group.id ? "rgba(36,99,71,.10)" : "rgba(255,255,255,.72)",
+                    fontFamily:"inherit",boxShadow:"0 8px 20px rgba(53,59,50,.07)",cursor:"pointer",
+                  }}>
+                  <span style={{display:"block",marginBottom:"5px"}}><Icon name={group.icon} /></span>
+                  <strong>{group.title}</strong>
+                  <small style={{display:"block",marginTop:"3px",opacity:.65}}>{group.items.length} گزینه</small>
+                </button>
+              ))}
+            </div>
+
+            {activeGroup && (
+              <div style={{display:"grid",gap:"9px",marginTop:"12px"}}>
+                {activeGroup.items.length > 0 ? activeGroup.items.map((service) => (
+                  <button key={service.id} type="button"
+                    onClick={() => {
+                      setServiceId(service.id);
+                      setBookingCategory(service.category);
+                      setDiscount({valid:false,percent:0,amount:0});
+                      setMessage("");
+                    }}
+                    style={{
+                      width:"100%",textAlign:"right",padding:"14px",border:"1px solid rgba(53,59,50,.12)",
+                      borderRadius:"16px",background:serviceId === service.id ? "rgba(36,99,71,.10)" : "rgba(255,255,255,.78)",
+                      fontFamily:"inherit",boxShadow:"0 7px 18px rgba(53,59,50,.06)",cursor:"pointer",
+                    }}>
+                    <strong style={{display:"block"}}>{service.title}</strong>
+                    {service.price && <span style={{display:"block",marginTop:"5px",fontSize:"12px",opacity:.72}}>{service.price} تومان</span>}
+                  </button>
+                )) : (
+                  <div style={{padding:"13px",borderRadius:"15px",background:"rgba(53,59,50,.05)",fontSize:"12px"}}>
+                    هنوز گزینه فعالی در این بخش ثبت نشده است.
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
         {selectedService && (
-          <div style={{marginTop:"10px",fontSize:"12px",lineHeight:1.9,color:"#73786f"}}>
-            {String(selectedService.description ?? selectedService.Description ?? "")}
+          <div style={{marginTop:"12px",fontSize:"12px",lineHeight:1.9,color:"#73786f"}}>
+            {selectedService.description}
           </div>
         )}
       </div>
@@ -4953,6 +5093,7 @@ function App() {
   const [section, setSection] = useState<Section>("home");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchService, setSearchService] = useState<Service | null>(null);
+  const [bookingService, setBookingService] = useState<Service | null>(null);
   const [vipOpen, setVipOpen] = useState(false);
   const [serviceFocus, setServiceFocus] = useState<"all" | "classes" | "events">("all");
   const [navDirection, setNavDirection] = useState<"forward" | "backward">("forward");
@@ -5184,6 +5325,7 @@ function App() {
             service={searchService}
             onBack={() => setSearchService(null)}
             onOpenBooking={() => {
+              setBookingService(searchService);
               setSearchOpen(false);
               setSearchService(null);
               changeSection("booking");
@@ -5231,12 +5373,21 @@ function App() {
         {section === "services" && (
           <ServicesPage
             focus={serviceFocus}
-            onOpenBooking={() => changeSection("booking")}
+            onOpenBooking={(service) => {
+              setBookingService(service || null);
+              changeSection("booking");
+            }}
           />
         )}
 
         {section === "booking" && (
-          <BookingPage onBack={() => changeSection("home")} />
+          <BookingPage
+            initialService={bookingService}
+            onBack={() => {
+              setBookingService(null);
+              changeSection("home");
+            }}
+          />
         )}
 
         {section === "selected" && (
@@ -5258,7 +5409,10 @@ function App() {
         active={section}
         onChange={changeSection}
         onQuickDestination={openQuickDestination}
-        onOpenBooking={() => changeSection("booking")}
+        onOpenBooking={() => {
+          setBookingService(null);
+          changeSection("booking");
+        }}
       />
     </div>
   );
