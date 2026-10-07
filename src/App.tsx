@@ -4586,7 +4586,7 @@ function BookingPage({
         title
       );
       return {
-        id: String(item.id ?? item.ID ?? ""),
+        id: String(item.id ?? item.ID ?? "").trim(),
         title,
         category,
         price: String(item.price ?? item.Price ?? ""),
@@ -4614,10 +4614,27 @@ function BookingPage({
     ["energy", "candle", "psychotherapy"].includes(service.category)
   );
 
+  /*
+   * Some existing Services rows do not have a Service ID.
+   * Keep the booking UI selectable in that case by using the
+   * service name as a stable client-side key. The backend still
+   * receives serviceName and remains the source of truth.
+   */
+  const getBookingServiceKey = (service: Service) =>
+    String(service.id || service.title).trim();
+
   const selectedService =
-    bookingServices.find((item) => item.id === serviceId) ||
-    initialService ||
-    null;
+    bookingServices.find(
+      (item) => getBookingServiceKey(item) === serviceId
+    ) ||
+    (initialService
+      ? bookingServices.find(
+          (item) =>
+            getBookingServiceKey(item) ===
+              getBookingServiceKey(initialService) ||
+            item.title === initialService.title
+        ) || initialService
+      : null);
   const basePrice =
     Number(String(selectedService?.price || "").replace(/[,٬،\s]/g, "")) || 0;
   const finalPrice = Math.max(0, basePrice - discount.amount);
@@ -4830,7 +4847,7 @@ function BookingPage({
     // The backend resolves the daily schedule from the Jalali date.
     // serviceId is not required by getAvailableSlots_ and is deliberately
     // omitted so the slot request stays compatible with the locked backend.
-    apiGet("getAvailableSlots", { date })
+    apiGet("getAvailableSlots", { date, ...(serviceId ? { serviceId } : {}) })
       .then((data) => {
         if (!active) return;
         setSlots(Array.isArray(data.slots) ? data.slots : []);
@@ -5164,7 +5181,7 @@ function BookingPage({
                         type="button"
                         className="booking-service-option"
                         onClick={() => {
-                          setServiceId(service.id);
+                          setServiceId(getBookingServiceKey(service));
                           setBookingCategory(group.id);
                           setDiscount({valid:false,percent:0,amount:0});
                           setMessage("");
