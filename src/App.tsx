@@ -108,6 +108,8 @@ const BOOKING_APP_URL =
 
 const BOOKING_TRANSPORT_ENDPOINT =
   "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
+const BOOKING_BACKEND_ENDPOINT =
+  "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
 const BOOKING_TRANSPORT_VERSION = "v4";
 const BOOKING_CONFIG_CACHE_KEY =
   "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
@@ -150,7 +152,8 @@ const bookingSleep = (ms: number) =>
 
 const apiGetJsonpOnce = (
   action: string,
-  params: Record<string, string> = {}
+  params: Record<string, string> = {},
+  endpoint: string = BOOKING_TRANSPORT_ENDPOINT
 ): Promise<any> =>
   new Promise((resolve, reject) => {
     const callbackName =
@@ -160,7 +163,7 @@ const apiGetJsonpOnce = (
       Math.random().toString(36).slice(2);
 
     const script = document.createElement("script");
-    const url = new URL(BOOKING_TRANSPORT_ENDPOINT);
+    const url = new URL(endpoint);
 
     url.searchParams.set("action", action);
     Object.entries(params).forEach(([key, value]) =>
@@ -312,12 +315,13 @@ const apiGet = async (
 };
 
 const apiGetIframeBridgeOnce = (
+  endpoint: string,
   action: string,
   params: Record<string, string> = {}
 ): Promise<any> =>
   new Promise((resolve, reject) => {
     const frame = document.createElement("iframe");
-    const url = new URL(BOOKING_TRANSPORT_ENDPOINT);
+    const url = new URL(endpoint);
 
     url.searchParams.set("action", action);
     url.searchParams.set("bridge", "iframe");
@@ -392,7 +396,7 @@ const apiGetIframeBridgeOnce = (
     frame.tabIndex = -1;
     frame.style.cssText =
       "position:fixed;width:1px;height:1px;left:-10000px;top:-10000px;" +
-      "border:0;opacity:0;pointer-events:none;";
+      "border:0;pointer-events:none;";
 
     frame.onload = () => {
       /*
@@ -430,21 +434,29 @@ const apiGetLive = async (
    */
   let lastError: unknown = null;
 
-  try {
-    const data = await apiGetIframeBridgeOnce(action, params);
+  const bridgeEndpoints = [
+    BOOKING_TRANSPORT_ENDPOINT,
+    BOOKING_BACKEND_ENDPOINT,
+  ];
 
-    if (action === "getConfig") {
-      writeBookingConfigCache(data);
+  for (const endpoint of bridgeEndpoints) {
+    try {
+      const data = await apiGetIframeBridgeOnce(endpoint, action, params);
+
+      if (action === "getConfig") {
+        writeBookingConfigCache(data);
+      }
+
+      return data;
+    } catch (error) {
+      lastError = error;
+      console.warn(
+        "[KaenatChi Booking] iframe bridge failed",
+        endpoint,
+        action,
+        error
+      );
     }
-
-    return data;
-  } catch (error) {
-    lastError = error;
-    console.warn(
-      "[KaenatChi Booking] iframe bridge failed",
-      action,
-      error
-    );
   }
 
   try {
@@ -465,26 +477,30 @@ const apiGetLive = async (
   }
 
   /*
-   * JSONP is only a compatibility fallback. It does not replace the
-   * primary bridge and does not alter the Worker or backend contract.
-   * This is especially useful for embedded WebViews that block ordinary
-   * cross-origin fetch while still allowing script loading.
+   * JSONP is the final compatibility fallback. Try the Worker first,
+   * then the backend directly. No booking business logic is changed.
    */
-  try {
-    const data = await apiGetJsonpOnce(action, params);
+  for (const endpoint of [
+    BOOKING_TRANSPORT_ENDPOINT,
+    BOOKING_BACKEND_ENDPOINT,
+  ]) {
+    try {
+      const data = await apiGetJsonpOnce(action, params, endpoint);
 
-    if (action === "getConfig") {
-      writeBookingConfigCache(data);
+      if (action === "getConfig") {
+        writeBookingConfigCache(data);
+      }
+
+      return data;
+    } catch (error) {
+      lastError = error;
+      console.warn(
+        "[KaenatChi Booking] JSONP fallback failed",
+        endpoint,
+        action,
+        error
+      );
     }
-
-    return data;
-  } catch (error) {
-    lastError = error;
-    console.warn(
-      "[KaenatChi Booking] JSONP fallback failed",
-      action,
-      error
-    );
   }
 
   void lastError;
