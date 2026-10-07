@@ -111,7 +111,7 @@ const BOOKING_TRANSPORT_ENDPOINT =
 const BOOKING_BACKEND_ENDPOINT =
   "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
 
-const BOOKING_TRANSPORT_VERSION = "v6-fetch-jsonp-backend";
+const BOOKING_TRANSPORT_VERSION = "v7-jsonp-fetch-backend";
 const BOOKING_CONFIG_CACHE_KEY =
   "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
 const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
@@ -267,16 +267,15 @@ const apiGetLive = async (
   action: string,
   params: Record<string, string> = {}
 ): Promise<any> => {
-  let fetchError: unknown = null;
-
-  try {
-    const data = await apiGetFetchOnce(action, params);
-    if (action === "getConfig") writeBookingConfigCache(data);
-    return data;
-  } catch (error) {
-    fetchError = error;
-  }
-
+  /*
+   * Telegram WebView transport:
+   * JSONP is the primary read path because the Worker JSONP endpoint
+   * has been verified directly and does not depend on CORS/fetch
+   * behavior inside the Telegram WebView.
+   *
+   * Fetch remains the first fallback, followed by direct Backend JSONP.
+   * This keeps the existing Worker + Backend architecture unchanged.
+   */
   let workerJsonpError: unknown = null;
 
   try {
@@ -291,6 +290,16 @@ const apiGetLive = async (
     workerJsonpError = error;
   }
 
+  let fetchError: unknown = null;
+
+  try {
+    const data = await apiGetFetchOnce(action, params);
+    if (action === "getConfig") writeBookingConfigCache(data);
+    return data;
+  } catch (error) {
+    fetchError = error;
+  }
+
   try {
     const data = await apiGetJsonpOnce(
       action,
@@ -301,18 +310,20 @@ const apiGetLive = async (
     return data;
   } catch (backendJsonpError) {
     const firstError =
-      fetchError instanceof Error ? fetchError.message : "FETCH_FAILED";
-    const secondError =
       workerJsonpError instanceof Error
         ? workerJsonpError.message
         : "WORKER_JSONP_FAILED";
+    const secondError =
+      fetchError instanceof Error
+        ? fetchError.message
+        : "FETCH_FAILED";
     const thirdError =
       backendJsonpError instanceof Error
         ? backendJsonpError.message
         : "BACKEND_JSONP_FAILED";
 
     console.warn(
-      "[KaenatChi Booking] fetch + Worker JSONP + backend JSONP failed",
+      "[KaenatChi Booking] Worker JSONP + fetch + backend JSONP failed",
       action,
       firstError,
       secondError,
