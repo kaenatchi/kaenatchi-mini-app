@@ -4234,7 +4234,7 @@ function BookingPage({ onBack }: { onBack: () => void }) {
   const apiGet = async (
   action: string,
   params: Record<string,string> = {}
-) => {
+): Promise<any> => {
   /*
    * Booking transport v4:
    *
