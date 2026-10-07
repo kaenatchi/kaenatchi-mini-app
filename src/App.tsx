@@ -4295,9 +4295,38 @@ function BookingPage({
     duration: String(item.duration ?? item.Duration ?? ""),
     description: String(item.description ?? item.Description ?? ""),
   }));
+
+  // این‌ها همان ۱۰ خدمت انرژی‌خوانی قبلی کائنات‌چی هستند.
+  // فقط به‌عنوان fallback فرانت‌اند برمی‌گردند؛ اگر Backend همان ID را
+  // داشته باشد، داده‌ی Backend اولویت دارد و دوباره‌کاری نمی‌شود.
+  const legacyEnergyServices: Service[] = [
+    { id: "coffee", title: "قهوه", category: "energy", price: "۷۰۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "انرژی‌خوانی با نقش‌های فنجان قهوه برای بررسی مسیر و نشانه‌های پیش رو." },
+    { id: "playing-cards", title: "پاسور", category: "energy", price: "۶۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "انرژی‌خوانی با کارت‌های پاسور برای بررسی موضوع مورد نظر شما." },
+    { id: "rider-waite", title: "تاروت رایدر وایت", category: "energy", price: "۷۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش تاروت رایدر وایت برای بررسی انرژی‌ها، شرایط و مسیر پیش روی شما." },
+    { id: "rider-emotional", title: "رایدر احساسی", category: "energy", price: "۷۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش احساسی برای بررسی وضعیت عاطفی، احساسات و انرژی میان افراد." },
+    { id: "rider-career-financial", title: "رایدر شغلی - مالی", category: "energy", price: "۷۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش با تمرکز بر مسیر شغلی، مالی و انرژی‌های مرتبط با این حوزه." },
+    { id: "french-lenormand", title: "لنورماند فرانسوی", category: "energy", price: "۷۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "انرژی‌خوانی با کارت‌های لنورماند فرانسوی برای بررسی موضوع انتخابی شما." },
+    { id: "emotional-lenormand", title: "لنورماند احساسی", category: "energy", price: "۷۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش احساسی با لنورماند برای بررسی روابط و انرژی‌های عاطفی." },
+    { id: "greek-tarot-emotional", title: "تاروت یونانی احساسی", category: "energy", price: "۸۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش احساسی با تاروت یونانی با تمرکز بر روابط و احساسات." },
+    { id: "marseille-tarot-emotional", title: "تاروت مارسی احساسی", category: "energy", price: "۸۵۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش احساسی با تاروت مارسی برای بررسی انرژی و شرایط رابطه." },
+    { id: "gem-oracle", title: "جم اوراکل", category: "energy", price: "۷۰۰,۰۰۰ تومان", duration: "۳۰ دقیقه", description: "خوانش اوراکل با تمرکز بر پیام‌ها و انرژی‌های مرتبط با موضوع شما." },
+  ];
+
+  const legacyOtherServices: Service[] = [
+    { id: "candle-therapy", title: "شمع‌تراپی", category: "candle", price: "۵۵۰,۰۰۰ تومان", duration: "۲۰ دقیقه", description: "جلسه شمع‌تراپی به‌صورت غیرحضوری و با تمرکز بر نیت و موضوع انتخابی شما." },
+    { id: "psychotherapy", title: "سایکوتراپی", category: "psychotherapy", price: "۶۰۰,۰۰۰ تومان", duration: "۴۵ دقیقه", description: "جلسه گفت‌وگومحور تلفنی برای صحبت درباره موضوع مورد نظر شما. این خدمت به‌عنوان روان‌درمانی یا خدمات درمانی بالینی ارائه نمی‌شود." },
+  ];
+
+  const mergedBackendServices = [...backendServices];
+  [...legacyEnergyServices, ...legacyOtherServices].forEach((fallback) => {
+    if (!mergedBackendServices.some((service) => service.id === fallback.id)) {
+      mergedBackendServices.push(fallback);
+    }
+  });
+
   const cmsClassServices = mapCmsBookableItems(cmsRows.courses, "class");
   const cmsEventServices = mapCmsBookableItems(cmsRows.events, "event");
-  const bookingServices = [...backendServices, ...cmsClassServices, ...cmsEventServices];
+  const bookingServices = [...mergedBackendServices, ...cmsClassServices, ...cmsEventServices];
 
   const selectedService =
     bookingServices.find((item) => item.id === serviceId) ||
