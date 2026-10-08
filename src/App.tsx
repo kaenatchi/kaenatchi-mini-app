@@ -273,8 +273,14 @@ const apiGetLive = async (
    * remains available as fallback for slots. This isolates the
    * slot-loading path without changing the booking architecture.
    */
-  if (action === "getAvailableSlots") {
+  if (action === "getAvailableSlots" || action === "bookingStatus") {
     try {
+      /*
+       * Slot reads and mutation-status reads are authoritative backend reads.
+       * Prefer the direct Apps Script JSONP path for these two actions so a
+       * transient Worker GET/JSONP issue cannot make a successful booking or
+       * payment look failed in the Mini App.
+       */
       return await apiGetJsonpOnce(
         action,
         params,
@@ -282,7 +288,8 @@ const apiGetLive = async (
       );
     } catch (backendFirstError) {
       console.warn(
-        "[KaenatChi Booking] direct backend slot read failed; falling back to Worker",
+        "[KaenatChi Booking] direct backend read failed; falling back to Worker",
+        action,
         backendFirstError
       );
     }
