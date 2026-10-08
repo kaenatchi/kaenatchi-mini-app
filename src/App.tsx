@@ -4748,9 +4748,16 @@ function BookingPage({
     Number(String(selectedService?.price || "").replace(/[,٬،\s]/g, "")) || 0;
   const finalPrice = Math.max(0, basePrice - discount.amount);
 
-  const getTelegramId = () => {
+  const getTelegramId = async () => {
     try {
-      return String((window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id || "");
+      const initData = await getTelegramInitData();
+      if (!initData) return "";
+
+      const userId = String(
+        (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id || ""
+      ).trim();
+
+      return userId;
     } catch {
       return "";
     }
@@ -5022,7 +5029,8 @@ function BookingPage({
       const data = await apiGet("validateDiscount", {
         code,
         price: String(basePrice),
-        telegramId: getTelegramId(),
+        telegramId: await getTelegramId(),
+        telegramChatId: await getTelegramId(),
       });
       if (data.valid) {
         setDiscount({
@@ -5063,7 +5071,7 @@ function BookingPage({
     try {
       const requestId = "REQ-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8).toUpperCase();
       const serviceName = String(selectedService.title || "");
-      const telegramId = getTelegramId();
+      const telegramId = await getTelegramId();
 
       // A POST can time out after the backend has already committed the booking.
       // Recover by requestId before treating the attempt as failed, so a successful
@@ -5073,6 +5081,7 @@ function BookingPage({
         create = await apiPost("createBooking", {
           requestId,
           telegramId,
+          telegramChatId: telegramId,
           firstName:firstName.trim(),
           lastName:lastName.trim(),
           mobile:mobile.trim(),
@@ -5129,6 +5138,7 @@ function BookingPage({
           requestId,
           bookingId,
           telegramId,
+          telegramChatId: telegramId,
           transactionNumber:transactionNumber.trim(),
           receiptData,
           receiptFileName:receiptFile?.name || "",
