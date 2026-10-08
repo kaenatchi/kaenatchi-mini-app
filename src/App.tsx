@@ -4755,19 +4755,26 @@ function BookingPage({
     Number(String(selectedService?.price || "").replace(/[,٬،\s]/g, "")) || 0;
   const finalPrice = Math.max(0, basePrice - discount.amount);
 
-  const getTelegramId = async () => {
+  const getTelegramProfile = async () => {
     try {
       const initData = await getTelegramInitData();
-      if (!initData) return "";
+      if (!initData) return { telegramId:"", telegramUsername:"", telegramFirstName:"", telegramLastName:"" };
 
-      const userId = String(
-        (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id || ""
-      ).trim();
-
-      return userId;
+      const user = (window as any).Telegram?.WebApp?.initDataUnsafe?.user || {};
+      return {
+        telegramId: String(user.id || "").trim(),
+        telegramUsername: String(user.username || "").trim(),
+        telegramFirstName: String(user.first_name || "").trim(),
+        telegramLastName: String(user.last_name || "").trim(),
+      };
     } catch {
-      return "";
+      return { telegramId:"", telegramUsername:"", telegramFirstName:"", telegramLastName:"" };
     }
+  };
+
+  const getTelegramId = async () => {
+    const profile = await getTelegramProfile();
+    return profile.telegramId;
   };
 
   const ENDPOINT = BOOKING_TRANSPORT_ENDPOINT;
@@ -5079,7 +5086,8 @@ function BookingPage({
     try {
       const requestId = "REQ-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8).toUpperCase();
       const serviceName = String(selectedService.title || "");
-      const telegramId = await getTelegramId();
+      const telegramProfile = await getTelegramProfile();
+      const telegramId = telegramProfile.telegramId;
 
       // A POST can time out after the backend has already committed the booking.
       // Recover by requestId before treating the attempt as failed, so a successful
@@ -5090,6 +5098,9 @@ function BookingPage({
           requestId,
           telegramId,
           telegramChatId: telegramId,
+          telegramUsername: telegramProfile.telegramUsername,
+          telegramFirstName: telegramProfile.telegramFirstName,
+          telegramLastName: telegramProfile.telegramLastName,
           firstName:firstName.trim(),
           lastName:lastName.trim(),
           mobile:mobile.trim(),
@@ -5147,6 +5158,9 @@ function BookingPage({
           bookingId,
           telegramId,
           telegramChatId: telegramId,
+          telegramUsername: telegramProfile.telegramUsername,
+          telegramFirstName: telegramProfile.telegramFirstName,
+          telegramLastName: telegramProfile.telegramLastName,
           transactionNumber:transactionNumber.trim(),
           receiptData,
           receiptFileName:receiptFile?.name || "",
