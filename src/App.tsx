@@ -5026,11 +5026,12 @@ function BookingPage({
     setCheckingDiscount(true);
     setMessage("");
     try {
+      const telegramId = await getTelegramId();
       const data = await apiGet("validateDiscount", {
         code,
         price: String(basePrice),
-        telegramId: await getTelegramId(),
-        telegramChatId: await getTelegramId(),
+        telegramId,
+        telegramChatId: telegramId,
       });
       if (data.valid) {
         setDiscount({
