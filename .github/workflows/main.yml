@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - design/home-daily-mood-card
+      - design/todays-practical-suggestion
   workflow_dispatch:
 
 jobs:
