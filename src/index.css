@@ -2210,6 +2210,146 @@ button:active,
 }
 
 /* --------------------------------------------------
+   HOME — LUXURY DAILY CONTENT CARDS
+   Shared editorial card language, responsive and touch-friendly.
+-------------------------------------------------- */
+.home-page .daily-editorial-card {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(255,255,255,.76), rgba(244,240,226,.88) 54%, rgba(224,233,220,.86));
+  box-shadow: 0 18px 42px rgba(39, 69, 49, .11), inset 0 1px 0 rgba(255,255,255,.86);
+  text-align: right;
+  color: var(--green-dark);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+.home-page .daily-editorial-card:active {
+  transform: translateY(1px) scale(.985);
+  box-shadow: 0 9px 22px rgba(39, 69, 49, .12), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.home-page .daily-editorial-card:focus-visible,
+.home-page .featured-card:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 4px;
+}
+.home-page .daily-editorial-card .daily-editorial-media {
+  border-radius: 27px 27px 0 0;
+  min-height: 0;
+  height: clamp(178px, 52vw, 300px);
+  overflow: hidden;
+}
+.home-page .daily-editorial-card .daily-editorial-media img {
+  transition: transform 420ms ease;
+}
+.home-page .daily-editorial-card:active .daily-editorial-media img {
+  transform: scale(1.025);
+}
+.home-page .daily-editorial-card .daily-editorial-copy {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 18px clamp(17px, 4vw, 25px) 20px;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.home-page .daily-editorial-card .daily-editorial-title {
+  display: block;
+  margin: 0;
+  color: var(--green-dark);
+  font-size: clamp(22px, 5.4vw, 34px);
+  font-weight: 760;
+  line-height: 1.55;
+  letter-spacing: -.025em;
+  overflow-wrap: anywhere;
+}
+.home-page .daily-editorial-card .daily-editorial-description {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: clamp(12px, 1.8vw, 14px);
+  line-height: 1.95;
+  overflow-wrap: anywhere;
+}
+.home-page .daily-editorial-card .daily-editorial-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 15px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(75, 101, 77, .15);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 750;
+}
+.home-page .featured-section .featured-card {
+  border-radius: 28px;
+  border: 1px solid rgba(255,255,255,.68);
+  box-shadow: 0 18px 42px rgba(39, 69, 49, .11), inset 0 1px 0 rgba(255,255,255,.8);
+  overflow: hidden;
+}
+.home-page .featured-section .featured-art {
+  overflow: hidden;
+}
+.home-page .featured-section .featured-card:active {
+  transform: translateY(1px) scale(.985);
+  box-shadow: 0 9px 22px rgba(39, 69, 49, .12), inset 0 1px 0 rgba(255,255,255,.8);
+}
+@media (min-width: 720px) {
+  .home-page .daily-editorial-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1.04fr) minmax(0, .96fr);
+    align-items: stretch;
+  }
+  .home-page .daily-editorial-card .daily-editorial-media {
+    grid-column: 1;
+    grid-row: 1;
+    height: 100%;
+    min-height: 270px;
+    border-radius: 0 27px 27px 0;
+  }
+  .home-page .daily-editorial-card .daily-editorial-copy {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    padding: clamp(22px, 3vw, 36px);
+  }
+}
+@media (prefers-color-scheme: dark) {
+  .home-page .daily-editorial-card,
+  .home-page .featured-section .featured-card {
+    border-color: rgba(218,232,220,.13);
+    background: linear-gradient(145deg, rgba(48,66,55,.84), rgba(32,45,38,.88));
+    box-shadow: 0 18px 42px rgba(0,0,0,.2), inset 0 1px 0 rgba(218,232,220,.08);
+  }
+  .home-page .daily-editorial-card .daily-editorial-title {
+    color: var(--green-dark);
+  }
+  .home-page .daily-editorial-card .daily-editorial-action {
+    border-color: rgba(218,232,220,.13);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-page .daily-editorial-card,
+  .home-page .daily-editorial-card .daily-editorial-media img,
+  .home-page .featured-section .featured-card {
+    transition: none !important;
+  }
+  .home-page .daily-editorial-card:active,
+  .home-page .featured-section .featured-card:active {
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------
    DARK MODE
 -------------------------------------------------- */
 
