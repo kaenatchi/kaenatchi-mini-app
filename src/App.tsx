@@ -661,15 +661,25 @@ function cmsPageText(keys: string[]): string {
   return "";
 }
 
-function rebuildCmsContent(data: Partial<typeof cmsRows>) {
-  cmsRows.services = Array.isArray(data.services) ? data.services : [];
-  cmsRows.courses = Array.isArray(data.courses) ? data.courses : [];
-  cmsRows.events = Array.isArray(data.events) ? data.events : [];
-  cmsRows.faq = Array.isArray(data.faq) ? data.faq : [];
-  cmsRows.pages = Array.isArray(data.pages) ? data.pages : [];
-  cmsRows.settings = Array.isArray(data.settings) ? data.settings : [];
-  cmsRows.dailyContent = Array.isArray(data.dailyContent) ? data.dailyContent : [];
-  cmsRows.bookingContent = Array.isArray(data.bookingContent) ? data.bookingContent : [];
+function cmsRowsFromPayload(value: unknown): CmsRow[] {
+  if (Array.isArray(value)) return value as CmsRow[];
+  if (value && typeof value === "object") {
+    const rows = (value as { rows?: unknown }).rows;
+    if (Array.isArray(rows)) return rows as CmsRow[];
+  }
+  return [];
+}
+
+function rebuildCmsContent(data: Partial<typeof cmsRows> & Record<string, unknown>) {
+  cmsRows.services = cmsRowsFromPayload(data.services);
+  cmsRows.courses = cmsRowsFromPayload(data.courses);
+  cmsRows.events = cmsRowsFromPayload(data.events);
+  cmsRows.faq = cmsRowsFromPayload(data.faq);
+  cmsRows.pages = cmsRowsFromPayload(data.pages);
+  cmsRows.settings = cmsRowsFromPayload(data.settings);
+  // Apps Script returns these collections as { headers, rows }, not plain arrays.
+  cmsRows.dailyContent = cmsRowsFromPayload(data.dailyContent);
+  cmsRows.bookingContent = cmsRowsFromPayload(data.bookingContent);
 
   const allServices = mapCmsServices(cmsRows.services);
   mainServices = allServices;
@@ -723,9 +733,23 @@ async function loadCmsData(): Promise<boolean> {
   }
 }
 
+function normalizeCmsLabel(value: string): string {
+  return value
+    .trim()
+    .replace(/[يى]/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/[\\u200c\\u200e\\u200f\\uFEFF\\s]+/g, "");
+}
+
 function dailyContentPlacement(row: CmsRow): string {
   const value = cmsText(row, ["محل نمایش", "جایگاه نمایش", "placement", "display in"]).trim();
   if (!value) return "حال‌وهوای امروز";
+  const key = normalizeCmsLabel(value);
+  if (key === normalizeCmsLabel("مناسبت‌ها")) return "مناسبت‌ها";
+  if (key === normalizeCmsLabel("همه بخش‌ها")) return "همه بخش‌ها";
+  if (key === normalizeCmsLabel("حال‌وهوای امروز")) return "حال‌وهوای امروز";
+  if (key === normalizeCmsLabel("پیشنهاد امروز")) return "پیشنهاد امروز";
+  if (key === normalizeCmsLabel("منتخب")) return "منتخب";
   return value;
 }
 
@@ -766,18 +790,18 @@ function getEditorialContentForPlacement(placement: "حال‌وهوای امر�
   if (placement === "حال‌وهوای امروز") {
     // A date-bounded entry marked as an occasion takes priority over the normal daily rotation.
     const occasions = activeRows.filter((row) =>
-      dailyContentPlacement(row) === "مناسبت‌ها" && hasDateWindow(row)
+      normalizeCmsLabel(dailyContentPlacement(row)) === normalizeCmsLabel("مناسبت‌ها") && hasDateWindow(row)
     );
     pool = occasions.length
       ? occasions
       : activeRows.filter((row) => {
           const slot = dailyContentPlacement(row);
-          return slot === "حال‌وهوای امروز" || slot === "همه بخش‌ها";
+          return normalizeCmsLabel(slot) === normalizeCmsLabel("حال‌وهوای امروز") || normalizeCmsLabel(slot) === normalizeCmsLabel("همه بخش‌ها");
         });
   } else {
     pool = activeRows.filter((row) => {
       const slot = dailyContentPlacement(row);
-      return slot === placement || slot === "همه بخش‌ها";
+      return normalizeCmsLabel(slot) === normalizeCmsLabel(placement) || normalizeCmsLabel(slot) === normalizeCmsLabel("همه بخش‌ها");
     });
   }
 
