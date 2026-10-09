@@ -758,7 +758,12 @@ function getEditorialContentForPlacement(placement: "حال‌وهوای امر�
     .filter((row) => {
       const slot = dailyContentPlacement(row);
       if (placement === "حال‌وهوای امروز") {
-        return slot === placement || slot === "همه بخش‌ها" || slot === "مناسبت‌ها";
+        const hasDateWindow = Boolean(
+          cmsText(row, ["تاریخ شروع", "شروع", "start date"]) ||
+          cmsText(row, ["تاریخ پایان", "پایان", "end date"])
+        );
+        if (slot === "مناسبت‌ها") return hasDateWindow;
+        return slot === placement || slot === "همه بخش‌ها";
       }
       return slot === placement || slot === "همه بخش‌ها";
     })
@@ -769,7 +774,7 @@ function getEditorialContentForPlacement(placement: "حال‌وهوای امر�
     const category = cmsText(row, ["دسته", "دسته‌بندی", "category"]);
     const start = cmsText(row, ["تاریخ شروع", "شروع", "start date"]);
     const end = cmsText(row, ["تاریخ پایان", "پایان", "end date"]);
-    return /مناسبت/.test(category) || Boolean(start || end);
+    return Boolean(start || end) && (/مناسبت/.test(category) || Boolean(start || end));
   });
   const pool = placement === "حال‌وهوای امروز" && specialRows.length ? specialRows : rows;
   const index = stableDailyIndex(today + "|" + placement, pool.length);
