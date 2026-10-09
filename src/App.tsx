@@ -1493,7 +1493,10 @@ function HomePage({
             <Icon name="spark" />
           </div>
 
-          <article className={`daily-editorial daily-editorial--${editorialLayout}`}>
+          <article
+            className={`daily-editorial daily-editorial-card daily-editorial--${editorialLayout}`}
+            aria-label={`حال‌وهوای امروز: ${dailyContent?.title || "آرام‌تر نگاه کن"}`}
+          >
             <div className="daily-editorial-media">
               <img
                 src={editorialImageSrc}
@@ -1516,8 +1519,8 @@ function HomePage({
             </div>
             <div className="daily-editorial-copy">
               {dailyContent?.category && !["عمومی", "general", "all", "همه"].includes(normalizeCmsLabel(dailyContent.category).toLowerCase()) && <span className="daily-editorial-eyebrow">{dailyContent.category}</span>}
-              <h3>{dailyContent?.title || "آرام‌تر نگاه کن."}</h3>
-              <p>{dailyContent?.text || "گاهی یک نشانه کوچک، شروع یک نگاه تازه است."}</p>
+              <h3 className="daily-editorial-title">{dailyContent?.title || "آرام‌تر نگاه کن."}</h3>
+              <p className="daily-editorial-description">{dailyContent?.text || "گاهی یک نشانه کوچک، شروع یک نگاه تازه است."}</p>
             </div>
           </article>
         </section>
@@ -1525,7 +1528,7 @@ function HomePage({
         <section className="featured-section">
           <div className="section-heading-row">
             <div>
-              <div className="section-kicker">FEATURED</div>
+              <div className="section-kicker">DAILY SUGGESTION</div>
               <h2>پیشنهاد امروز</h2>
             </div>
           </div>
