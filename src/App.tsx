@@ -5089,6 +5089,14 @@ function BookingPage({
       const telegramProfile = await getTelegramProfile();
       const telegramId = telegramProfile.telegramId;
 
+      // Telegram reminders require a real Telegram user/chat ID.
+      // Never create a booking that cannot receive its customer reminder.
+      if (!telegramId) {
+        setState("error");
+        setMessage("برای دریافت یادآوری تلگرامی، لطفاً مینی‌اپ را از داخل ربات کائنات‌چی باز کن و دوباره تلاش کن.");
+        return;
+      }
+
       // A POST can time out after the backend has already committed the booking.
       // Recover by requestId before treating the attempt as failed, so a successful
       // booking never leaves a hidden hold that forces the customer to choose another slot.
