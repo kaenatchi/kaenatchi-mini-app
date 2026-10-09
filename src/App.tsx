@@ -1270,8 +1270,8 @@ function HomePage({
               <div className="today-decoration"><Icon name="spark" /></div>
             )}
             <div className="today-content" style={{ flex: '1 1 180px', minWidth: 0, overflowWrap: 'anywhere' }}>
-              <strong>{dailyContent?.title || 'آرام‌تر نگاه کن.'}</strong>
-              <span>{dailyContent?.text || 'گاهی یک نشانه کوچک، شروع یک نگاه تازه است.'}</span>
+              <strong style={{ display: 'block', color: 'var(--green-dark)', fontSize: 'clamp(15px, 2vw, 18px)', lineHeight: 1.7, overflowWrap: 'anywhere' }}>{dailyContent?.title || 'آرام‌تر نگاه کن.'}</strong>
+              <span style={{ display: 'block', marginTop: '12px', color: 'var(--muted)', fontSize: 'clamp(11px, 1.5vw, 13px)', lineHeight: 1.9, overflowWrap: 'anywhere' }}>{dailyContent?.text || 'گاهی یک نشانه کوچک، شروع یک نگاه تازه است.'}</span>
             </div>
           </div>
         </section>
