@@ -2160,12 +2160,14 @@ function ServicesPage({
                 <span className={"services-accordion-chevron " + (expandedClassEventId === "classes" ? "is-open" : "")}><Icon name="arrow" /></span>
               </button>
               <div className={"services-accordion-panel " + (expandedClassEventId === "classes" ? "is-open" : "")} aria-hidden={expandedClassEventId !== "classes"}>
-                {publishedClasses.length > 0 ? publishedClasses.map((item) => (
-                  <article className="services-detail-item" key={item.id}>
-                    <strong>{item.title}</strong>
-                    {item.description && <p>{item.description}</p>}
-                  </article>
-                )) : <p className="services-accordion-empty">هنوز دوره‌ای برای نمایش منتشر نشده است.</p>}
+                <div className="services-accordion-panel-inner">
+                  {publishedClasses.length > 0 ? publishedClasses.map((item) => (
+                    <article className="services-detail-item" key={item.id}>
+                      <strong>{item.title}</strong>
+                      {item.description && <p>{item.description}</p>}
+                    </article>
+                  )) : <p className="services-accordion-empty">هنوز دوره‌ای برای نمایش منتشر نشده است.</p>}
+                </div>
               </div>
             </section>
 
@@ -2180,12 +2182,14 @@ function ServicesPage({
                 <span className={"services-accordion-chevron " + (expandedClassEventId === "events" ? "is-open" : "")}><Icon name="arrow" /></span>
               </button>
               <div className={"services-accordion-panel " + (expandedClassEventId === "events" ? "is-open" : "")} aria-hidden={expandedClassEventId !== "events"}>
-                {publishedEvents.length > 0 ? publishedEvents.map((item) => (
-                  <article className="services-detail-item" key={item.id}>
-                    <strong>{item.title}</strong>
-                    {item.description && <p>{item.description}</p>}
-                  </article>
-                )) : <p className="services-accordion-empty">هنوز رویدادی برای نمایش منتشر نشده است.</p>}
+                <div className="services-accordion-panel-inner">
+                  {publishedEvents.length > 0 ? publishedEvents.map((item) => (
+                    <article className="services-detail-item" key={item.id}>
+                      <strong>{item.title}</strong>
+                      {item.description && <p>{item.description}</p>}
+                    </article>
+                  )) : <p className="services-accordion-empty">هنوز رویدادی برای نمایش منتشر نشده است.</p>}
+                </div>
               </div>
             </section>
           </div>
