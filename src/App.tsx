@@ -6292,24 +6292,15 @@ function App() {
   const touchStart = useRef<{ x: number; y: number; identifier: number } | null>(null);
   const [cmsReady, setCmsReady] = useState(false);
   const [cmsLoading, setCmsLoading] = useState(true);
-  const [loadingPercent, setLoadingPercent] = useState(8);
-
   useEffect(() => {
-    const progressTimer = window.setInterval(() => {
-      setLoadingPercent((value) => value < 88 ? Math.min(88, value + Math.max(1, Math.round((90 - value) / 9))) : value);
-    }, 260);
     let mounted = true;
     loadCmsData().then((ready) => {
       if (!mounted) return;
       setCmsReady(ready);
-      setLoadingPercent(100);
-      window.setTimeout(() => {
-        if (mounted) setCmsLoading(false);
-      }, 280);
+      setCmsLoading(false);
     });
     return () => {
       mounted = false;
-      window.clearInterval(progressTimer);
     };
   }, []);
 
@@ -6461,8 +6452,6 @@ function App() {
           <div className="cms-loading-mark" aria-hidden="true"><span className="loading-path-orbit loading-path-one" /><span className="loading-path-orbit loading-path-two" /><span className="loading-path-signature">ک</span></div>
           <strong>در حال آماده‌سازی کائنات‌چی</strong>
           <span>مسیر تو، آرام‌آرام آماده می‌شود...</span>
-          <div className="loading-progress" role="progressbar" aria-label="آماده‌سازی کائنات‌چی" aria-valuemin={0} aria-valuemax={100} aria-valuenow={loadingPercent}><span style={{ width: loadingPercent + "%" }} /></div>
-          <div className="loading-percent">{loadingPercent.toLocaleString("fa-IR")}٪</div>
         </div>
       </div>
     );
