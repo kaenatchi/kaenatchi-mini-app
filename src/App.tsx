@@ -2211,11 +2211,13 @@ function ServicesPage({
                 <span className={"services-accordion-chevron " + (openClassEvent === "classes" ? "is-open" : "")}><Icon name="arrow" /></span>
               </button>
               <div className={"services-accordion-panel " + (openClassEvent === "classes" ? "is-open" : "")} aria-hidden={openClassEvent !== "classes"}>
-                {publishedClasses.length ? publishedClasses.map((item) => (
-                  <button key={item.id} type="button" className="services-learning-item" onClick={() => { serviceScrollPosition.current = window.scrollY || document.documentElement.scrollTop || 0; setSelectedService({id:item.id,title:item.title,category:"class",price:"",duration:"",description:item.description}); }}>
-                    <strong>{item.title}</strong><span>{item.description || "برای مشاهده جزئیات این دوره انتخاب کن."}</span><span className="services-learning-open">مشاهده جزئیات ←</span>
-                  </button>
-                )) : <div className="services-learning-empty">هنوز دوره‌ای برای نمایش ثبت نشده است.</div>}
+                <div className="services-accordion-panel-inner">
+                  {publishedClasses.length ? publishedClasses.map((item) => (
+                    <button key={item.id} type="button" className="services-learning-item" onClick={() => { serviceScrollPosition.current = window.scrollY || document.documentElement.scrollTop || 0; setSelectedService({id:item.id,title:item.title,category:"class",price:"",duration:"",description:item.description}); }}>
+                      <strong>{item.title}</strong><span>{item.description || "برای مشاهده جزئیات این دوره انتخاب کن."}</span><span className="services-learning-open">مشاهده جزئیات ←</span>
+                    </button>
+                  )) : <div className="services-learning-empty">هنوز دوره‌ای برای نمایش ثبت نشده است.</div>}
+                </div>
               </div>
             </section>
 
@@ -2226,11 +2228,13 @@ function ServicesPage({
                 <span className={"services-accordion-chevron " + (openClassEvent === "events" ? "is-open" : "")}><Icon name="arrow" /></span>
               </button>
               <div className={"services-accordion-panel " + (openClassEvent === "events" ? "is-open" : "")} aria-hidden={openClassEvent !== "events"}>
-                {publishedEvents.length ? publishedEvents.map((item) => (
-                  <button key={item.id} type="button" className="services-learning-item" onClick={() => { serviceScrollPosition.current = window.scrollY || document.documentElement.scrollTop || 0; setSelectedService({id:item.id,title:item.title,category:"event",price:"",duration:"",description:item.description}); }}>
-                    <strong>{item.title}</strong><span>{item.description || "برای مشاهده جزئیات این رویداد انتخاب کن."}</span><span className="services-learning-open">مشاهده جزئیات ←</span>
-                  </button>
-                )) : <div className="services-learning-empty">هنوز رویدادی برای نمایش ثبت نشده است.</div>}
+                <div className="services-accordion-panel-inner">
+                  {publishedEvents.length ? publishedEvents.map((item) => (
+                    <button key={item.id} type="button" className="services-learning-item" onClick={() => { serviceScrollPosition.current = window.scrollY || document.documentElement.scrollTop || 0; setSelectedService({id:item.id,title:item.title,category:"event",price:"",duration:"",description:item.description}); }}>
+                      <strong>{item.title}</strong><span>{item.description || "برای مشاهده جزئیات این رویداد انتخاب کن."}</span><span className="services-learning-open">مشاهده جزئیات ←</span>
+                    </button>
+                  )) : <div className="services-learning-empty">هنوز رویدادی برای نمایش ثبت نشده است.</div>}
+                </div>
               </div>
             </section>
           </div>
@@ -4658,15 +4662,17 @@ function MoreDetail({
                       <span className={"services-accordion-chevron " + (categoryOpen ? "is-open" : "")}><Icon name="arrow" /></span>
                     </button>
                     <div className={"faq-question-panel " + (categoryOpen ? "is-open" : "")} aria-hidden={!categoryOpen}>
-                      {rows.map((item, index) => {
-                        const questionOpen = openFaqQuestion === item.question;
-                        return <div className="faq-question-item" key={item.question + index}>
-                          <button type="button" aria-expanded={questionOpen} className="faq-question-trigger" onClick={() => setOpenFaqQuestion(questionOpen ? null : item.question)}>
-                            <span>{item.question}</span><span>{questionOpen ? "−" : "+"}</span>
-                          </button>
-                          <div className={"faq-answer-panel " + (questionOpen ? "is-open" : "")} aria-hidden={!questionOpen}><p>{item.answer}</p></div>
-                        </div>;
-                      })}
+                      <div className="faq-question-panel-inner">
+                        {rows.map((item, index) => {
+                          const questionOpen = openFaqQuestion === item.question;
+                          return <div className="faq-question-item" key={item.question + index}>
+                            <button type="button" aria-expanded={questionOpen} className="faq-question-trigger" onClick={() => setOpenFaqQuestion(questionOpen ? null : item.question)}>
+                              <span>{item.question}</span><span>{questionOpen ? "−" : "+"}</span>
+                            </button>
+                            <div className={"faq-answer-panel " + (questionOpen ? "is-open" : "")} aria-hidden={!questionOpen}><p>{item.answer}</p></div>
+                          </div>;
+                        })}
+                      </div>
                     </div>
                   </section>
                 );
