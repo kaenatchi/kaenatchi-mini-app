@@ -706,10 +706,12 @@ function rebuildCmsContent(data: Partial<typeof cmsRows>) {
 }
 
 async function loadCmsData(): Promise<boolean> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 12000);
   try {
     const response = await fetch(
       `${CMS_API_URL}?action=getMiniAppData&_=${Date.now()}`,
-      { method: "GET", cache: "no-store" }
+      { method: "GET", cache: "no-store", signal: controller.signal }
     );
 
     if (!response.ok) return false;
@@ -724,6 +726,8 @@ async function loadCmsData(): Promise<boolean> {
     return true;
   } catch {
     return false;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 }
 
@@ -3273,7 +3277,7 @@ function formatVipJalaliDate(value: unknown): string {
     let year = Number(jalaliMatch[1]);
     const month = Number(jalaliMatch[2]);
     const day = Number(jalaliMatch[3]);
-    if (year >= 700 && year < 900) year += 620;
+    year = normalizeVipJalaliYear(year);
     if (year >= 1200 && year <= 1600 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
       const monthNames = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
       return `${day.toLocaleString("fa-IR")} ${monthNames[month - 1]} ${year.toLocaleString("fa-IR")}`;
@@ -3315,21 +3319,27 @@ function getVipTokenDisplayStatus(token: VipToken): {
   return { label: "فعال", color: "#246347", background: "rgba(36,99,71,0.08)", border: "rgba(36,99,71,0.08)" };
 }
 
+function normalizeVipJalaliYear(year: number): number {
+  return year >= 700 && year < 900 ? year + 620 : year;
+}
+
 function isVipTokenExpired(value: string): boolean {
   if (!value) return false;
-  const match = value.match(/^(\d{3,4})[\/-](\d{1,2})[\/-](\d{1,2})(?:\s*-\s*(\d{1,2}):(\d{2}))?$/);
+  const match = value.trim().match(/^(\d{3,4})[\/-](\d{1,2})[\/-](\d{1,2})(?:\s*-\s*(\d{1,2}):(\d{2}))?$/);
   if (!match) return false;
 
-  const target = [
-    Number(match[1]), Number(match[2]), Number(match[3]),
-    match[4] == null ? 23 : Number(match[4]),
-    match[5] == null ? 59 : Number(match[5]),
-  ];
+  const year = normalizeVipJalaliYear(Number(match[1]));
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = match[4] == null ? 23 : Number(match[4]);
+  const minute = match[5] == null ? 59 : Number(match[5]);
+  if (year < 1200 || year > 1600 || month < 1 || month > 12 || day < 1 || day > 31 || hour < 0 || hour > 23 || minute < 0 || minute > 59) return false;
 
+  const target = [year, month, day, hour, minute];
   try {
     const parts = new Intl.DateTimeFormat("en-US-u-ca-persian", {
       calendar: "persian", year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Tehran",
     }).formatToParts(new Date());
 
     const now = [
