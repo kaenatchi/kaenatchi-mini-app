@@ -1855,9 +1855,13 @@ function ServiceDetail({
   const icon =
     service.category === "energy"
       ? "energy"
-      : service.category === "candle"
+      : service.category === "candle" || service.category === "therapy"
         ? "candle"
-        : "conversation";
+        : service.category === "class"
+          ? "class"
+          : service.category === "event"
+            ? "event"
+            : "conversation";
 
   return (
     <div className="inner-page">
@@ -1904,27 +1908,27 @@ function ServiceDetail({
         </div>
       </div>
 
-      <button
-        type="button"
-        style={{
-          width: "100%",
-          marginTop: "16px",
-          border: "none",
-          borderRadius: "18px",
-          padding: "15px 18px",
-          background:
-            "linear-gradient(135deg, #174b38, #2c7658)",
-          color: "#fff",
-          fontFamily: "inherit",
-          fontSize: "15px",
-          cursor: "pointer",
-          boxShadow:
-            "0 10px 24px rgba(23, 75, 56, 0.2)",
-        }}
-        onClick={() => onOpenBooking(service)}
-      >
-        📅 دریافت نوبت
-      </button>
+      {service.category !== "class" && service.category !== "event" && (
+        <button
+          type="button"
+          style={{
+            width: "100%",
+            marginTop: "16px",
+            border: "none",
+            borderRadius: "18px",
+            padding: "15px 18px",
+            background: "linear-gradient(135deg, #174b38, #2c7658)",
+            color: "#fff",
+            fontFamily: "inherit",
+            fontSize: "15px",
+            cursor: "pointer",
+            boxShadow: "0 10px 24px rgba(23, 75, 56, 0.2)",
+          }}
+          onClick={() => onOpenBooking(service)}
+        >
+          📅 دریافت نوبت
+        </button>
+      )}
     </div>
   );
 }
