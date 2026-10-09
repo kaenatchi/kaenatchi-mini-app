@@ -4719,3 +4719,33 @@ button {
   }
   .services-page .services-category-card:active, .services-page .services-content-button:active { transform: none; }
 }
+
+
+/* FAQ: one calm, category-filtered accordion at a time */
+.faq-accordion-stack { gap: 10px; }
+.faq-category-trail { display:flex; align-items:center; gap:8px; padding:2px 3px 5px; color:#68766c; font-size:11px; }
+.faq-category-trail b { color:#9baf9d; font-size:17px; }
+.faq-category-trail strong { color:#315c43; font-weight:800; }
+.faq-category-chips { display:flex; gap:7px; overflow-x:auto; padding:2px 2px 8px; scrollbar-width:none; }
+.faq-category-chips button { flex:0 0 auto; padding:8px 13px; border:1px solid rgba(36,77,59,.15); border-radius:999px; background:#f3f1e8; color:#526257; font:inherit; font-size:11px; cursor:pointer; }
+.faq-category-chips button.is-active { background:#315d45; border-color:#315d45; color:#fff; box-shadow:0 6px 15px rgba(36,77,59,.14); }
+.faq-accordion-item { padding:0; overflow:hidden; }
+.faq-accordion-trigger { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-height:58px; padding:14px 16px; border:0; background:transparent; color:#244d3b; text-align:right; font:inherit; font-size:13px; font-weight:800; line-height:1.9; cursor:pointer; }
+.faq-accordion-trigger > span { min-width:0; }
+.faq-accordion-chevron { flex:0 0 27px; width:27px; height:27px; display:grid; place-items:center; border-radius:10px; background:rgba(36,99,71,.09); color:#315d45; font-size:18px; }
+.faq-accordion-answer { display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows .26s ease,opacity .2s ease; }
+.faq-accordion-answer p { min-height:0; overflow:hidden; margin:0; padding:0 16px; color:#53665a; font-size:12px; line-height:2.1; white-space:pre-line; }
+.faq-accordion-answer.is-open { grid-template-rows:1fr; opacity:1; }
+.faq-accordion-answer.is-open p { padding:0 16px 16px; }
+.faq-accordion-item.is-open { border-color:rgba(36,99,71,.25); }
+@media (prefers-color-scheme: dark) {
+  .faq-category-trail { color:#bdcbbf; }
+  .faq-category-trail strong { color:#d8e6d9; }
+  .faq-category-chips button { background:#2c3d32; border-color:rgba(218,232,220,.14); color:#c4d2c7; }
+  .faq-category-chips button.is-active { background:#53785c; border-color:#6e9876; color:#fff; }
+  .faq-accordion-trigger { color:#e5eee7; }
+  .faq-accordion-chevron { background:rgba(169,199,173,.12); color:#dce9de; }
+  .faq-accordion-answer p { color:#c3d0c6; }
+  .faq-accordion-item.is-open { border-color:rgba(169,199,173,.28); }
+}
+@media (prefers-reduced-motion: reduce) { .faq-accordion-answer { transition:none; } }
