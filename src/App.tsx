@@ -31,6 +31,7 @@ type ServiceCategory =
   | "energy"
   | "candle"
   | "psychotherapy"
+  | "therapy"
   | "class"
   | "event";
 
@@ -534,6 +535,7 @@ function cmsCategory(value: string, title: string): ServiceCategory {
 
   if (/شمعتراپی|شمع/.test(text)) return "candle";
   if (/سایکو?تراپی|سایکوتراپی|مشاوره|گفتوگو/.test(text)) return "psychotherapy";
+  if (/^تراپی$|^therapy$/.test(text)) return "therapy";
   return "energy";
 }
 
@@ -1022,10 +1024,9 @@ const DAILY_EDITORIAL_IMAGE_FALLBACKS = [
 
 function getCmsFaqRows() {
   return cmsRows.faq.filter(cmsActive).map((row) => ({
-    question:
-      cmsText(row, ["سؤال", "سوال", "question", "title"]) || "سؤال",
-    answer:
-      cmsText(row, ["پاسخ", "answer", "text", "توضیحات"]) || "",
+    question: cmsText(row, ["سؤال", "سوال", "question", "title"]) || "سؤال",
+    answer: cmsText(row, ["پاسخ", "answer", "text", "توضیحات"]) || "",
+    category: cmsText(row, ["دسته‌بندی", "دسته", "category", "گروه"]) || "عمومی",
   }));
 }
 
@@ -1932,6 +1933,8 @@ function ServicesPage({
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [activeCategory, setActiveCategory] = useState<ServiceCategory | null>(null);
   const [energyFilter, setEnergyFilter] = useState<"all" | "emotional" | "career" | "general">("all");
+  const [therapyFilter, setTherapyFilter] = useState<"candle" | "psychotherapy" | null>(null);
+  const [openClassEvent, setOpenClassEvent] = useState<string | null>(null);
 
   useEffect(() => {
     if (!focus || focus === "all") return;
@@ -1966,29 +1969,25 @@ function ServicesPage({
     {
       id: "energy",
       title: "انرژی‌خوانی",
-      description: "خوانش‌های مختلف برای احساسات، مسیر و موضوع مورد نظر تو.",
+      description: "خوانش‌های احساسی، شغلی، مالی و عمومی؛ محتوای خدمات از CMS خوانده می‌شود.",
       icon: "energy",
     },
     {
-      id: "candle",
-      title: "شمع‌تراپی",
-      description: "جلسه‌ای غیرحضوری با تمرکز بر نیت و موضوع انتخابی تو.",
+      id: "therapy",
+      title: "تراپی",
+      description: "شمع‌تراپی و سایکو‌تراپی در یک فضای منظم و قابل گسترش.",
       icon: "candle",
-    },
-    {
-      id: "psychotherapy",
-      title: "گفت‌وگو",
-      description: "جلسه‌ای گفت‌وگومحور برای صحبت درباره موضوع مورد نظر تو.",
-      icon: "conversation",
     },
   ];
 
   const categoryServices =
     activeCategory === "energy"
       ? energyServices
-      : activeCategory
-        ? mainServices.filter((service) => service.category === activeCategory)
-        : [];
+      : activeCategory === "therapy"
+        ? mainServices.filter((service) => service.category === "candle" || service.category === "psychotherapy" || service.category === "therapy")
+        : activeCategory
+          ? mainServices.filter((service) => service.category === activeCategory)
+          : [];
 
   const filteredEnergyServices =
     energyFilter === "all"
@@ -2006,10 +2005,15 @@ function ServicesPage({
   const visibleServices =
     activeCategory === "energy"
       ? filteredEnergyServices
-      : categoryServices;
+      : activeCategory === "therapy" && therapyFilter
+        ? categoryServices.filter((service) => service.category === therapyFilter || service.category === "therapy")
+        : activeCategory === "therapy"
+          ? []
+          : categoryServices;
 
   const openCategory = (category: ServiceCategory) => {
     setEnergyFilter("all");
+    setTherapyFilter(null);
     setActiveCategory(category);
     window.setTimeout(() => {
       window.scrollTo(0, 0);
@@ -2068,6 +2072,7 @@ function ServicesPage({
             onClick={() => {
               setActiveCategory(null);
               setEnergyFilter("all");
+              setTherapyFilter(null);
             }}
           >
             <span>→</span>
@@ -2080,7 +2085,7 @@ function ServicesPage({
                 name={
                   activeCategory === "energy"
                     ? "energy"
-                    : activeCategory === "candle"
+                    : activeCategory === "candle" || activeCategory === "therapy"
                       ? "candle"
                       : "conversation"
                 }
@@ -2090,19 +2095,40 @@ function ServicesPage({
               <span>
                 {activeCategory === "energy"
                   ? "ENERGY READING"
-                  : activeCategory === "candle"
-                    ? "CANDLE"
-                    : "CONVERSATION"}
+                  : activeCategory === "candle" || activeCategory === "therapy"
+                    ? "THERAPY"
+                    : "PSYCHOTHERAPY"}
               </span>
               <strong>
                 {activeCategory === "energy"
                   ? "انرژی‌خوانی"
                   : activeCategory === "candle"
                     ? "شمع‌تراپی"
-                    : "گفت‌وگو"}
+                    : activeCategory === "therapy"
+                      ? "تراپی"
+                      : "سایکو‌تراپی"}
               </strong>
             </div>
           </div>
+
+          {activeCategory === "therapy" && (
+            <div className="services-filter-row therapy-filter-row" aria-label="دسته‌بندی تراپی">
+              {([
+                ["candle", "شمع‌تراپی"],
+                ["psychotherapy", "سایکو‌تراپی"],
+              ] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={"services-filter-chip " + (therapyFilter === id ? "active" : "")}
+                  aria-pressed={therapyFilter === id}
+                  onClick={() => setTherapyFilter((current) => current === id ? null : id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {activeCategory === "energy" && (
             <div className="services-filter-row" aria-label="فیلتر انرژی‌خوانی">
@@ -2126,6 +2152,13 @@ function ServicesPage({
             </div>
           )}
 
+          {activeCategory === "therapy" && !therapyFilter && (
+            <div className="services-section-intro therapy-empty-prompt">
+              <span>یک مسیر را انتخاب کن</span>
+              <strong>شمع‌تراپی یا سایکو‌تراپی</strong>
+            </div>
+          )}
+
           <div className="service-list services-detail-list">
             {visibleServices.map((service) => (
               <ServiceCard
@@ -2146,51 +2179,35 @@ function ServicesPage({
           </div>
 
           <div className="services-content-lobby">
-            <button
-              id="services-classes"
-              type="button"
-              className={"services-content-card services-content-button " + (focus === "classes" ? "is-focused" : "")}
-              onClick={() => {
-                document.getElementById("services-classes")?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "center",
-                });
-              }}
-            >
-              <div className="services-content-icon"><Icon name="class" /></div>
-              <div className="list-copy">
-                <strong>کلاس‌ها</strong>
-                {publishedClasses.length > 0
-                  ? publishedClasses.map((item) => (
-                      <span key={item.id}>{item.title} — {item.description}</span>
-                    ))
-                  : <span>آموزش‌ها و دوره‌های کائنات‌چی به‌صورت خودکار اینجا نمایش داده می‌شوند.</span>}
+            <section id="services-classes" className={"services-content-card services-accordion-card " + (focus === "classes" ? "is-focused" : "")}>
+              <button type="button" className="services-content-trigger" aria-expanded={openClassEvent === "classes"} onClick={() => setOpenClassEvent((current) => current === "classes" ? null : "classes")}>
+                <span className="services-content-icon"><Icon name="class" /></span>
+                <span className="list-copy"><strong>کلاس‌ها</strong><span>{publishedClasses.length ? publishedClasses.length.toLocaleString("fa-IR") + " دوره" : "آموزش و دوره‌های کائنات‌چی"}</span></span>
+                <span className={"services-accordion-chevron " + (openClassEvent === "classes" ? "is-open" : "")}><Icon name="arrow" /></span>
+              </button>
+              <div className={"services-accordion-panel " + (openClassEvent === "classes" ? "is-open" : "")} aria-hidden={openClassEvent !== "classes"}>
+                {publishedClasses.length ? publishedClasses.map((item) => (
+                  <button key={item.id} type="button" className="services-learning-item" onClick={() => setSelectedService({id:item.id,title:item.title,category:"class",price:"",duration:"",description:item.description})}>
+                    <strong>{item.title}</strong><span>{item.description || "برای مشاهده جزئیات این دوره انتخاب کن."}</span><span className="services-learning-open">مشاهده جزئیات ←</span>
+                  </button>
+                )) : <div className="services-learning-empty">هنوز دوره‌ای برای نمایش ثبت نشده است.</div>}
               </div>
-              <div className="list-arrow"><Icon name="arrow" /></div>
-            </button>
+            </section>
 
-            <button
-              id="services-events"
-              type="button"
-              className={"services-content-card services-content-button " + (focus === "events" ? "is-focused" : "")}
-              onClick={() => {
-                document.getElementById("services-events")?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "center",
-                });
-              }}
-            >
-              <div className="services-content-icon"><Icon name="event" /></div>
-              <div className="list-copy">
-                <strong>ایونت‌ها</strong>
-                {publishedEvents.length > 0
-                  ? publishedEvents.map((item) => (
-                      <span key={item.id}>{item.title} — {item.description}</span>
-                    ))
-                  : <span>رویدادها و برنامه‌های پیش روی کائنات‌چی اینجا قرار می‌گیرند.</span>}
+            <section id="services-events" className={"services-content-card services-accordion-card " + (focus === "events" ? "is-focused" : "")}>
+              <button type="button" className="services-content-trigger" aria-expanded={openClassEvent === "events"} onClick={() => setOpenClassEvent((current) => current === "events" ? null : "events")}>
+                <span className="services-content-icon"><Icon name="event" /></span>
+                <span className="list-copy"><strong>ایونت‌ها</strong><span>{publishedEvents.length ? publishedEvents.length.toLocaleString("fa-IR") + " رویداد" : "رویدادها و برنامه‌های کائنات‌چی"}</span></span>
+                <span className={"services-accordion-chevron " + (openClassEvent === "events" ? "is-open" : "")}><Icon name="arrow" /></span>
+              </button>
+              <div className={"services-accordion-panel " + (openClassEvent === "events" ? "is-open" : "")} aria-hidden={openClassEvent !== "events"}>
+                {publishedEvents.length ? publishedEvents.map((item) => (
+                  <button key={item.id} type="button" className="services-learning-item" onClick={() => setSelectedService({id:item.id,title:item.title,category:"event",price:"",duration:"",description:item.description})}>
+                    <strong>{item.title}</strong><span>{item.description || "برای مشاهده جزئیات این رویداد انتخاب کن."}</span><span className="services-learning-open">مشاهده جزئیات ←</span>
+                  </button>
+                )) : <div className="services-learning-empty">هنوز رویدادی برای نمایش ثبت نشده است.</div>}
               </div>
-              <div className="list-arrow"><Icon name="arrow" /></div>
-            </button>
+            </section>
           </div>
         </>
       )}
@@ -3226,63 +3243,34 @@ function normalizeVipTokens(value: unknown): VipToken[] {
 }
 
 function formatVipJalaliDate(value: unknown): string {
-  if (!value) return "";
+  if (value === null || value === undefined || value === "") return "";
+  const raw = String(value).trim();
+  if (!raw) return "";
 
-  const text = String(value).trim();
-
-  // The VIP sheet can return a date as "00:00 784/04/16".
-  // Strip the time and normalize the legacy 3-digit Jalali year.
-  const match = text.match(/(?:^|\\s)(\\d{3,4})[\\/-](\\d{1,2})[\\/-](\\d{1,2})/);
-
-  if (!match) return text;
-
-  let year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-
-  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-    return text;
+  // Keep already-Jalali dates Jalali; handle common legacy shortened years.
+  const jalaliMatch = raw.match(/(?:^|\s)(\d{3,4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+  if (jalaliMatch) {
+    let year = Number(jalaliMatch[1]);
+    const month = Number(jalaliMatch[2]);
+    const day = Number(jalaliMatch[3]);
+    if (year >= 700 && year < 900) year += 620;
+    if (year >= 1200 && year <= 1600 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const monthNames = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+      return `${day.toLocaleString("fa-IR")} ${monthNames[month - 1]} ${year.toLocaleString("fa-IR")}`;
+    }
   }
 
-  // Legacy backend formatting can drop the leading "1" from a Jalali
-  // year in the 1400s (e.g. 784 => 1404).
-  if (year >= 700 && year < 900) {
-    year += 620;
+  // API dates that are actual timestamps or Gregorian dates must be converted
+  // with the Persian calendar rather than displayed as English/Gregorian text.
+  const date = new Date(raw);
+  if (!Number.isNaN(date.getTime())) {
+    try {
+      return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+        day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Tehran",
+      }).format(date);
+    } catch {}
   }
-
-  if (year < 1200 || year > 1600 || month < 1 || month > 12 || day < 1 || day > 31) {
-    return text;
-  }
-
-  try {
-    const dateText = `${year}/${month}/${day}`;
-    const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }).formatToParts(
-      new Date(
-        new Intl.DateTimeFormat("en-US", {
-          timeZone: "Asia/Tehran",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        }).format(new Date()) + "T00:00:00"
-      )
-    );
-
-    // Use the Jalali fields directly so we never reinterpret the stored
-    // membership date as a Gregorian date.
-    const monthNames = [
-      "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
-      "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
-    ];
-
-    void parts;
-    return `${day.toLocaleString("fa-IR") } ${monthNames[month - 1]} ${year.toLocaleString("fa-IR")}`;
-  } catch {
-    return `${day.toLocaleString("fa-IR")}/${month.toLocaleString("fa-IR")}/${year.toLocaleString("fa-IR")}`;
-  }
+  return raw.replace(/[0-9]/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
 }
 
 function getVipTokenDisplayStatus(token: VipToken): {
@@ -4608,6 +4596,9 @@ function MoreDetail({
   const isHours = title === "ساعات کاری";
   const isContact = title === "ارتباط با ما";
   const faqRows = getCmsFaqRows();
+  const faqCategories = Array.from(new Set(faqRows.map((item) => item.category)));
+  const [openFaqCategory, setOpenFaqCategory] = useState<string | null>(null);
+  const [openFaqQuestion, setOpenFaqQuestion] = useState<string | null>(null);
   const hoursText = cmsPageText(["ساعات", "hours"]) || cmsSetting(["hours", "ساعات"]);
   const telegram = cmsSetting(["telegram", "تلگرام"]) || "https://t.me/AD_Kaenatchi";
   const whatsapp = cmsSetting(["whatsapp", "واتساپ"]);
@@ -4624,17 +4615,40 @@ function MoreDetail({
       />
 
       {isFaq && (
-        <div className="more-info-stack">
-          {faqRows.length ? faqRows.map((item, index) => (
-            <div className="more-info-card" key={item.question + index}>
-              <strong>{item.question}</strong>
-              <span>{item.answer}</span>
+        <div className="faq-explorer">
+          <nav className="faq-breadcrumbs" aria-label="مسیر سوالات">
+            <button type="button" onClick={() => { setOpenFaqCategory(null); setOpenFaqQuestion(null); }}>همه</button>
+            {openFaqCategory && <><span>›</span><button type="button" onClick={() => setOpenFaqQuestion(null)}>{openFaqCategory}</button></>}
+            {openFaqQuestion && <><span>›</span><span>{openFaqQuestion}</span></>}
+          </nav>
+          {faqRows.length ? (
+            <div className="faq-category-list">
+              {faqCategories.map((category) => {
+                const rows = faqRows.filter((item) => item.category === category);
+                const categoryOpen = openFaqCategory === category;
+                return (
+                  <section className={"faq-category-card " + (categoryOpen ? "is-open" : "")} key={category}>
+                    <button type="button" className="faq-category-trigger" aria-expanded={categoryOpen} onClick={() => { setOpenFaqCategory(categoryOpen ? null : category); setOpenFaqQuestion(null); }}>
+                      <span><strong>{category}</strong><small>{rows.length.toLocaleString("fa-IR")} پرسش</small></span>
+                      <span className={"services-accordion-chevron " + (categoryOpen ? "is-open" : "")}><Icon name="arrow" /></span>
+                    </button>
+                    <div className={"faq-question-panel " + (categoryOpen ? "is-open" : "")} aria-hidden={!categoryOpen}>
+                      {rows.map((item, index) => {
+                        const questionOpen = openFaqQuestion === item.question;
+                        return <div className="faq-question-item" key={item.question + index}>
+                          <button type="button" aria-expanded={questionOpen} className="faq-question-trigger" onClick={() => setOpenFaqQuestion(questionOpen ? null : item.question)}>
+                            <span>{item.question}</span><span>{questionOpen ? "−" : "+"}</span>
+                          </button>
+                          <div className={"faq-answer-panel " + (questionOpen ? "is-open" : "")} aria-hidden={!questionOpen}><p>{item.answer}</p></div>
+                        </div>;
+                      })}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
-          )) : (
-            <div className="more-info-card">
-              <strong>هنوز محتوایی ثبت نشده</strong>
-              <span>این بخش را از پنل CMS تکمیل کن.</span>
-            </div>
+          ) : (
+            <div className="more-info-card"><strong>هنوز محتوایی ثبت نشده</strong><span>دسته‌بندی و پاسخ‌ها را از پنل CMS اضافه کن.</span></div>
           )}
         </div>
       )}
@@ -6241,16 +6255,24 @@ function App() {
   const touchStart = useRef<{ x: number; y: number; identifier: number } | null>(null);
   const [cmsReady, setCmsReady] = useState(false);
   const [cmsLoading, setCmsLoading] = useState(true);
+  const [loadingPercent, setLoadingPercent] = useState(8);
 
   useEffect(() => {
+    const progressTimer = window.setInterval(() => {
+      setLoadingPercent((value) => value < 88 ? Math.min(88, value + Math.max(1, Math.round((90 - value) / 9))) : value);
+    }, 260);
     let mounted = true;
     loadCmsData().then((ready) => {
       if (!mounted) return;
       setCmsReady(ready);
-      setCmsLoading(false);
+      setLoadingPercent(100);
+      window.setTimeout(() => {
+        if (mounted) setCmsLoading(false);
+      }, 280);
     });
     return () => {
       mounted = false;
+      window.clearInterval(progressTimer);
     };
   }, []);
 
@@ -6399,9 +6421,11 @@ function App() {
     return (
       <div className="app-shell app-shell-loading">
         <div className="cms-loading-card">
-          <div className="cms-loading-mark">✦</div>
+          <div className="cms-loading-mark" aria-hidden="true"><span className="loading-path-orbit loading-path-one" /><span className="loading-path-orbit loading-path-two" /><span className="loading-path-signature">ک</span></div>
           <strong>در حال آماده‌سازی کائنات‌چی</strong>
-          <span>در حال دریافت تازه‌ترین محتوا...</span>
+          <span>مسیر تو، آرام‌آرام آماده می‌شود...</span>
+          <div className="loading-progress" role="progressbar" aria-label="آماده‌سازی کائنات‌چی" aria-valuemin={0} aria-valuemax={100} aria-valuenow={loadingPercent}><span style={{ width: loadingPercent + "%" }} /></div>
+          <div className="loading-percent">{loadingPercent.toLocaleString("fa-IR")}٪</div>
         </div>
       </div>
     );
@@ -6411,9 +6435,10 @@ function App() {
     return (
       <div className="app-shell app-shell-loading">
         <div className="cms-loading-card">
-          <div className="cms-loading-mark">!</div>
+          <div className="cms-loading-mark" aria-hidden="true">ک</div>
           <strong>محتوا در دسترس نیست</strong>
           <span>اتصال به سامانه محتوا برقرار نشد. لطفاً چند لحظه بعد دوباره تلاش کن.</span>
+          <button type="button" className="loading-retry-button" onClick={() => window.location.reload()}>تلاش دوباره</button>
         </div>
       </div>
     );
