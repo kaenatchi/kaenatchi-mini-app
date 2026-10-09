@@ -431,6 +431,7 @@ const cmsRows: {
   faq: CmsRow[];
   pages: CmsRow[];
   settings: CmsRow[];
+  dailyContent: CmsRow[];
   bookingContent: CmsRow[];
 } = {
   services: [],
@@ -439,6 +440,7 @@ const cmsRows: {
   faq: [],
   pages: [],
   settings: [],
+  dailyContent: [],
   bookingContent: [],
 };
 
@@ -666,6 +668,7 @@ function rebuildCmsContent(data: Partial<typeof cmsRows>) {
   cmsRows.faq = Array.isArray(data.faq) ? data.faq : [];
   cmsRows.pages = Array.isArray(data.pages) ? data.pages : [];
   cmsRows.settings = Array.isArray(data.settings) ? data.settings : [];
+  cmsRows.dailyContent = Array.isArray(data.dailyContent) ? data.dailyContent : [];
   cmsRows.bookingContent = Array.isArray(data.bookingContent) ? data.bookingContent : [];
 
   const allServices = mapCmsServices(cmsRows.services);
@@ -718,6 +721,27 @@ async function loadCmsData(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function getDailyContentForToday() {
+  const today = getTodayJalali().replace(/[^0-9/]/g, '');
+  const rows = cmsRows.dailyContent.filter(cmsActive).filter((row) => {
+    const start = cmsText(row, ['تاریخ شروع', 'شروع', 'start date']).replace(/[^0-9/]/g, '');
+    const end = cmsText(row, ['تاریخ پایان', 'پایان', 'end date']).replace(/[^0-9/]/g, '');
+    return (!start || start <= today) && (!end || end >= today);
+  }).sort((a, b) => (Number(cmsText(a, ['ترتیب', 'order'])) || 0) - (Number(cmsText(b, ['ترتیب', 'order'])) || 0));
+  if (!rows.length) return null;
+  const day = getTodayJalali();
+  let hash = 0;
+  for (let i = 0; i < day.length; i += 1) hash = (hash * 31 + day.charCodeAt(i)) >>> 0;
+  const index = hash % rows.length;
+  const row = rows[index];
+  return {
+    id: cmsText(row, ['شناسه', 'id']) || `daily-${index + 1}`,
+    title: cmsText(row, ['عنوان', 'title']) || 'حال‌وهوای امروز',
+    text: cmsText(row, ['متن', 'محتوا', 'توضیحات', 'text', 'content']),
+    imageUrl: cmsText(row, ['لینک تصویر', 'تصویر', 'image url', 'image']),
+  };
 }
 
 function getCmsFaqRows() {
@@ -1151,6 +1175,7 @@ function HomePage({
   onOpenVip: () => void;
 }) {
   const today = getTodayJalali();
+  const dailyContent = getDailyContentForToday();
 
   return (
     <>
@@ -1233,17 +1258,15 @@ function HomePage({
             <Icon name="spark" />
           </div>
 
-          <div className="today-card">
-            <div className="today-decoration">
-              <Icon name="spark" />
-            </div>
-
-            <div className="today-content">
-              <strong>آرام‌تر نگاه کن.</strong>
-
-              <span>
-                گاهی یک نشانه کوچک، شروع یک نگاه تازه است.
-              </span>
+          <div className="today-card" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 3vw, 22px)', flexWrap: 'wrap', minWidth: 0 }}>
+            {dailyContent?.imageUrl ? (
+              <img src={dailyContent.imageUrl} alt={dailyContent.title} loading="lazy" decoding="async" style={{ width: 'clamp(96px, 28%, 168px)', maxWidth: '100%', aspectRatio: '4 / 5', objectFit: 'cover', objectPosition: 'center', borderRadius: '16px', flex: '0 1 168px' }} />
+            ) : (
+              <div className="today-decoration"><Icon name="spark" /></div>
+            )}
+            <div className="today-content" style={{ flex: '1 1 180px', minWidth: 0, overflowWrap: 'anywhere' }}>
+              <strong>{dailyContent?.title || 'آرام‌تر نگاه کن.'}</strong>
+              <span>{dailyContent?.text || 'گاهی یک نشانه کوچک، شروع یک نگاه تازه است.'}</span>
             </div>
           </div>
         </section>
