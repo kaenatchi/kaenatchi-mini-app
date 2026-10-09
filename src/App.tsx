@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "react";
+import { createPortal } from "react-dom";
 
 type Section = "home" | "services" | "booking" | "selected" | "more";
 
@@ -1458,6 +1459,46 @@ function HomePage({
   const [suggestionOpen, setSuggestionOpen] = useState(false);
   const suggestionImageSrc = getDailyEditorialImage(suggestion);
   const openSuggestion = () => setSuggestionOpen(true);
+  useEffect(() => {
+    if (!suggestionOpen) return;
+
+    // Keep the current page position while the practice dialog is open.
+    // The dialog itself is portalled to document.body so transformed page
+    // sections cannot change the fixed overlay's containing block.
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const previousStyles = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSuggestionOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      body.style.position = previousStyles.position;
+      body.style.top = previousStyles.top;
+      body.style.left = previousStyles.left;
+      body.style.right = previousStyles.right;
+      body.style.width = previousStyles.width;
+      body.style.overflow = previousStyles.overflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [suggestionOpen]);
 
   return (
     <>
@@ -1609,10 +1650,8 @@ function HomePage({
           </article>
         </section>
 
-        {suggestionOpen && (
-          <div className="practical-suggestion-overlay" role="presentation" onKeyDown={(event) => {
-            if (event.key === "Escape") setSuggestionOpen(false);
-          }} onMouseDown={(event) => {
+        {suggestionOpen && createPortal(
+          <div className="practical-suggestion-overlay" role="presentation" onMouseDown={(event) => {
             if (event.target === event.currentTarget) setSuggestionOpen(false);
           }}>
             <section className="practical-suggestion-dialog" role="dialog" aria-modal="true" aria-labelledby="practical-suggestion-dialog-title">
@@ -1626,7 +1665,8 @@ function HomePage({
               </div>
               <button type="button" className="practical-suggestion-done" onClick={() => setSuggestionOpen(false)}>تمام، برمی‌گردم <span aria-hidden="true">←</span></button>
             </section>
-          </div>
+          </div>,
+          document.body
         )}
 
       </main>
