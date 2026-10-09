@@ -931,7 +931,7 @@ function getTodaySuggestion(): TodaySuggestion {
       const body = cmsText(row, ["متن", "محتوا", "توضیحات", "text", "content", "شرح کوتاه", "خلاصه"]);
       const combined = normalizeCmsLabel(title + " " + body);
       if (category === normalizeCmsLabel("معرفی خدمات")) return false;
-      if (/خدماتکائناتچی|کلاسها|دورهها|رویدادهایفعال|خدماتکائناتچی|گزینههایخدمات/.test(combined)) return false;
+      if (/خدماتکائناتچی|کلاسها|دورهها|رویدادهایفعال|گزینههایخدمات|خدمتیاکلاس/.test(combined)) return false;
       return true;
     })
     .sort((a, b) => (Number(cmsText(a, ["ترتیب", "order"])) || 0) - (Number(cmsText(b, ["ترتیب", "order"])) || 0));
@@ -1610,7 +1610,9 @@ function HomePage({
         </section>
 
         {suggestionOpen && (
-          <div className="practical-suggestion-overlay" role="presentation" onMouseDown={(event) => {
+          <div className="practical-suggestion-overlay" role="presentation" onKeyDown={(event) => {
+            if (event.key === "Escape") setSuggestionOpen(false);
+          }} onMouseDown={(event) => {
             if (event.target === event.currentTarget) setSuggestionOpen(false);
           }}>
             <section className="practical-suggestion-dialog" role="dialog" aria-modal="true" aria-labelledby="practical-suggestion-dialog-title">
