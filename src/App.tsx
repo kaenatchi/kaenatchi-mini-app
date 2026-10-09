@@ -661,25 +661,15 @@ function cmsPageText(keys: string[]): string {
   return "";
 }
 
-function cmsRowsFromPayload(value: unknown): CmsRow[] {
-  if (Array.isArray(value)) return value as CmsRow[];
-  if (value && typeof value === "object") {
-    const rows = (value as { rows?: unknown }).rows;
-    if (Array.isArray(rows)) return rows as CmsRow[];
-  }
-  return [];
-}
-
-function rebuildCmsContent(data: Partial<typeof cmsRows> & Record<string, unknown>) {
-  cmsRows.services = cmsRowsFromPayload(data.services);
-  cmsRows.courses = cmsRowsFromPayload(data.courses);
-  cmsRows.events = cmsRowsFromPayload(data.events);
-  cmsRows.faq = cmsRowsFromPayload(data.faq);
-  cmsRows.pages = cmsRowsFromPayload(data.pages);
-  cmsRows.settings = cmsRowsFromPayload(data.settings);
-  // Apps Script returns these collections as { headers, rows }, not plain arrays.
-  cmsRows.dailyContent = cmsRowsFromPayload(data.dailyContent);
-  cmsRows.bookingContent = cmsRowsFromPayload(data.bookingContent);
+function rebuildCmsContent(data: Partial<typeof cmsRows>) {
+  cmsRows.services = Array.isArray(data.services) ? data.services : [];
+  cmsRows.courses = Array.isArray(data.courses) ? data.courses : [];
+  cmsRows.events = Array.isArray(data.events) ? data.events : [];
+  cmsRows.faq = Array.isArray(data.faq) ? data.faq : [];
+  cmsRows.pages = Array.isArray(data.pages) ? data.pages : [];
+  cmsRows.settings = Array.isArray(data.settings) ? data.settings : [];
+  cmsRows.dailyContent = Array.isArray(data.dailyContent) ? data.dailyContent : [];
+  cmsRows.bookingContent = Array.isArray(data.bookingContent) ? data.bookingContent : [];
 
   const allServices = mapCmsServices(cmsRows.services);
   mainServices = allServices;
