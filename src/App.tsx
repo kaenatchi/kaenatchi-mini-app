@@ -1026,6 +1026,8 @@ function getCmsFaqRows() {
       cmsText(row, ["سؤال", "سوال", "question", "title"]) || "سؤال",
     answer:
       cmsText(row, ["پاسخ", "answer", "text", "توضیحات"]) || "",
+    category:
+      cmsText(row, ["دسته‌بندی", "دسته", "موضوع", "category", "group"]) || "عمومی",
   }));
 }
 
@@ -4603,6 +4605,10 @@ function MoreDetail({
   const isHours = title === "ساعات کاری";
   const isContact = title === "ارتباط با ما";
   const faqRows = getCmsFaqRows();
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [faqCategory, setFaqCategory] = useState("همه");
+  const faqCategories = ["همه", ...Array.from(new Set(faqRows.map((item) => item.category)))];
+  const visibleFaqRows = faqCategory === "همه" ? faqRows : faqRows.filter((item) => item.category === faqCategory);
   const hoursText = cmsPageText(["ساعات", "hours"]) || cmsSetting(["hours", "ساعات"]);
   const telegram = cmsSetting(["telegram", "تلگرام"]) || "https://t.me/AD_Kaenatchi";
   const whatsapp = cmsSetting(["whatsapp", "واتساپ"]);
@@ -4619,16 +4625,38 @@ function MoreDetail({
       />
 
       {isFaq && (
-        <div className="more-info-stack">
-          {faqRows.length ? faqRows.map((item, index) => (
-            <div className="more-info-card" key={item.question + index}>
-              <strong>{item.question}</strong>
-              <span>{item.answer}</span>
-            </div>
-          )) : (
+        <div className="more-info-stack faq-accordion-stack">
+          {faqRows.length ? (
+            <>
+              <div className="faq-category-trail" aria-live="polite">
+                <span>همه</span>{faqCategory !== "همه" && <><b>›</b><strong>{faqCategory}</strong></>}
+              </div>
+              <div className="faq-category-chips" aria-label="دسته‌بندی پرسش‌ها">
+                {faqCategories.map((category) => (
+                  <button key={category} type="button" className={faqCategory === category ? "is-active" : ""} onClick={() => { setFaqCategory(category); setExpandedFaq(null); }}>
+                    {category}
+                  </button>
+                ))}
+              </div>
+              {visibleFaqRows.map((item, index) => {
+                const rowId = faqRows.indexOf(item);
+                const open = expandedFaq === rowId;
+                return (
+                  <section className={"more-info-card faq-accordion-item " + (open ? "is-open" : "")} key={item.question + index}>
+                    <button type="button" className="faq-accordion-trigger" aria-expanded={open} onClick={() => setExpandedFaq(open ? null : rowId)}>
+                      <span>{item.question}</span><b className="faq-accordion-chevron">{open ? "−" : "+"}</b>
+                    </button>
+                    <div className={"faq-accordion-answer " + (open ? "is-open" : "")} aria-hidden={!open}>
+                      <p>{item.answer}</p>
+                    </div>
+                  </section>
+                );
+              })}
+            </>
+          ) : (
             <div className="more-info-card">
               <strong>هنوز محتوایی ثبت نشده</strong>
-              <span>این بخش را از پنل CMS تکمیل کن.</span>
+              <span>پرسش‌ها از پنل مدیریت کائنات‌چی نمایش داده می‌شوند.</span>
             </div>
           )}
         </div>
