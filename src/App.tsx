@@ -723,33 +723,111 @@ async function loadCmsData(): Promise<boolean> {
   }
 }
 
-function getDailyContentForToday() {
+function dailyContentPlacement(row: CmsRow): string {
+  const value = cmsText(row, ["محل نمایش", "جایگاه نمایش", "placement", "display in"]).trim();
+  if (!value) return "حال‌وهوای امروز";
+  return value;
+}
+
+function isDailyContentInRange(row: CmsRow, today: string): boolean {
   const normalizeDate = (value: string) => {
     const normalized = value
-      .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
-      .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
-      .replace(/-/g, '/')
-      .replace(/[^0-9/]/g, '');
-    return normalized.includes('/') ? normalizeJalaliKey(normalized) : '';
+      .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+      .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+      .replace(/-/g, "/")
+      .replace(/[^0-9/]/g, "");
+    return normalized.includes("/") ? normalizeJalaliKey(normalized) : "";
   };
-  const today = getTodayJalaliKey();
-  const rows = cmsRows.dailyContent.filter(cmsActive).filter((row) => {
-    const start = normalizeDate(cmsText(row, ['تاریخ شروع', 'شروع', 'start date']));
-    const end = normalizeDate(cmsText(row, ['تاریخ پایان', 'پایان', 'end date']));
-    return (!start || start <= today) && (!end || end >= today);
-  }).sort((a, b) => (Number(cmsText(a, ['ترتیب', 'order'])) || 0) - (Number(cmsText(b, ['ترتیب', 'order'])) || 0));
-  if (!rows.length) return null;
-  const day = today;
+  const start = normalizeDate(cmsText(row, ["تاریخ شروع", "شروع", "start date"]));
+  const end = normalizeDate(cmsText(row, ["تاریخ پایان", "پایان", "end date"]));
+  return (!start || start <= today) && (!end || end >= today);
+}
+
+function stableDailyIndex(seed: string, length: number): number {
+  if (!length) return 0;
   let hash = 0;
-  for (let i = 0; i < day.length; i += 1) hash = (hash * 31 + day.charCodeAt(i)) >>> 0;
-  const index = hash % rows.length;
-  const row = rows[index];
+  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return hash % length;
+}
+
+function getEditorialContentForPlacement(placement: "حال‌وهوای امروز" | "پیشنهاد امروز" | "منتخب") {
+  const today = getTodayJalaliKey();
+  const rows = cmsRows.dailyContent
+    .filter(cmsActive)
+    .filter((row) => isDailyContentInRange(row, today))
+    .filter((row) => {
+      const slot = dailyContentPlacement(row);
+      if (placement === "حال‌وهوای امروز") {
+        return slot === placement || slot === "همه بخش‌ها" || slot === "مناسبت‌ها";
+      }
+      return slot === placement || slot === "همه بخش‌ها";
+    })
+    .sort((a, b) => (Number(cmsText(a, ["ترتیب", "order"])) || 0) - (Number(cmsText(b, ["ترتیب", "order"])) || 0));
+
+  if (!rows.length) return null;
+  const specialRows = rows.filter((row) => {
+    const category = cmsText(row, ["دسته", "دسته‌بندی", "category"]);
+    const start = cmsText(row, ["تاریخ شروع", "شروع", "start date"]);
+    const end = cmsText(row, ["تاریخ پایان", "پایان", "end date"]);
+    return /مناسبت/.test(category) || Boolean(start || end);
+  });
+  const pool = placement === "حال‌وهوای امروز" && specialRows.length ? specialRows : rows;
+  const index = stableDailyIndex(today + "|" + placement, pool.length);
+  const row = pool[index];
   return {
-    id: cmsText(row, ['شناسه', 'id']) || `daily-${index + 1}`,
-    title: cmsText(row, ['عنوان', 'title']) || 'حال‌وهوای امروز',
-    text: cmsText(row, ['متن', 'محتوا', 'توضیحات', 'text', 'content']),
-    imageUrl: cmsText(row, ['لینک تصویر', 'تصویر', 'image url', 'image']),
+    id: cmsText(row, ["شناسه", "id"]) || "daily-" + (index + 1),
+    title: cmsText(row, ["عنوان", "title"]) || placement,
+    text: cmsText(row, ["متن", "محتوا", "توضیحات", "text", "content"]),
+    imageUrl: cmsText(row, ["لینک تصویر", "تصویر", "image url", "image"]),
+    category: cmsText(row, ["دسته", "دسته‌بندی", "category"]),
   };
+}
+
+function getDailyContentForToday() {
+  return getEditorialContentForPlacement("حال‌وهوای امروز");
+}
+
+type TodaySuggestion = {
+  id: string;
+  title: string;
+  description: string;
+  badge: string;
+  icon: IconName;
+  service?: Service;
+  type: "service" | "class" | "event" | "editorial";
+  imageUrl?: string;
+};
+
+function getTodaySuggestion(): TodaySuggestion {
+  const editorial = getEditorialContentForPlacement("پیشنهاد امروز");
+  const pool: TodaySuggestion[] = [
+    ...mainServices.map((service) => ({
+      id: "service-" + service.id,
+      title: service.title,
+      description: service.description,
+      badge: "خدمت قابل رزرو",
+      icon: (service.category === "candle" ? "candle" : service.category === "psychotherapy" ? "conversation" : "energy") as IconName,
+      service,
+      type: "service" as const,
+    })),
+    ...publishedClasses.map((item) => ({ id: item.id, title: item.title, description: item.description, badge: "کلاس", icon: "class" as IconName, type: "class" as const })),
+    ...publishedEvents.map((item) => ({ id: item.id, title: item.title, description: item.description, badge: "رویداد", icon: "event" as IconName, type: "event" as const })),
+  ];
+  const candidates: TodaySuggestion[] = editorial
+    ? [{ id: editorial.id, title: editorial.title, description: editorial.text, badge: "محتوای کاربردی", icon: "spark", type: "editorial", imageUrl: editorial.imageUrl }, ...pool]
+    : pool;
+  if (!candidates.length) {
+    return {
+      id: "default-pause",
+      title: "برای خودت یک مکث بساز.",
+      description: "گاهی چند دقیقه مکث، فرصت تازه‌ای برای دیدن چیزهای ساده به ما می‌دهد.",
+      badge: "پیشنهاد کائنات‌چی",
+      icon: "spark",
+      type: "editorial",
+    };
+  }
+  const index = stableDailyIndex(getTodayJalaliKey() + "|suggestion", candidates.length);
+  return candidates[index];
 }
 
 function getDailyContentImageSrc(value: string) {
@@ -1199,12 +1277,31 @@ function AppFooter() {
 function HomePage({
   onSearch,
   onOpenVip,
+  onNavigate,
+  onOpenService,
 }: {
   onSearch: () => void;
   onOpenVip: () => void;
+  onNavigate: (section: Section) => void;
+  onOpenService: (service: Service) => void;
 }) {
   const today = getTodayJalali();
   const dailyContent = getDailyContentForToday();
+  const suggestion = getTodaySuggestion();
+  const openSuggestion = () => {
+    if (suggestion.service) {
+      onOpenService(suggestion.service);
+      return;
+    }
+    if (suggestion.type === "class" || suggestion.type === "event") {
+      onNavigate("services");
+      window.setTimeout(() => {
+        document.getElementById(suggestion.type === "class" ? "services-classes" : "services-events")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 120);
+      return;
+    }
+    if (suggestion.type === "editorial") onNavigate("selected");
+  };
 
   return (
     <>
@@ -1303,37 +1400,32 @@ function HomePage({
         <section className="featured-section">
           <div className="section-heading-row">
             <div>
-              <div className="section-kicker">
-                FEATURED
-              </div>
-
+              <div className="section-kicker">FEATURED</div>
               <h2>پیشنهاد امروز</h2>
             </div>
           </div>
 
-          <div className="featured-card">
+          <button type="button" className="featured-card" onClick={openSuggestion} aria-label={`مشاهده ${suggestion.title}`} style={{ width: "100%", textAlign: "inherit", cursor: "pointer", fontFamily: "inherit", color: "inherit" }}>
             <div className="featured-art">
-              <div className="featured-circle">
-                <div className="featured-leaf leaf-a" />
-                <div className="featured-leaf leaf-b" />
-                <div className="featured-leaf leaf-c" />
-                <Icon name="spark" />
-              </div>
+              {suggestion.imageUrl ? (
+                <img src={getDailyContentImageSrc(suggestion.imageUrl)} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
+              ) : (
+                <div className="featured-circle">
+                  <div className="featured-leaf leaf-a" />
+                  <div className="featured-leaf leaf-b" />
+                  <div className="featured-leaf leaf-c" />
+                  <Icon name={suggestion.icon} />
+                </div>
+              )}
             </div>
 
             <div className="featured-copy">
-              <div className="featured-label">
-                KAENATCHI MOMENT
-              </div>
-
-              <h3>برای خودت یک مکث بساز.</h3>
-
-              <p>
-                فضای کائنات‌چی برای تجربه‌ای آرام، شخصی و متفاوت
-                طراحی شده است.
-              </p>
+              <div className="featured-label">{suggestion.badge}</div>
+              <h3>{suggestion.title}</h3>
+              <p>{suggestion.description || "برای آشنایی بیشتر، این انتخاب را ببین."}</p>
+              <span className="selected-feature-link" style={{ display: "inline-block", marginTop: "10px" }}>مشاهده <span>←</span></span>
             </div>
-          </div>
+          </button>
         </section>
 
       </main>
@@ -1864,9 +1956,18 @@ function SelectedPage({
 }) {
   const [revealOpen, setRevealOpen] = useState(false);
   const [path, setPath] = useState<"all" | "calm" | "clarity" | "learning">("all");
+  const curatedContent = cmsRows.dailyContent
+    .filter(cmsActive)
+    .filter((row) => {
+      const placement = dailyContentPlacement(row);
+      return placement === "منتخب" || placement === "همه بخش‌ها";
+    })
+    .filter((row) => isDailyContentInRange(row, getTodayJalaliKey()))
+    .sort((a, b) => (Number(cmsText(a, ["ترتیب", "order"])) || 0) - (Number(cmsText(b, ["ترتیب", "order"])) || 0));
 
+  const uniqueServices = Array.from(new Map<string, Service>(mainServices.map((service) => [service.id, service] as const)).values());
   const allSelected: Array<SearchItem & { badge: string }> = [
-    ...mainServices.map((service) => ({
+    ...uniqueServices.map((service) => ({
       id: service.id,
       title: service.title,
       description: service.description,
@@ -1878,15 +1979,6 @@ function SelectedPage({
           : "conversation") as IconName,
       service,
       badge: "خدمت",
-    })),
-    ...energyServices.map((service) => ({
-      id: service.id,
-      title: service.title,
-      description: service.description,
-      type: "service" as const,
-      icon: "energy" as IconName,
-      service,
-      badge: "انرژی‌خوانی",
     })),
     ...publishedClasses.map((item) => ({ ...item, badge: "کلاس" })),
     ...publishedEvents.map((item) => ({ ...item, badge: "ایونت" })),
@@ -1946,6 +2038,30 @@ function SelectedPage({
         </div>
         <div className="selected-intro-line" />
       </section>
+
+      {curatedContent.length > 0 && (
+        <section className="selected-now">
+          <div className="selected-section-heading">
+            <span>از کتابخانهٔ محتوا</span>
+            <strong>مطالب منتخب</strong>
+          </div>
+          <div className="selected-mini-grid">
+            {curatedContent.map((row, index) => {
+              const imageUrl = cmsText(row, ["لینک تصویر", "تصویر", "image url", "image"]);
+              const title = cmsText(row, ["عنوان", "title"]) || "منتخب کائنات‌چی";
+              const text = cmsText(row, ["متن", "محتوا", "توضیحات", "text", "content"]);
+              return (
+                <article className="selected-mini-card" key={cmsText(row, ["شناسه", "id"]) || "curated-" + index}>
+                  {imageUrl && <img src={getDailyContentImageSrc(imageUrl)} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.style.display = "none"; }} style={{ width: "100%", maxHeight: "150px", objectFit: "cover", borderRadius: "12px", marginBottom: "10px" }} />}
+                  <small>مطلب منتخب</small>
+                  <strong>{title}</strong>
+                  <span>{text}</span>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {featured ? (
         <button
@@ -6246,6 +6362,11 @@ function App() {
           <HomePage
             onSearch={openSearch}
             onOpenVip={openVip}
+            onNavigate={changeSection}
+            onOpenService={(service) => {
+              setSearchOpen(true);
+              setSearchService(service);
+            }}
           />
         )}
 
