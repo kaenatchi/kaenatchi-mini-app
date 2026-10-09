@@ -942,6 +942,11 @@ button:active,
   padding: 0;
 }
 
+/* Keep decorative particles off the editorial photograph. */
+.today-card.daily-content-card::after {
+  display: none;
+}
+
 .today-card.daily-content-card .today-card-image {
   display: block;
   width: 100%;
