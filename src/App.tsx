@@ -1880,33 +1880,24 @@ function ServiceDetail({
         icon={icon}
       />
 
-      <div className="glass-list-card">
-        <div className="list-copy">
-          {service.duration && (
-            <div
-              style={{
-                marginBottom: "10px",
-              }}
-            >
-              <strong>مدت زمان</strong>
-
-              <span>
-                {service.duration}
-              </span>
-            </div>
-          )}
-
-          {service.price && (
-            <div>
-              <strong>هزینه</strong>
-
-              <span>
-                {service.price}
-              </span>
-            </div>
-          )}
+      {(service.duration || service.price) && (
+        <div className="glass-list-card">
+          <div className="list-copy">
+            {service.duration && (
+              <div style={{ marginBottom: "10px" }}>
+                <strong>مدت زمان</strong>
+                <span>{service.duration}</span>
+              </div>
+            )}
+            {service.price && (
+              <div>
+                <strong>هزینه</strong>
+                <span>{service.price}</span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {service.category !== "class" && service.category !== "event" && (
         <button
@@ -6454,7 +6445,7 @@ function App() {
   if (cmsLoading) {
     return (
       <div className="app-shell app-shell-loading">
-        <div className="cms-loading-card">
+        <div className="cms-loading-card" role="status" aria-live="polite">
           <div className="cms-loading-mark" aria-hidden="true"><span className="loading-path-orbit loading-path-one" /><span className="loading-path-orbit loading-path-two" /><span className="loading-path-signature">ک</span></div>
           <strong>در حال آماده‌سازی کائنات‌چی</strong>
           <span>مسیر تو، آرام‌آرام آماده می‌شود...</span>
