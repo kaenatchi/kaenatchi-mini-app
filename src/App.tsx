@@ -926,35 +926,41 @@ function getDailyEditorialImage(content: { title?: string; text?: string; catego
   const topic = [content?.title, content?.text, content?.category].filter(Boolean).join(" ").toLocaleLowerCase("fa");
   const imageSets = [
     { match: /شمع|آتش|نور|گرما|یلدا/, urls: [
-      "https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=1400&q=85",
-      "https://images.unsplash.com/photo-1602874801007-bd458bb1b8b6?auto=format&fit=crop&w=1400&q=85"
+      "https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=1600&q=85",
+      "https://images.unsplash.com/photo-1602874801007-bd458bb1b8b6?auto=format&fit=crop&w=1600&q=85"
     ]},
     { match: /طبیعت|گیاه|گل|رشد|زمین|بهار|نوروز/, urls: [
-      "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1400&q=85",
-      "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1400&q=85"
+      "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1600&q=85",
+      "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1600&q=85"
     ]},
     { match: /آرامش|مکث|تنفس|مدیتیشن|ذهن|خودآگاهی|انرژی/, urls: [
-      "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1400&q=85",
-      "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1400&q=85"
+      "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1600&q=85",
+      "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1600&q=85"
     ]},
     { match: /عشق|مهر|رابطه|احساس|قلب|دوست/, urls: [
-      "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=1400&q=85",
-      "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1400&q=85"
+      "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=1600&q=85",
+      "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1600&q=85"
     ]},
     { match: /یادگیری|کلاس|دانش|کتاب|مسیر|انتخاب|هدف/, urls: [
-      "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1400&q=85"
+      "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1600&q=85"
     ]}
   ];
   const matched = imageSets.find((set) => set.match.test(topic));
-  const safeDefaults = [
-    "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=1400&q=85",
-    "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1400&q=85",
-    "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1400&q=85"
+  const defaults = [
+    "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1600&q=85",
+    "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1600&q=85",
+    "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1600&q=85"
   ];
-  const candidates = matched?.urls?.length ? matched.urls : safeDefaults;
+  const candidates = matched?.urls?.length ? matched.urls : defaults;
   const seed = Array.from(today).reduce((sum, char) => sum + char.charCodeAt(0), 0);
   return candidates[seed % candidates.length];
 }
+
+const DAILY_EDITORIAL_IMAGE_FALLBACKS = [
+  "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1600&q=85",
+  "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1600&q=85",
+  "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1600&q=85"
+];
 
 function getCmsFaqRows() {
   return cmsRows.faq.filter(cmsActive).map((row) => ({
@@ -1498,8 +1504,13 @@ function HomePage({
                 referrerPolicy="no-referrer"
                 onError={(event) => {
                   const img = event.currentTarget;
-                  const fallback = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=1400&q=85";
-                  if (img.src !== fallback) img.src = fallback;
+                  const fallbackIndex = Number(img.dataset.fallbackIndex || "0");
+                  if (fallbackIndex < DAILY_EDITORIAL_IMAGE_FALLBACKS.length) {
+                    img.dataset.fallbackIndex = String(fallbackIndex + 1);
+                    img.src = DAILY_EDITORIAL_IMAGE_FALLBACKS[fallbackIndex];
+                  } else {
+                    img.style.visibility = "hidden";
+                  }
                 }}
               />
             </div>
