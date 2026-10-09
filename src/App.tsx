@@ -1935,6 +1935,18 @@ function ServicesPage({
   const [energyFilter, setEnergyFilter] = useState<"all" | "emotional" | "career" | "general">("all");
   const [therapyFilter, setTherapyFilter] = useState<"candle" | "psychotherapy" | null>(null);
   const [openClassEvent, setOpenClassEvent] = useState<string | null>(null);
+  const serviceScrollPosition = useRef(0);
+
+  useLayoutEffect(() => {
+    if (selectedService) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    } else if (serviceScrollPosition.current > 0) {
+      const restoreAt = serviceScrollPosition.current;
+      window.requestAnimationFrame(() => window.scrollTo({ top: restoreAt, behavior: "auto" }));
+    }
+  }, [selectedService]);
 
   useEffect(() => {
     if (!focus || focus === "all") return;
@@ -2164,7 +2176,10 @@ function ServicesPage({
               <ServiceCard
                 key={service.id}
                 service={service}
-                onClick={() => setSelectedService(service)}
+                onClick={() => {
+                  serviceScrollPosition.current = window.scrollY || document.documentElement.scrollTop || 0;
+                  setSelectedService(service);
+                }}
               />
             ))}
           </div>
@@ -2187,7 +2202,7 @@ function ServicesPage({
               </button>
               <div className={"services-accordion-panel " + (openClassEvent === "classes" ? "is-open" : "")} aria-hidden={openClassEvent !== "classes"}>
                 {publishedClasses.length ? publishedClasses.map((item) => (
-                  <button key={item.id} type="button" className="services-learning-item" onClick={() => setSelectedService({id:item.id,title:item.title,category:"class",price:"",duration:"",description:item.description})}>
+                  <button key={item.id} type="button" className="services-learning-item" onClick={() => { serviceScrollPosition.current = window.scrollY || document.documentElement.scrollTop || 0; setSelectedService({id:item.id,title:item.title,category:"class",price:"",duration:"",description:item.description}); }}>
                     <strong>{item.title}</strong><span>{item.description || "برای مشاهده جزئیات این دوره انتخاب کن."}</span><span className="services-learning-open">مشاهده جزئیات ←</span>
                   </button>
                 )) : <div className="services-learning-empty">هنوز دوره‌ای برای نمایش ثبت نشده است.</div>}
@@ -2202,7 +2217,7 @@ function ServicesPage({
               </button>
               <div className={"services-accordion-panel " + (openClassEvent === "events" ? "is-open" : "")} aria-hidden={openClassEvent !== "events"}>
                 {publishedEvents.length ? publishedEvents.map((item) => (
-                  <button key={item.id} type="button" className="services-learning-item" onClick={() => setSelectedService({id:item.id,title:item.title,category:"event",price:"",duration:"",description:item.description})}>
+                  <button key={item.id} type="button" className="services-learning-item" onClick={() => { serviceScrollPosition.current = window.scrollY || document.documentElement.scrollTop || 0; setSelectedService({id:item.id,title:item.title,category:"event",price:"",duration:"",description:item.description}); }}>
                     <strong>{item.title}</strong><span>{item.description || "برای مشاهده جزئیات این رویداد انتخاب کن."}</span><span className="services-learning-open">مشاهده جزئیات ←</span>
                   </button>
                 )) : <div className="services-learning-empty">هنوز رویدادی برای نمایش ثبت نشده است.</div>}
