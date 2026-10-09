@@ -6401,9 +6401,16 @@ function App() {
     return (
       <div className="app-shell app-shell-loading">
         <div className="cms-loading-card">
-          <div className="cms-loading-mark">✦</div>
+          <div className="cms-loading-mark" aria-hidden="true">
+            <svg className="cms-loading-path" viewBox="0 0 52 52" fill="none">
+              <path className="cms-loading-path-line" d="M10 42C10 31 17 30 23 25C29 20 28 13 39 8" />
+              <path className="cms-loading-leaf cms-loading-leaf-one" d="M14 31C8 25 9 20 9 20C16 20 20 24 20 28" />
+              <path className="cms-loading-leaf cms-loading-leaf-two" d="M29 18C29 11 35 7 41 7C41 14 37 19 30 21" />
+              <circle className="cms-loading-path-dot" cx="10" cy="42" r="3" />
+            </svg>
+          </div>
           <strong>در حال آماده‌سازی کائنات‌چی</strong>
-          <span>در حال دریافت تازه‌ترین محتوا...</span>
+          <span>مسیرت را آرام‌آرام آماده می‌کنیم…</span>
         </div>
       </div>
     );
