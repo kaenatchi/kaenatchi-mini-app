@@ -4773,3 +4773,46 @@ button {
   .cms-loading-path-line, .cms-loading-leaf, .cms-loading-path-dot { animation:none !important; }
   .cms-loading-path-line { stroke-dashoffset:0; }
 }
+
+/* Consistent press feedback for tappable surfaces, without moving page layout. */
+.app-shell .glass-list-card:active,
+.app-shell .services-category-card:active,
+.app-shell .more-category-card:active,
+.app-shell .more-contact-card:active,
+.app-shell .more-search-card:active,
+.app-shell .more-info-card:has(.faq-accordion-trigger:active) {
+  transform: scale(.985);
+}
+.app-shell .glass-list-card,
+.app-shell .services-category-card,
+.app-shell .more-category-card,
+.app-shell .more-contact-card,
+.app-shell .more-search-card {
+  transition: transform .18s ease, background-color .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+@media (prefers-color-scheme: dark) {
+  .app-shell .more-category-card,
+  .app-shell .more-contact-card,
+  .app-shell .more-info-card {
+    background: linear-gradient(145deg, rgba(43,59,48,.97), rgba(31,44,36,.98)) !important;
+    border-color: rgba(218,232,220,.14) !important;
+  }
+  .app-shell .more-category-card strong,
+  .app-shell .more-category-card span,
+  .app-shell .more-contact-card strong,
+  .app-shell .more-contact-card small,
+  .app-shell .more-info-card strong,
+  .app-shell .more-info-card span { color: #e5eee7 !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .glass-list-card,
+  .app-shell .services-category-card,
+  .app-shell .more-category-card,
+  .app-shell .more-contact-card,
+  .app-shell .more-search-card { transition: none !important; }
+  .app-shell .glass-list-card:active,
+  .app-shell .services-category-card:active,
+  .app-shell .more-category-card:active,
+  .app-shell .more-contact-card:active,
+  .app-shell .more-search-card:active { transform: none; }
+}
