@@ -752,6 +752,27 @@ function getDailyContentForToday() {
   };
 }
 
+function getDailyContentImageSrc(value: string) {
+  const url = String(value || '').trim();
+  if (!url) return '';
+  // Google Drive's preview/view URLs are HTML pages in some browsers and
+  // Telegram WebViews. Use its image thumbnail endpoint for an embeddable URL.
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'drive.google.com' || parsed.hostname === 'www.drive.google.com') {
+      let fileId = parsed.searchParams.get('id') || '';
+      if (!fileId) {
+        const pathParts = parsed.pathname.split('/');
+        if (pathParts[1] === 'file' && pathParts[2] === 'd') fileId = pathParts[3] || '';
+      }
+      if (fileId) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1600`;
+    }
+  } catch {
+    // Keep a non-standard but potentially valid image URL unchanged.
+  }
+  return url;
+}
+
 function getCmsFaqRows() {
   return cmsRows.faq.filter(cmsActive).map((row) => ({
     question:
@@ -1268,7 +1289,7 @@ function HomePage({
 
           <div className="today-card" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 3vw, 22px)', flexWrap: 'wrap', minWidth: 0 }}>
             {dailyContent?.imageUrl ? (
-              <img src={dailyContent.imageUrl} alt={dailyContent.title} loading="lazy" decoding="async" style={{ width: 'clamp(96px, 28%, 168px)', maxWidth: '100%', aspectRatio: '4 / 5', objectFit: 'cover', objectPosition: 'center', borderRadius: '16px', flex: '0 1 168px' }} />
+              <img src={getDailyContentImageSrc(dailyContent.imageUrl)} alt={dailyContent.title} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.style.display = 'none'; }} style={{ width: 'clamp(96px, 28%, 168px)', maxWidth: '100%', aspectRatio: '4 / 5', objectFit: 'cover', objectPosition: 'center', borderRadius: '16px', flex: '0 1 168px' }} />
             ) : (
               <div className="today-decoration"><Icon name="spark" /></div>
             )}
