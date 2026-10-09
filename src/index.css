@@ -4702,3 +4702,20 @@ button {
 @media (prefers-reduced-motion:reduce) {
   .services-accordion-panel,.faq-question-panel,.faq-answer-panel { transition:none!important; }
 }
+
+/* VIP dashboard needs a separate light palette as well as its dark palette. */
+.vip-mode .vip-journey-summary { color:#26372f; background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(241,243,233,.82)); border-color:rgba(36,77,59,.14); }
+.vip-mode .vip-journey-heading strong { color:#26372f; }
+.vip-mode .vip-journey-heading span { color:#5f6b62; }
+.vip-mode .vip-journey-stat { border-color:rgba(36,77,59,.12); background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(241,243,233,.86)); box-shadow:0 8px 20px rgba(36,77,59,.055),inset 0 1px 0 rgba(255,255,255,.9); }
+.vip-mode .vip-journey-stat-copy strong { color:#26372f; }
+.vip-mode .vip-journey-stat-copy span { color:#5f6b62; }
+.vip-mode .nav-fab-actions .nav-fab-action { background:linear-gradient(145deg,rgba(255,253,247,.98),rgba(238,241,231,.96)); border-color:rgba(36,77,59,.16); color:#26372f; box-shadow:0 12px 28px rgba(0,0,0,.13); }
+.vip-mode .nav-fab-actions .nav-fab-action span { color:inherit; }
+@media (prefers-color-scheme:dark) {
+  .vip-mode .vip-journey-summary { color:#edf3ed; background:linear-gradient(145deg,rgba(35,47,39,.98),rgba(28,39,32,.98)); border-color:rgba(218,232,220,.14); }
+  .vip-mode .vip-journey-heading strong,.vip-mode .vip-journey-stat-copy strong { color:#edf3ed; }
+  .vip-mode .vip-journey-heading span,.vip-mode .vip-journey-stat-copy span { color:#c0cdc4; }
+  .vip-mode .vip-journey-stat { border-color:rgba(218,232,220,.14); background:linear-gradient(145deg,rgba(44,59,49,.96),rgba(30,42,34,.96)); }
+  .vip-mode .nav-fab-actions .nav-fab-action { background:linear-gradient(145deg,rgba(39,54,46,.98),rgba(28,40,33,.98)); border-color:rgba(218,232,220,.16); color:#edf3ed; }
+}
