@@ -801,16 +801,29 @@ function getEditorialContentForPlacement(placement: "حال‌وهوای امر�
 
   let pool = activeRows;
   if (placement === "حال‌وهوای امروز") {
-    // A date-bounded entry marked as an occasion takes priority over the normal daily rotation.
-    const occasions = activeRows.filter((row) =>
+    // CMS occasions override the built-in calendar; ordinary daily content is the final fallback.
+    const cmsOccasions = activeRows.filter((row) =>
       normalizeCmsLabel(dailyContentPlacement(row)) === normalizeCmsLabel("مناسبت‌ها") && hasDateWindow(row)
     );
-    pool = occasions.length
-      ? occasions
-      : activeRows.filter((row) => {
-          const slot = dailyContentPlacement(row);
-          return normalizeCmsLabel(slot) === normalizeCmsLabel("حال‌وهوای امروز") || normalizeCmsLabel(slot) === normalizeCmsLabel("همه بخش‌ها");
-        });
+    if (cmsOccasions.length) {
+      const index = stableDailyIndex(today + "|" + placement + "|cms-occasion", cmsOccasions.length);
+      const row = cmsOccasions[index];
+      return {
+        id: cmsText(row, ["شناسه", "id"]) || "cms-occasion-" + (index + 1),
+        title: cmsText(row, ["عنوان", "title"]) || placement,
+        text: cmsText(row, ["متن", "محتوا", "توضیحات", "text", "content"]),
+        imageUrl: cmsText(row, ["لینک تصویر", "تصویر", "image url", "image"]),
+        category: cmsText(row, ["دسته", "دسته‌بندی", "category"]),
+      };
+    }
+    const calendarOccasions = getAutomaticCalendarOccasions(today);
+    if (calendarOccasions.length) {
+      return calendarOccasions[stableDailyIndex(today + "|" + placement + "|calendar", calendarOccasions.length)];
+    }
+    pool = activeRows.filter((row) => {
+      const slot = dailyContentPlacement(row);
+      return normalizeCmsLabel(slot) === normalizeCmsLabel("حال‌وهوای امروز") || normalizeCmsLabel(slot) === normalizeCmsLabel("همه بخش‌ها");
+    });
   } else {
     pool = activeRows.filter((row) => {
       const slot = dailyContentPlacement(row);
