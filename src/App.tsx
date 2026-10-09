@@ -2191,253 +2191,138 @@ function ServicesPage({
 function SelectedPage({
   onNavigate,
   onOpenService,
+  onOpenVip,
 }: {
   onNavigate: (section: Section) => void;
   onOpenService: (service: Service) => void;
+  onOpenVip: () => void;
 }) {
-  type GrowthGoal = "calm" | "clarity" | "experience";
-  type GrowthStage = "discover" | "choose" | "reflect";
-  type GrowthProgress = {
-    goal: GrowthGoal | null;
-    completedIds: string[];
-    skippedIds: string[];
-    activeServiceId: string | null;
-    stage: GrowthStage;
-  };
-  const STORAGE_KEY = "kaenatchi-selected-growth-v1";
-  const emptyProgress: GrowthProgress = {
-    goal: null,
-    completedIds: [],
-    skippedIds: [],
-    activeServiceId: null,
-    stage: "discover",
-  };
-  const [progress, setProgress] = useState<GrowthProgress>(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return emptyProgress;
-      const parsed = JSON.parse(raw) as Partial<GrowthProgress>;
-      const goal = parsed.goal === "calm" || parsed.goal === "clarity" || parsed.goal === "experience" ? parsed.goal : null;
-      const stage = parsed.stage === "choose" || parsed.stage === "reflect" ? parsed.stage : "discover";
-      return {
-        goal,
-        completedIds: Array.isArray(parsed.completedIds) ? parsed.completedIds.filter((id): id is string => typeof id === "string") : [],
-        skippedIds: Array.isArray(parsed.skippedIds) ? parsed.skippedIds.filter((id): id is string => typeof id === "string") : [],
-        activeServiceId: typeof parsed.activeServiceId === "string" ? parsed.activeServiceId : null,
-        stage: goal ? stage : "discover",
-      };
-    } catch {
-      return emptyProgress;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-    } catch {
-      // Keep the journey usable even when private browsing disables storage.
-    }
-  }, [progress]);
-
-  const goals: Array<{ id: GrowthGoal; title: string; copy: string; icon: IconName }> = [
-    { id: "calm", title: "کمی مکث", copy: "برای وقتی که به آرامش بیشتری نیاز داری", icon: "candle" },
-    { id: "clarity", title: "از نو ببین", copy: "برای کشف زاویه‌ای تازه", icon: "spark" },
-    { id: "experience", title: "تجربه کن", copy: "برای آشناشدن با چیزی متفاوت", icon: "energy" },
+  type Profile = "calm" | "clarity" | "habits" | "exploration";
+  type Answer = { q: number; option: number; profile: Profile };
+  type Progress = { answers: Answer[]; quizComplete: boolean; freeDone: boolean; vipDone: boolean };
+  const KEY = "kaenatchi-selected-growth-v2";
+  const questions: Array<{ title: string; options: Array<{ label: string; profile: Profile }> }> = [
+    { title: "این روزها بیشتر از همه به چه چیزی نیاز داری؟", options: [
+      { label: "کمی آرامش و مکث", profile: "calm" }, { label: "روشن‌تر دیدن فکرها و انتخاب‌ها", profile: "clarity" }, { label: "ساختن یک عادت کوچک", profile: "habits" }, { label: "تجربه‌ای تازه و متفاوت", profile: "exploration" }] },
+    { title: "وقتی ذهنت شلوغ می‌شود، معمولاً چه می‌کنی؟", options: [
+      { label: "دنبال فرصتی برای آرام‌شدن می‌گردم", profile: "calm" }, { label: "سعی می‌کنم موضوع را تحلیل کنم", profile: "clarity" }, { label: "خودم را با کارهای روزمره مشغول می‌کنم", profile: "habits" }, { label: "چیزی تازه امتحان می‌کنم", profile: "exploration" }] },
+    { title: "کدام تغییر کوچک برایت جذاب‌تر است؟", options: [
+      { label: "هر روز چند دقیقه برای خودم وقت بگذارم", profile: "calm" }, { label: "احساسات و نیازهایم را بهتر بشناسم", profile: "clarity" }, { label: "به یک کار مفید استمرار بدهم", profile: "habits" }, { label: "از تجربه‌های تازه استقبال کنم", profile: "exploration" }] },
+    { title: "چه چیزی شروع‌کردن را برایت آسان‌تر می‌کند؟", options: [
+      { label: "فضایی آرام و بدون عجله", profile: "calm" }, { label: "فهمیدن دلیل انجام آن کار", profile: "clarity" }, { label: "یک برنامهٔ کوتاه و مشخص", profile: "habits" }, { label: "آزادی برای امتحان‌کردن چند راه", profile: "exploration" }] },
+    { title: "دوست داری چه چیزی همراهت بماند؟", options: [
+      { label: "آرامش و توجه بیشتر به خودم", profile: "calm" }, { label: "شناخت بهتر خودم و انتخاب‌هایم", profile: "clarity" }, { label: "یک عادت کوچک و پایدار", profile: "habits" }, { label: "نگاهی تازه و تجربه‌های جدید", profile: "exploration" }] },
   ];
-  const goal = goals.find((item) => item.id === progress.goal);
-  const activeService = mainServices.find((service) => service.id === progress.activeServiceId) || null;
-  const availableServices = Array.from(
-    new Map<string, Service>(mainServices.map((service) => [service.id, service] as const)).values()
-  ).filter((service) => !progress.completedIds.includes(service.id));
+  const empty: Progress = { answers: [], quizComplete: false, freeDone: false, vipDone: false };
+  const [progress, setProgress] = useState<Progress>(() => {
+    try {
+      const p = JSON.parse(window.localStorage.getItem(KEY) || "null");
+      const answers = Array.isArray(p?.answers) ? p.answers.filter((a: any) => Number.isInteger(a.q) && a.q >= 0 && a.q < questions.length && Number.isInteger(a.option) && a.option >= 0 && a.option < 4) : [];
+      return { answers, quizComplete: p?.quizComplete === true && answers.length === questions.length, freeDone: p?.freeDone === true, vipDone: p?.vipDone === true };
+    } catch { return empty; }
+  });
+  const [screen, setScreen] = useState<"intro" | "quiz" | "result" | "exercise" | "gate" | "vip">(() => {
+    try {
+      const p = JSON.parse(window.localStorage.getItem(KEY) || "null");
+      if (p?.vipDone) return "gate";
+      if (p?.freeDone) return "gate";
+      if (p?.quizComplete) return "result";
+      if (Array.isArray(p?.answers) && p.answers.length) return "quiz";
+    } catch {}
+    return "intro";
+  });
+  const [qIndex, setQIndex] = useState(0);
+  const [checkingVip, setCheckingVip] = useState(false);
+  const [vipMessage, setVipMessage] = useState("");
+  const [vipActive, setVipActive] = useState(false);
+  useEffect(() => { try { window.localStorage.setItem(KEY, JSON.stringify(progress)); } catch {} }, [progress]);
 
-  const scoreService = (service: Service): number => {
-    const text = (service.title + " " + service.description + " " + service.category).toLocaleLowerCase("fa");
-    const rules: Record<GrowthGoal, { patterns: RegExp[]; categories: ServiceCategory[] }> = {
-      calm: {
-        patterns: [/آرام/, /شمع/, /رها/, /احساس/, /عاطف/, /گفت.?وگو/, /مدیتیشن/, /تنفس/, /آرامش/],
-        categories: ["candle", "psychotherapy"],
-      },
-      clarity: {
-        patterns: [/مسیر/, /انرژی/, /قهوه/, /پاسور/, /اوراکل/, /خوانش/, /شناخت/, /وضوح/, /تصمیم/],
-        categories: ["energy"],
-      },
-      experience: {
-        patterns: [/تجربه/, /جدید/, /شمع/, /قهوه/, /کارت/, /لنورماند/, /تاروت/, /انرژی/],
-        categories: ["candle", "energy"],
-      },
-    };
-    if (!progress.goal) return 1;
-    const rule = rules[progress.goal];
-    return rule.patterns.reduce((score, pattern) => score + (pattern.test(text) ? 3 : 0), 0)
-      + (rule.categories.includes(service.category) ? 2 : 0)
-      + (service.description.trim() ? 1 : 0)
-      + (progress.skippedIds.includes(service.id) ? -100 : 0);
+  const totals: Record<Profile, number> = { calm: 0, clarity: 0, habits: 0, exploration: 0 };
+  progress.answers.forEach((a) => { totals[a.profile] += 1; });
+  const profileOrder: Profile[] = ["calm", "clarity", "habits", "exploration"];
+  const profile = profileOrder.reduce((best, p) => totals[p] > totals[best] ? p : best, "calm");
+  const profileInfo: Record<Profile, { title: string; summary: string; free: string; vip: string; icon: IconName }> = {
+    calm: { title: "مکث و آرامش", summary: "شروع مسیرت می‌تواند با مکث‌های کوتاه و توجه به حال خودت باشد.", free: "سه دقیقه مکث کن. بدون قضاوت، سه چیزی را که همین حالا حس می‌کنی نام ببر؛ بعد بنویس چه چیزی می‌تواند امروز کمی به تو کمک کند.", vip: "برای یک هفته، روزی یک بار حال‌وهوایت را از ۱ تا ۵ ثبت کن و کنار آن بنویس چه چیزی روی حالت اثر گذاشته است.", icon: "candle" },
+    clarity: { title: "شناخت و شفافیت", summary: "شناخت بهتر فکرها، احساسات و انتخاب‌ها می‌تواند نقطهٔ شروع مناسبی باشد.", free: "یک موضوع که ذهنت را مشغول کرده بنویس. دو ستون بساز: «چیزی که می‌دانم» و «چیزی که هنوز نمی‌دانم». لازم نیست همین امروز نتیجه بگیری.", vip: "یک موقعیت تکرارشونده را ثبت کن: چه اتفاقی افتاد، چه احساسی داشتی و دفعهٔ بعد چه انتخاب دیگری می‌توانی امتحان کنی.", icon: "spark" },
+    habits: { title: "قدم‌های کوچک", summary: "یک برنامهٔ ساده و قابل تکرار ممکن است کمک کند پیشرفتت را ملموس‌تر ببینی.", free: "یک کار کوچک انتخاب کن که کمتر از پنج دقیقه طول می‌کشد. مشخص کن چه زمانی انجامش می‌دهی و پس از انجامش علامت بزن.", vip: "برای هفت روز یک عادت کوچک را پیگیری کن. اگر روزی انجام نشد، دلیلش را ثبت کن و روز بعد دوباره شروع کن؛ هدف استمرار است، نه کمال.", icon: "check" },
+    exploration: { title: "کشف و تجربه", summary: "تجربه‌کردن یک نگاه یا فعالیت تازه می‌تواند شروع جذابی برای مسیرت باشد.", free: "امروز یک چیز کوچک را متفاوت انجام بده؛ در پایان بنویس چه چیزی برایت تازه بود.", vip: "در هفتهٔ پیش رو سه تجربهٔ کوچک را امتحان کن و پس از هرکدام بنویس چه چیزی دوست داشتی و چه چیزی دربارهٔ خودت کشف کردی.", icon: "energy" },
   };
-  const recommendations = availableServices
-    .filter((service) => !progress.skippedIds.includes(service.id))
-    .map((service, index) => ({ service, score: scoreService(service), index }))
-    .sort((a, b) => b.score - a.score || a.index - b.index)
-    .slice(0, 3)
-    .map((item) => item.service);
-
-  const updateProgress = (patch: Partial<GrowthProgress>) => {
-    setProgress((current) => ({ ...current, ...patch }));
+  const info = profileInfo[profile];
+  const currentQuestion = questions[qIndex];
+  const answer = progress.answers.find((a) => a.q === qIndex);
+  const chooseAnswer = (option: number) => {
+    const picked = { q: qIndex, option, profile: currentQuestion.options[option].profile };
+    setProgress((p) => ({ ...p, answers: [...p.answers.filter((a) => a.q !== qIndex), picked], quizComplete: false }));
   };
-  const startPath = (selectedGoal: GrowthGoal) => {
-    setProgress((current) => ({
-      ...current,
-      goal: selectedGoal,
-      stage: "choose",
-      activeServiceId: null,
-      skippedIds: [],
-    }));
+  const nextQuestion = () => {
+    if (!answer) return;
+    if (qIndex < questions.length - 1) setQIndex((i) => i + 1);
+    else { setProgress((p) => ({ ...p, quizComplete: true })); setScreen("result"); }
   };
-  const chooseService = (service: Service) => {
-    updateProgress({ activeServiceId: service.id, stage: "reflect" });
+  const startQuiz = () => { setQIndex(0); setProgress(empty); setScreen("quiz"); };
+  const continueWithVipCheck = async () => {
+    setCheckingVip(true); setVipMessage("");
+    try {
+      const result = await loadTelegramIdentity();
+      const status = result?.customer?.vipStatus;
+      const active = Boolean(result?.success && result?.customer && (status === "فعال" || status === "active"));
+      setVipActive(active);
+      if (active) setScreen("vip");
+      else {
+        setVipMessage(result?.needsConnectionCode ? "برای ادامه، ابتدا حساب VIP تلگرامت را متصل کن." : "مرحلهٔ بعد برای اعضای VIP باز است. می‌توانی وضعیت عضویتت را از بخش VIP بررسی کنی.");
+        setScreen("gate");
+      }
+    } catch { setVipMessage("فعلاً امکان بررسی عضویت نیست. دوباره تلاش کن یا از بخش VIP وضعیت عضویت را بررسی کن."); }
+    finally { setCheckingVip(false); }
   };
-  const finishStep = () => {
-    if (!activeService) return;
-    setProgress((current) => ({
-      ...current,
-      completedIds: Array.from(new Set([...current.completedIds, activeService.id])),
-      activeServiceId: null,
-      stage: "choose",
-    }));
-  };
-  const skipService = (service: Service) => {
-    setProgress((current) => ({
-      ...current,
-      skippedIds: Array.from(new Set([...current.skippedIds, service.id])),
-    }));
-  };
-  const resetPath = () => setProgress(emptyProgress);
-  const totalActiveServices = new Set(mainServices.map((service) => service.id)).size;
-  const progressPercent = totalActiveServices > 0
-    ? Math.min(100, Math.round((progress.completedIds.length / totalActiveServices) * 100))
-    : 0;
+  const reset = () => { setProgress(empty); setQIndex(0); setVipActive(false); setVipMessage(""); setScreen("intro"); };
+  const primary: React.CSSProperties = { width: "100%", border: 0, borderRadius: "16px", padding: "14px 16px", background: "linear-gradient(135deg,#174b38,#2c7658)", color: "#fff", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, boxShadow: "0 9px 22px rgba(23,75,56,.18)", cursor: "pointer" };
+  const secondary: React.CSSProperties = { width: "100%", border: "1px solid rgba(36,99,71,.2)", borderRadius: "16px", padding: "13px 16px", background: "rgba(36,99,71,.05)", color: "#246347", fontFamily: "inherit", fontSize: "13px", fontWeight: 600, cursor: "pointer" };
+  const optionStyle: React.CSSProperties = { display: "block", width: "100%", textAlign: "right", padding: "15px", borderRadius: "16px", border: "1px solid rgba(36,99,71,.16)", background: "rgba(255,255,255,.72)", color: "inherit", fontFamily: "inherit", cursor: "pointer", lineHeight: 1.8 };
 
   return (
     <div className="inner-page selected-page selected-growth-page">
-      <section className="selected-intro">
-        <div className="selected-intro-mark"><Icon name="spark" /></div>
-        <div className="selected-intro-copy">
-          <span>YOUR PERSONAL PATH</span>
-          <h1>مسیر من</h1>
-          <p>یک مسیر کوچک، متناسب با انتخاب‌های تو.</p>
-        </div>
-        <div className="selected-intro-line" />
-      </section>
-
+      <section className="selected-intro"><div className="selected-intro-mark"><Icon name="spark" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>مسیر من</h1><p>قدم‌به‌قدم، متناسب با خودت.</p></div><div className="selected-intro-line" /></section>
       <section className="growth-welcome">
-        <div className="growth-welcome-orbit growth-orbit-one" />
-        <div className="growth-welcome-orbit growth-orbit-two" />
+        <div className="growth-welcome-orbit growth-orbit-one" /><div className="growth-welcome-orbit growth-orbit-two" />
         <span className="growth-kicker">منتخب کائنات‌چی · مسیر رشد</span>
-        <h2>{progress.goal ? "قدم بعدی، با انتخاب تو شکل می‌گیرد." : "قرار نیست همه‌چیز را یک‌جا کشف کنی."}</h2>
-        <p>{progress.goal
-          ? "پیشنهادها بر اساس مسیر انتخابی تو مرتب می‌شوند. هر وقت خواستی، می‌توانی مسیرت را عوض کنی."
-          : "یک مسیر را انتخاب کن؛ بعد از آن، منتخب از بین خدمات فعال، گزینه‌های مرتبط‌تری را پیشنهاد می‌دهد."}</p>
-        <div className="growth-progress-meta">
-          <span>{progress.completedIds.length ? `${progress.completedIds.length} قدم ثبت‌شده` : "شروع یک مسیر تازه"}</span>
-          <span>{totalActiveServices ? `${progressPercent}٪ مسیر` : "در انتظار خدمات فعال"}</span>
-        </div>
-        <div className="growth-progress-track"><span style={{ width: `${progressPercent}%` }} /></div>
+        <h2>{screen === "intro" || screen === "quiz" ? "مسیرت را از شناخت خودت شروع کن." : "هر قدم کوچک، بخشی از مسیر توست."}</h2>
+        <p>این آزمون برای خودشناسی و پیشنهاد تمرین طراحی شده؛ تشخیص روان‌شناختی یا سنجش علمی شخصیت نیست.</p>
+        <div className="growth-progress-meta"><span>{progress.quizComplete ? "آزمون اولیه تکمیل شد" : "آغاز مسیر شخصی"}</span><span>{progress.answers.length} از {questions.length} پرسش</span></div>
+        <div className="growth-progress-track"><span style={{ width: (progress.answers.length / questions.length * 100) + "%" }} /></div>
       </section>
 
-      <section className="growth-step-heading">
-        <span>مرحله‌ی {progress.stage === "discover" ? "۱" : progress.stage === "choose" ? "۲" : "۳"} از ۳</span>
-        <h2>{progress.stage === "discover" ? "از کجا شروع می‌کنی؟" : progress.stage === "choose" ? "یک قدم برای مسیرت انتخاب کن" : "این قدم را چطور ادامه می‌دهی؟"}</h2>
-        <p>{progress.stage === "discover" ? "این انتخاب فقط برای ساختن پیشنهادهای مرتبط‌تر است؛ هیچ جواب درست یا غلطی ندارد." : progress.stage === "choose" ? `مسیر تو: ${goal?.title || "انتخاب شخصی"} · این پیشنهادها از خدمات فعال انتخاب شده‌اند.` : "جزئیات این خدمت را ببین؛ اگر تجربه‌اش کردی، می‌توانی این قدم را در مسیرت ثبت کنی."}</p>
+      {screen === "intro" && <section className="glass-list-card" style={{ display: "block", padding: "20px" }}>
+        <div className="growth-kicker">برای همه · حتی بدون هدف مشخص</div><h2 style={{ margin: "8px 0", fontSize: "21px" }}>نمی‌دانی از کجا شروع کنی؟</h2>
+        <p style={{ lineHeight: 2, fontSize: "13px" }}>با پنج سؤال کوتاه شروع می‌کنیم. در پایان، نقطهٔ شروع و یک تمرین رایگان می‌گیری؛ برای این مرحله لازم نیست خدمتی بخری یا VIP باشی.</p>
+        <button type="button" style={primary} onClick={startQuiz}>شروع آزمون کوتاه ←</button>
+        <div className="selected-discover" style={{ marginTop: "16px" }}><div><span>دوست داری آزادانه مرور کنی؟</span><strong>تمام خدمات کائنات‌چی</strong></div><div className="selected-discover-links"><button type="button" onClick={() => onNavigate("services")}>دیدن همهٔ خدمات <span>←</span></button></div></div>
+      </section>}
+
+      {screen === "quiz" && <section className="glass-list-card" style={{ display: "block", padding: "20px" }}>
+        <span className="growth-kicker">پرسش {qIndex + 1} از {questions.length}</span><h2 style={{ fontSize: "19px", lineHeight: 1.9, margin: "12px 0 16px" }}>{currentQuestion.title}</h2>
+        <div style={{ display: "grid", gap: "10px" }}>{currentQuestion.options.map((option, index) => <button type="button" key={option.label} aria-pressed={answer?.option === index} onClick={() => chooseAnswer(index)} style={{ ...optionStyle, border: answer?.option === index ? "1px solid rgba(36,99,71,.7)" : optionStyle.border, background: answer?.option === index ? "rgba(36,99,71,.1)" : optionStyle.background }}>{option.label}{answer?.option === index ? "  ✓" : ""}</button>)}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "16px" }}><button type="button" style={secondary} onClick={() => qIndex > 0 ? setQIndex((i) => i - 1) : setScreen("intro")}>{qIndex > 0 ? "پرسش قبلی" : "بازگشت"}</button><button type="button" style={{ ...primary, opacity: answer ? 1 : .45 }} disabled={!answer} onClick={nextQuestion}>{qIndex === questions.length - 1 ? "دیدن نتیجه" : "پرسش بعدی ←"}</button></div>
+      </section>}
+
+      {screen === "result" && <section className="growth-reflect-card"><div className="growth-reflect-symbol"><Icon name={info.icon} /></div><span className="growth-kicker">نتیجهٔ اولیه · سطح ۱</span><h2>{info.title}</h2><p>{info.summary}</p><div style={{ borderRadius: "16px", padding: "14px", background: "rgba(36,99,71,.06)", margin: "14px 0", textAlign: "right" }}><strong>قدم رایگان تو</strong><p style={{ lineHeight: 2, fontSize: "13px" }}>{info.free}</p></div><button type="button" style={primary} onClick={() => setScreen("exercise")}>شروع تمرین مرحلهٔ اول ←</button><button type="button" style={{ ...secondary, marginTop: "10px" }} onClick={startQuiz}>تکرار آزمون</button></section>}
+
+      {screen === "exercise" && <section className="growth-reflect-card"><div className="growth-reflect-symbol"><Icon name={info.icon} /></div><span className="growth-kicker">سطح ۱ از ۴ · رایگان برای همه</span><h2>تمرین اول: یک قدم برای خودت</h2><p style={{ lineHeight: 2 }}>{info.free}</p><div style={{ borderRadius: "15px", padding: "13px", background: "rgba(36,99,71,.06)", fontSize: "12px", lineHeight: 1.9 }}>پس از انجام تمرین، ثبتش کن تا قدم اول در مسیرت مشخص شود. این ثبت بر اساس تأیید خودت است.</div><button type="button" style={primary} onClick={() => { setProgress((p) => ({ ...p, freeDone: true })); setScreen("gate"); }}>تمرین را انجام دادم ✓</button><button type="button" style={{ ...secondary, marginTop: "10px" }} onClick={() => setScreen("result")}>بازگشت به نتیجه</button></section>}
+
+      {screen === "gate" && <section className="growth-reflect-card"><div className="growth-reflect-symbol"><Icon name="crown" /></div><span className="growth-kicker">سطح ۱ تکمیل شد</span><h2>آماده‌ای مسیرت را ادامه بدهی؟</h2><p>قدم اولت ثبت شد. در مرحلهٔ بعد تمرین‌های پیوسته‌تر و ثبت روند شخصی در انتظارت است. ادامهٔ مسیر برای اعضای VIP فعال می‌شود.</p><div style={{ borderRadius: "16px", padding: "14px", background: "rgba(36,99,71,.06)", margin: "14px 0", textAlign: "right" }}><strong>پیش‌نمایش سطح ۲ · ادامه و تثبیت</strong><p style={{ lineHeight: 2, fontSize: "13px" }}>{info.vip}</p></div>{vipMessage && <p role="status" style={{ fontSize: "12px", lineHeight: 1.9 }}>{vipMessage}</p>}<button type="button" style={primary} disabled={checkingVip} onClick={() => void continueWithVipCheck()}>{checkingVip ? "در حال بررسی عضویت..." : "بررسی عضویت و ادامه ←"}</button><button type="button" style={{ ...secondary, marginTop: "10px" }} onClick={onOpenVip}>رفتن به بخش VIP</button><button type="button" style={{ ...secondary, marginTop: "10px" }} onClick={() => setScreen("result")}>مرور نتیجه و تمرین رایگان</button></section>}
+
+      {screen === "vip" && <section className="growth-reflect-card"><div className="growth-reflect-symbol"><Icon name="crown" /></div><span className="growth-kicker">سطح ۲ از ۴ · ویژهٔ VIP</span><h2>ادامهٔ مسیر: ساختن تجربه</h2><p style={{ lineHeight: 2 }}>{info.vip}</p><div style={{ borderRadius: "15px", padding: "13px", background: "rgba(36,99,71,.06)", fontSize: "12px", lineHeight: 1.9 }}>این مرحله به ثبت تجربه و پیگیری شخصی کمک می‌کند؛ نتیجه‌ها ارزیابی علمی یا درمان نیستند.</div><button type="button" style={primary} onClick={() => setProgress((p) => ({ ...p, vipDone: true }))}>{progress.vipDone ? "تمرین مرحلهٔ دوم ثبت شد ✓" : "تمرین مرحلهٔ دوم را انجام دادم ✓"}</button>{progress.vipDone && <p role="status" style={{ fontSize: "13px", lineHeight: 1.9 }}>قدم سطح ۲ ثبت شد. سابقهٔ مسیر روی همین دستگاه نگهداری می‌شود.</p>}<button type="button" style={{ ...secondary, marginTop: "10px" }} onClick={() => setScreen("gate")}>بازگشت به مسیر</button></section>}
+
+      <section className="growth-history"><div className="growth-history-heading"><span>پیشرفت تو</span><strong>{progress.vipDone ? "۲ قدم ثبت‌شده" : progress.freeDone ? "۱ قدم ثبت‌شده" : "در آغاز مسیر"}</strong></div><div className="growth-progress-track"><span style={{ width: (progress.vipDone ? 50 : progress.freeDone ? 25 : progress.quizComplete ? 12 : 0) + "%" }} /></div>
+        <div className="growth-history-item"><span><Icon name={progress.quizComplete ? "check" : "spark"} /></span><div><small>سطح ۱</small><strong>شناخت خود</strong></div><span className="growth-history-done">{progress.quizComplete ? "تکمیل شد" : "در انتظار"}</span></div>
+        <div className="growth-history-item"><span><Icon name={progress.freeDone ? "check" : "clock"} /></span><div><small>سطح ۲</small><strong>ادامه و تثبیت</strong></div><span className="growth-history-done">{progress.vipDone ? "تمرین ثبت شد" : vipActive ? "VIP" : "قفل"}</span></div>
+        <div className="growth-history-item"><span><Icon name="clock" /></span><div><small>سطح ۳ و ۴</small><strong>بازنگری و ادامهٔ مسیر</strong></div><span className="growth-history-done">در ادامهٔ مسیر</span></div>
       </section>
-
-      {progress.stage === "discover" && (
-        <div className="growth-goal-grid">
-          {goals.map((item) => (
-            <button type="button" key={item.id} className="growth-goal-card" onClick={() => startPath(item.id)}>
-              <span className="growth-goal-icon"><Icon name={item.icon} /></span>
-              <strong>{item.title}</strong>
-              <span>{item.copy}</span>
-              <span className="growth-goal-arrow">شروع این مسیر ←</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {progress.stage === "choose" && (
-        <>
-          {goal && (
-            <div className="growth-current-goal">
-              <span><Icon name={goal.icon} /></span>
-              <div><small>مسیر انتخابی تو</small><strong>{goal.title}</strong></div>
-              <button type="button" onClick={() => updateProgress({ stage: "discover", activeServiceId: null })}>تغییر مسیر</button>
-            </div>
-          )}
-          {recommendations.length ? (
-            <div className="growth-recommendations">
-              {recommendations.map((service, index) => (
-                <article className="growth-service-card" key={service.id}>
-                  <div className="growth-service-number">{String(index + 1).padStart(2, "0")}</div>
-                  <div className="growth-service-copy">
-                    <small>{index === 0 ? "پیشنهاد متناسب‌تر با مسیرت" : index === 1 ? "گزینه‌ی بعدی" : "برای کشف بیشتر"}</small>
-                    <strong>{service.title}</strong>
-                    <p>{service.description || "برای آشنایی با جزئیات این خدمت، صفحه‌ی آن را ببین."}</p>
-                    <div className="growth-service-actions">
-                      <button type="button" className="growth-primary-action" onClick={() => chooseService(service)}>انتخاب این قدم</button>
-                      <button type="button" className="growth-secondary-action" onClick={() => onOpenService(service)}>جزئیات خدمت</button>
-                      <button type="button" className="growth-skip-action" onClick={() => skipService(service)} aria-label={`پیشنهاد ${service.title} را کمتر نشان بده`}>پیشنهاد دیگری</button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="growth-empty">
-              <Icon name="spark" />
-              <strong>{totalActiveServices ? "این مسیر را کامل‌تر کرده‌ای!" : "هنوز خدمتی برای این مسیر فعال نیست."}</strong>
-              <p>{totalActiveServices ? "می‌توانی مسیر دیگری انتخاب کنی یا خدمات را دوباره مرور کنی." : "با فعال‌شدن خدمات در CMS، پیشنهادهای این بخش به‌صورت خودکار در دسترس قرار می‌گیرند."}</p>
-              <button type="button" className="growth-primary-action" onClick={() => updateProgress({ stage: "discover" })}>انتخاب مسیر دیگر</button>
-            </div>
-          )}
-        </>
-      )}
-
-      {progress.stage === "reflect" && activeService && (
-        <section className="growth-reflect-card">
-          <div className="growth-reflect-symbol"><Icon name={activeService.category === "candle" ? "candle" : activeService.category === "psychotherapy" ? "conversation" : "energy"} /></div>
-          <span className="growth-kicker">قدم انتخاب‌شده‌ی تو</span>
-          <h3>{activeService.title}</h3>
-          <p>{activeService.description || "می‌توانی ابتدا جزئیات این خدمت را بخوانی و بعد تصمیم بگیری."}</p>
-          <button type="button" className="growth-primary-action growth-full-action" onClick={() => onOpenService(activeService)}>دیدن جزئیات این خدمت ←</button>
-          <button type="button" className="growth-complete-action" onClick={finishStep}><Icon name="check" /> این قدم را انجام داده‌ام</button>
-          <button type="button" className="growth-text-action" onClick={() => updateProgress({ stage: "choose", activeServiceId: null })}>فعلاً رد می‌کنم</button>
-          <small>ثبت این قدم دستی است؛ کائنات‌چی انجام خدمت یا نتیجه‌ی آن را خودکار تشخیص نمی‌دهد.</small>
-        </section>
-      )}
-
-      {progress.completedIds.length > 0 && (
-        <section className="growth-history">
-          <div className="growth-history-heading"><span>مسیر طی‌شده</span><strong>{progress.completedIds.length} قدم</strong></div>
-          {progress.completedIds.map((id, index) => {
-            const service = mainServices.find((item) => item.id === id);
-            return service ? <div className="growth-history-item" key={id}><span><Icon name="check" /></span><div><small>قدم {index + 1}</small><strong>{service.title}</strong></div><span className="growth-history-done">ثبت شد</span></div> : null;
-          })}
-        </section>
-      )}
-
-      <section className="growth-footer">
-        <div><span>مسیر تو، انتخاب توست</span><strong>هر وقت خواستی، از نو شروع کن.</strong></div>
-        <button type="button" onClick={resetPath}>شروع دوباره</button>
-      </section>
-      <p className="growth-storage-note">نسخه‌ی فعلی، مسیرت را فقط روی همین دستگاه ذخیره می‌کند. همگام‌سازی بین دستگاه‌ها در این نسخه فعال نیست.</p>
-      <section className="selected-discover">
-        <div><span>اگر می‌خواهی آزادانه مرور کنی</span><strong>تمام خدمات کائنات‌چی</strong></div>
-        <div className="selected-discover-links">
-          <button type="button" onClick={() => onNavigate("services")}>دیدن همه‌ی خدمات <span>←</span></button>
-        </div>
-      </section>
+      <section className="growth-footer"><div><span>مسیر تو، انتخاب توست</span><strong>هر وقت خواستی، از نو شروع کن.</strong></div><button type="button" onClick={reset}>شروع دوباره</button></section>
+      <p className="growth-storage-note">پیشرفت این نسخه روی همین دستگاه ذخیره می‌شود و بین دستگاه‌ها همگام نیست. دسترسی VIP هنگام ادامه از سامانهٔ عضویت بررسی می‌شود.</p>
     </div>
   );
 }
-
 function SearchPage({
   onBack,
   onOpenService,
@@ -6639,6 +6524,7 @@ function App() {
         {section === "selected" && (
           <SelectedPage
             onNavigate={changeSection}
+            onOpenVip={openVip}
             onOpenService={(service) => {
               setSearchOpen(true);
               setSearchService(service);
