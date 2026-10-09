@@ -3878,3 +3878,356 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .services-category-card { animation: none; }
 }
+
+
+/* --------------------------------------------------
+   HOME — DYNAMIC DAILY EDITORIAL
+   Five date-stable compositions; deliberately not a reusable card frame.
+-------------------------------------------------- */
+.daily-editorial-section .section-heading-row {
+  align-items: end;
+  margin-bottom: 13px;
+}
+
+.daily-editorial {
+  --editorial-ink: var(--green-dark);
+  --editorial-muted: var(--muted);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--editorial-ink);
+}
+
+.daily-editorial-copy {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  direction: rtl;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.daily-editorial-eyebrow {
+  display: block;
+  margin-bottom: 9px;
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.daily-editorial-copy h3 {
+  margin: 0;
+  color: var(--editorial-ink);
+  font-size: clamp(21px, 5.2vw, 35px);
+  font-weight: 750;
+  line-height: 1.75;
+  letter-spacing: -.045em;
+  overflow-wrap: anywhere;
+}
+
+.daily-editorial-copy p {
+  max-width: 58ch;
+  margin: 13px 0 0;
+  color: var(--editorial-muted);
+  font-size: clamp(12px, 1.7vw, 14px);
+  line-height: 2.05;
+  overflow-wrap: anywhere;
+}
+
+.daily-editorial-art,
+.daily-editorial-media {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  min-height: 150px;
+  overflow: hidden;
+}
+
+.daily-editorial-art {
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  background:
+    linear-gradient(145deg, rgba(36,99,71,.035), rgba(216,197,155,.13)),
+    var(--cream-soft);
+}
+
+.daily-editorial-art-mark {
+  position: relative;
+  z-index: 2;
+  font-family: Georgia, serif;
+  font-size: clamp(64px, 16vw, 132px);
+  line-height: 1;
+  color: currentColor;
+  opacity: .76;
+}
+
+.daily-editorial-art-line {
+  position: absolute;
+  width: 78%;
+  height: 1px;
+  background: currentColor;
+  opacity: .24;
+  transform: rotate(-38deg);
+}
+
+.daily-editorial-art-orbit {
+  position: absolute;
+  width: 65%;
+  aspect-ratio: 1;
+  border: 1px solid currentColor;
+  border-radius: 50% 46% 54% 48%;
+  opacity: .2;
+  transform: rotate(27deg) scaleX(.72);
+}
+
+.daily-editorial-media {
+  background:
+    radial-gradient(ellipse at 24% 80%, rgba(216,197,155,.26), transparent 40%),
+    linear-gradient(135deg, var(--cream-soft), var(--green-pale));
+}
+
+.daily-editorial-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  object-fit: cover;
+  object-position: center;
+}
+
+.daily-editorial-index {
+  position: absolute;
+  z-index: 3;
+  left: 3px;
+  bottom: 0;
+  color: var(--gold);
+  font-family: Georgia, serif;
+  font-size: 12px;
+  letter-spacing: .12em;
+  opacity: .8;
+  pointer-events: none;
+}
+
+/* 01 — typography first: open page, oversized headline, no image frame. */
+.daily-editorial--typographic {
+  min-height: 250px;
+  padding: 25px 0 29px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  align-content: center;
+}
+
+.daily-editorial--typographic .daily-editorial-art {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: -2%;
+  width: 37%;
+  height: 100%;
+  min-height: 0;
+  background: transparent;
+  color: var(--gold);
+  opacity: .42;
+}
+
+.daily-editorial--typographic .daily-editorial-art-mark {
+  font-size: clamp(90px, 23vw, 190px);
+}
+
+.daily-editorial--typographic .daily-editorial-copy {
+  width: 86%;
+}
+
+.daily-editorial--typographic .daily-editorial-copy h3 {
+  font-size: clamp(28px, 7.3vw, 47px);
+  line-height: 1.55;
+}
+
+.daily-editorial--typographic .daily-editorial-copy p {
+  max-width: 42ch;
+}
+
+/* 02 — split editorial: image/art and copy have different visual weights. */
+.daily-editorial--split {
+  grid-template-columns: minmax(0, 1.12fr) minmax(110px, .78fr);
+  align-items: stretch;
+  min-height: 230px;
+  gap: clamp(14px, 4vw, 28px);
+  padding: 14px 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.daily-editorial--split .daily-editorial-media,
+.daily-editorial--split .daily-editorial-art {
+  min-height: 225px;
+  height: 100%;
+  border-radius: 2px 38px 2px 2px;
+}
+
+.daily-editorial--split .daily-editorial-copy {
+  align-self: center;
+  padding: 7px 0;
+}
+
+.daily-editorial--split .daily-editorial-copy h3 {
+  font-size: clamp(20px, 4.6vw, 30px);
+}
+
+/* 03 — image-led: only this day's composition gets a large image field. */
+.daily-editorial--image-led {
+  gap: 0;
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--border);
+}
+
+.daily-editorial--image-led .daily-editorial-media,
+.daily-editorial--image-led .daily-editorial-art {
+  width: 100%;
+  height: clamp(185px, 54vw, 350px);
+  min-height: 185px;
+  margin-bottom: 17px;
+  border-radius: 2px 2px 32px 2px;
+}
+
+.daily-editorial--image-led .daily-editorial-copy {
+  padding: 0 4px;
+}
+
+.daily-editorial--image-led .daily-editorial-copy h3 {
+  max-width: 22ch;
+  font-size: clamp(23px, 6vw, 39px);
+}
+
+/* 04 — graphic manifesto: a strong field, not an image with words baked in. */
+.daily-editorial--graphic {
+  grid-template-columns: minmax(0, 1fr) minmax(86px, .38fr);
+  align-items: center;
+  min-height: 245px;
+  gap: 12px;
+  padding: 24px 19px;
+  color: #f8f4eb;
+  background:
+    radial-gradient(ellipse at 4% 100%, rgba(216,197,155,.18), transparent 39%),
+    linear-gradient(125deg, #253f31 0%, #315943 58%, #1d382b 100%);
+}
+
+.daily-editorial--graphic .daily-editorial-copy h3 {
+  color: #f8f4eb;
+  font-size: clamp(24px, 6.4vw, 42px);
+}
+
+.daily-editorial--graphic .daily-editorial-copy p {
+  color: rgba(248,244,235,.76);
+}
+
+.daily-editorial--graphic .daily-editorial-eyebrow,
+.daily-editorial--graphic .daily-editorial-index {
+  color: #d8c59b;
+}
+
+.daily-editorial--graphic .daily-editorial-art {
+  min-height: 150px;
+  background: transparent;
+  color: #d8c59b;
+}
+
+.daily-editorial--graphic .daily-editorial-art-mark {
+  font-size: clamp(65px, 15vw, 120px);
+}
+
+.daily-editorial--graphic .daily-editorial-art-line,
+.daily-editorial--graphic .daily-editorial-art-orbit {
+  opacity: .36;
+}
+
+/* 05 — asymmetry: staggered layout, quiet rule and a shifted visual anchor. */
+.daily-editorial--asymmetric {
+  grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+  align-items: center;
+  gap: clamp(13px, 3.5vw, 25px);
+  min-height: 225px;
+  padding: 18px 0 23px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.daily-editorial--asymmetric .daily-editorial-media,
+.daily-editorial--asymmetric .daily-editorial-art {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 200px;
+  height: 100%;
+  border-radius: 38px 2px 2px 2px;
+}
+
+.daily-editorial--asymmetric .daily-editorial-copy {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+
+.daily-editorial--asymmetric .daily-editorial-copy h3 {
+  font-size: clamp(20px, 4.7vw, 31px);
+}
+
+@media (max-width: 420px) {
+  .daily-editorial--split {
+    grid-template-columns: minmax(0, 1fr) minmax(92px, .72fr);
+    gap: 12px;
+  }
+
+  .daily-editorial--split .daily-editorial-media,
+  .daily-editorial--split .daily-editorial-art {
+    min-height: 205px;
+  }
+
+  .daily-editorial--graphic {
+    grid-template-columns: minmax(0, 1fr) minmax(64px, .32fr);
+    padding: 21px 13px;
+  }
+
+  .daily-editorial--asymmetric {
+    grid-template-columns: minmax(0, .72fr) minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .daily-editorial--asymmetric .daily-editorial-media,
+  .daily-editorial--asymmetric .daily-editorial-art {
+    min-height: 180px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .daily-editorial-art {
+    color: #a8c6b2;
+    background:
+      linear-gradient(145deg, rgba(168,198,178,.07), rgba(216,197,155,.06)),
+      var(--cream-soft);
+  }
+
+  .daily-editorial--typographic .daily-editorial-art {
+    background: transparent;
+    color: #d8c59b;
+  }
+
+  .daily-editorial--graphic {
+    background:
+      radial-gradient(ellipse at 4% 100%, rgba(216,197,155,.12), transparent 39%),
+      linear-gradient(125deg, #1c2c23 0%, #284535 58%, #17271f 100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-editorial,
+  .daily-editorial * {
+    scroll-behavior: auto;
+    animation: none !important;
+    transition: none !important;
+  }
+}
