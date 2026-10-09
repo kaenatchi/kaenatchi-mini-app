@@ -2195,234 +2195,243 @@ function SelectedPage({
   onNavigate: (section: Section) => void;
   onOpenService: (service: Service) => void;
 }) {
-  const [revealOpen, setRevealOpen] = useState(false);
-  const [path, setPath] = useState<"all" | "calm" | "clarity" | "learning">("all");
-  const curatedContent = cmsRows.dailyContent
-    .filter(cmsActive)
-    .filter((row) => {
-      const placement = dailyContentPlacement(row);
-      return placement === "منتخب" || placement === "همه بخش‌ها";
-    })
-    .filter((row) => isDailyContentInRange(row, getTodayJalaliKey()))
-    .sort((a, b) => (Number(cmsText(a, ["ترتیب", "order"])) || 0) - (Number(cmsText(b, ["ترتیب", "order"])) || 0));
-
-  const uniqueServices = Array.from(new Map<string, Service>(mainServices.map((service) => [service.id, service] as const)).values());
-  const allSelected: Array<SearchItem & { badge: string }> = [
-    ...uniqueServices.map((service) => ({
-      id: service.id,
-      title: service.title,
-      description: service.description,
-      type: "service" as const,
-      icon: (service.category === "energy"
-        ? "energy"
-        : service.category === "candle"
-          ? "candle"
-          : "conversation") as IconName,
-      service,
-      badge: "خدمت",
-    })),
-    ...publishedClasses.map((item) => ({ ...item, badge: "کلاس" })),
-    ...publishedEvents.map((item) => ({ ...item, badge: "ایونت" })),
-  ];
-
-  const daySeed = new Date().getDate() + new Date().getMonth() * 31;
-  const offset = allSelected.length ? daySeed % allSelected.length : 0;
-  const rotated = allSelected.length
-    ? [...allSelected.slice(offset), ...allSelected.slice(0, offset)]
-    : [];
-
-  const pathItems = rotated.filter((item) => {
-    if (path === "all") return true;
-    const text = (item.title + " " + item.description).toLocaleLowerCase("fa");
-    if (path === "calm") return /آرام|شمع|گفت.?وگو|احساس|عاطف/.test(text);
-    if (path === "clarity") return /مسیر|عمومی|انرژی|قهوه|پاسور|اوراکل|خوانش/.test(text);
-    return item.type === "class" || item.type === "event" || /آموزش|کلاس|دوره/.test(text);
+  type GrowthGoal = "calm" | "clarity" | "experience";
+  type GrowthStage = "discover" | "choose" | "reflect";
+  type GrowthProgress = {
+    goal: GrowthGoal | null;
+    completedIds: string[];
+    skippedIds: string[];
+    activeServiceId: string | null;
+    stage: GrowthStage;
+  };
+  const STORAGE_KEY = "kaenatchi-selected-growth-v1";
+  const emptyProgress: GrowthProgress = {
+    goal: null,
+    completedIds: [],
+    skippedIds: [],
+    activeServiceId: null,
+    stage: "discover",
+  };
+  const [progress, setProgress] = useState<GrowthProgress>(() => {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return emptyProgress;
+      const parsed = JSON.parse(raw) as Partial<GrowthProgress>;
+      const goal = parsed.goal === "calm" || parsed.goal === "clarity" || parsed.goal === "experience" ? parsed.goal : null;
+      const stage = parsed.stage === "choose" || parsed.stage === "reflect" ? parsed.stage : "discover";
+      return {
+        goal,
+        completedIds: Array.isArray(parsed.completedIds) ? parsed.completedIds.filter((id): id is string => typeof id === "string") : [],
+        skippedIds: Array.isArray(parsed.skippedIds) ? parsed.skippedIds.filter((id): id is string => typeof id === "string") : [],
+        activeServiceId: typeof parsed.activeServiceId === "string" ? parsed.activeServiceId : null,
+        stage: goal ? stage : "discover",
+      };
+    } catch {
+      return emptyProgress;
+    }
   });
 
-  const featured = pathItems[0] ?? rotated[0];
-  const secondary = pathItems.slice(1, 4);
-  const revealItem = rotated.length
-    ? rotated[(daySeed * 7 + 3) % rotated.length]
-    : null;
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    } catch {
+      // Keep the journey usable even when private browsing disables storage.
+    }
+  }, [progress]);
 
-  const openItem = (item: (SearchItem & { badge: string }) | undefined) => {
-    if (!item) return;
-    if (item.service) {
-      onOpenService(item.service);
-      return;
-    }
-    if (item.type === "class") {
-      onNavigate("services");
-      window.setTimeout(() => {
-        document.getElementById("services-classes")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 120);
-      return;
-    }
-    if (item.type === "event") {
-      onNavigate("services");
-      window.setTimeout(() => {
-        document.getElementById("services-events")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 120);
-    }
+  const goals: Array<{ id: GrowthGoal; title: string; copy: string; icon: IconName }> = [
+    { id: "calm", title: "کمی مکث", copy: "برای وقتی که به آرامش بیشتری نیاز داری", icon: "candle" },
+    { id: "clarity", title: "از نو ببین", copy: "برای کشف زاویه‌ای تازه", icon: "spark" },
+    { id: "experience", title: "تجربه کن", copy: "برای آشناشدن با چیزی متفاوت", icon: "energy" },
+  ];
+  const goal = goals.find((item) => item.id === progress.goal);
+  const activeService = mainServices.find((service) => service.id === progress.activeServiceId) || null;
+  const availableServices = Array.from(
+    new Map<string, Service>(mainServices.map((service) => [service.id, service] as const)).values()
+  ).filter((service) => !progress.completedIds.includes(service.id));
+
+  const scoreService = (service: Service): number => {
+    const text = (service.title + " " + service.description + " " + service.category).toLocaleLowerCase("fa");
+    const rules: Record<GrowthGoal, { patterns: RegExp[]; categories: ServiceCategory[] }> = {
+      calm: {
+        patterns: [/آرام/, /شمع/, /رها/, /احساس/, /عاطف/, /گفت.?وگو/, /مدیتیشن/, /تنفس/, /آرامش/],
+        categories: ["candle", "psychotherapy"],
+      },
+      clarity: {
+        patterns: [/مسیر/, /انرژی/, /قهوه/, /پاسور/, /اوراکل/, /خوانش/, /شناخت/, /وضوح/, /تصمیم/],
+        categories: ["energy"],
+      },
+      experience: {
+        patterns: [/تجربه/, /جدید/, /شمع/, /قهوه/, /کارت/, /لنورماند/, /تاروت/, /انرژی/],
+        categories: ["candle", "energy"],
+      },
+    };
+    if (!progress.goal) return 1;
+    const rule = rules[progress.goal];
+    return rule.patterns.reduce((score, pattern) => score + (pattern.test(text) ? 3 : 0), 0)
+      + (rule.categories.includes(service.category) ? 2 : 0)
+      + (service.description.trim() ? 1 : 0)
+      + (progress.skippedIds.includes(service.id) ? -100 : 0);
   };
+  const recommendations = availableServices
+    .filter((service) => !progress.skippedIds.includes(service.id))
+    .map((service, index) => ({ service, score: scoreService(service), index }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, 3)
+    .map((item) => item.service);
+
+  const updateProgress = (patch: Partial<GrowthProgress>) => {
+    setProgress((current) => ({ ...current, ...patch }));
+  };
+  const startPath = (selectedGoal: GrowthGoal) => {
+    setProgress((current) => ({
+      ...current,
+      goal: selectedGoal,
+      stage: "choose",
+      activeServiceId: null,
+      skippedIds: [],
+    }));
+  };
+  const chooseService = (service: Service) => {
+    updateProgress({ activeServiceId: service.id, stage: "reflect" });
+  };
+  const finishStep = () => {
+    if (!activeService) return;
+    setProgress((current) => ({
+      ...current,
+      completedIds: Array.from(new Set([...current.completedIds, activeService.id])),
+      activeServiceId: null,
+      stage: "choose",
+    }));
+  };
+  const skipService = (service: Service) => {
+    setProgress((current) => ({
+      ...current,
+      skippedIds: Array.from(new Set([...current.skippedIds, service.id])),
+    }));
+  };
+  const resetPath = () => setProgress(emptyProgress);
+  const totalActiveServices = new Set(mainServices.map((service) => service.id)).size;
+  const progressPercent = totalActiveServices > 0
+    ? Math.min(100, Math.round((progress.completedIds.length / totalActiveServices) * 100))
+    : 0;
 
   return (
-    <div className="inner-page selected-page">
+    <div className="inner-page selected-page selected-growth-page">
       <section className="selected-intro">
-        <div className="selected-intro-mark">
-          <Icon name="spark" />
-        </div>
+        <div className="selected-intro-mark"><Icon name="spark" /></div>
         <div className="selected-intro-copy">
-          <span>KAENATCHI CURATED</span>
-          <h1>منتخب کائنات‌چی</h1>
-          <p>چیزهایی که این روزها ارزش دیدن دارند.</p>
+          <span>YOUR PERSONAL PATH</span>
+          <h1>مسیر من</h1>
+          <p>یک مسیر کوچک، متناسب با انتخاب‌های تو.</p>
         </div>
         <div className="selected-intro-line" />
       </section>
 
-      {curatedContent.length > 0 && (
-        <section className="selected-now">
-          <div className="selected-section-heading">
-            <span>از کتابخانهٔ محتوا</span>
-            <strong>مطالب منتخب</strong>
-          </div>
-          <div className="selected-mini-grid">
-            {curatedContent.map((row, index) => {
-              const imageUrl = cmsText(row, ["لینک تصویر", "تصویر", "image url", "image"]);
-              const title = cmsText(row, ["عنوان", "title"]) || "منتخب کائنات‌چی";
-              const text = cmsText(row, ["متن", "محتوا", "توضیحات", "text", "content"]);
-              return (
-                <article className="selected-mini-card" key={cmsText(row, ["شناسه", "id"]) || "curated-" + index}>
-                  {imageUrl && <img src={getDailyContentImageSrc(imageUrl)} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.style.display = "none"; }} style={{ width: "100%", maxHeight: "150px", objectFit: "cover", borderRadius: "12px", marginBottom: "10px" }} />}
-                  <small>مطلب منتخب</small>
-                  <strong>{title}</strong>
-                  <span>{text}</span>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {featured ? (
-        <button
-          type="button"
-          className="selected-feature"
-          onClick={() => openItem(featured)}
-          aria-label={`مشاهده ${featured.title}`}
-        >
-          <div className="selected-feature-orbit orbit-a" />
-          <div className="selected-feature-orbit orbit-b" />
-          <div className="selected-feature-copy">
-            <span className="selected-eyebrow">انتخاب امروز</span>
-            <strong>{featured.title}</strong>
-            <p>{featured.description}</p>
-            <span className="selected-feature-link">مشاهده <span>←</span></span>
-          </div>
-          <div className="selected-feature-badge">
-            <Icon name={featured.icon} />
-            <small>{featured.badge}</small>
-          </div>
-        </button>
-      ) : (
-        <div className="selected-feature selected-empty-feature">
-          <span className="selected-eyebrow">منتخب کائنات‌چی</span>
-          <strong>هنوز چیزی برای انتخاب نداریم</strong>
-          <p>با فعال شدن محتوا در خدمات، کلاس‌ها یا ایونت‌ها، این فضا خودکار پر می‌شود.</p>
+      <section className="growth-welcome">
+        <div className="growth-welcome-orbit growth-orbit-one" />
+        <div className="growth-welcome-orbit growth-orbit-two" />
+        <span className="growth-kicker">منتخب کائنات‌چی · مسیر رشد</span>
+        <h2>{progress.goal ? "قدم بعدی، با انتخاب تو شکل می‌گیرد." : "قرار نیست همه‌چیز را یک‌جا کشف کنی."}</h2>
+        <p>{progress.goal
+          ? "پیشنهادها بر اساس مسیر انتخابی تو مرتب می‌شوند. هر وقت خواستی، می‌توانی مسیرت را عوض کنی."
+          : "یک مسیر را انتخاب کن؛ بعد از آن، منتخب از بین خدمات فعال، گزینه‌های مرتبط‌تری را پیشنهاد می‌دهد."}</p>
+        <div className="growth-progress-meta">
+          <span>{progress.completedIds.length ? `${progress.completedIds.length} قدم ثبت‌شده` : "شروع یک مسیر تازه"}</span>
+          <span>{totalActiveServices ? `${progressPercent}٪ مسیر` : "در انتظار خدمات فعال"}</span>
         </div>
-      )}
+        <div className="growth-progress-track"><span style={{ width: `${progressPercent}%` }} /></div>
+      </section>
 
-      <section className="selected-paths">
-        <div className="selected-section-heading">
-          <span>یک حال‌وهوا انتخاب کن</span>
-          <strong>برای تو</strong>
-        </div>
+      <section className="growth-step-heading">
+        <span>مرحله‌ی {progress.stage === "discover" ? "۱" : progress.stage === "choose" ? "۲" : "۳"} از ۳</span>
+        <h2>{progress.stage === "discover" ? "از کجا شروع می‌کنی؟" : progress.stage === "choose" ? "یک قدم برای مسیرت انتخاب کن" : "این قدم را چطور ادامه می‌دهی؟"}</h2>
+        <p>{progress.stage === "discover" ? "این انتخاب فقط برای ساختن پیشنهادهای مرتبط‌تر است؛ هیچ جواب درست یا غلطی ندارد." : progress.stage === "choose" ? `مسیر تو: ${goal?.title || "انتخاب شخصی"} · این پیشنهادها از خدمات فعال انتخاب شده‌اند.` : "جزئیات این خدمت را ببین؛ اگر تجربه‌اش کردی، می‌توانی این قدم را در مسیرت ثبت کنی."}</p>
+      </section>
 
-        <div className="selected-path-grid">
-          {[
-            { id: "calm" as const, title: "آرامش", icon: "candle" as IconName, copy: "چیزهای نرم‌تر و آرام‌تر" },
-            { id: "clarity" as const, title: "وضوح", icon: "spark" as IconName, copy: "برای وقتی که دنبال جهت هستی" },
-            { id: "learning" as const, title: "یادگیری", icon: "class" as IconName, copy: "چیزهایی برای یاد گرفتن" },
-          ].map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`selected-path-card ${path === item.id ? "active" : ""}`}
-              onClick={() => setPath(path === item.id ? "all" : item.id)}
-            >
-              <span className="selected-path-icon"><Icon name={item.icon} /></span>
+      {progress.stage === "discover" && (
+        <div className="growth-goal-grid">
+          {goals.map((item) => (
+            <button type="button" key={item.id} className="growth-goal-card" onClick={() => startPath(item.id)}>
+              <span className="growth-goal-icon"><Icon name={item.icon} /></span>
               <strong>{item.title}</strong>
               <span>{item.copy}</span>
+              <span className="growth-goal-arrow">شروع این مسیر ←</span>
             </button>
           ))}
         </div>
-      </section>
+      )}
 
-      {secondary.length > 0 && (
-        <section className="selected-now">
-          <div className="selected-section-heading">
-            <span>چند انتخاب کوتاه</span>
-            <strong>این روزها در کائنات‌چی</strong>
-          </div>
+      {progress.stage === "choose" && (
+        <>
+          {goal && (
+            <div className="growth-current-goal">
+              <span><Icon name={goal.icon} /></span>
+              <div><small>مسیر انتخابی تو</small><strong>{goal.title}</strong></div>
+              <button type="button" onClick={() => updateProgress({ stage: "discover", activeServiceId: null })}>تغییر مسیر</button>
+            </div>
+          )}
+          {recommendations.length ? (
+            <div className="growth-recommendations">
+              {recommendations.map((service, index) => (
+                <article className="growth-service-card" key={service.id}>
+                  <div className="growth-service-number">{String(index + 1).padStart(2, "0")}</div>
+                  <div className="growth-service-copy">
+                    <small>{index === 0 ? "پیشنهاد متناسب‌تر با مسیرت" : index === 1 ? "گزینه‌ی بعدی" : "برای کشف بیشتر"}</small>
+                    <strong>{service.title}</strong>
+                    <p>{service.description || "برای آشنایی با جزئیات این خدمت، صفحه‌ی آن را ببین."}</p>
+                    <div className="growth-service-actions">
+                      <button type="button" className="growth-primary-action" onClick={() => chooseService(service)}>انتخاب این قدم</button>
+                      <button type="button" className="growth-secondary-action" onClick={() => onOpenService(service)}>جزئیات خدمت</button>
+                      <button type="button" className="growth-skip-action" onClick={() => skipService(service)} aria-label={`پیشنهاد ${service.title} را کمتر نشان بده`}>پیشنهاد دیگری</button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="growth-empty">
+              <Icon name="spark" />
+              <strong>{totalActiveServices ? "این مسیر را کامل‌تر کرده‌ای!" : "هنوز خدمتی برای این مسیر فعال نیست."}</strong>
+              <p>{totalActiveServices ? "می‌توانی مسیر دیگری انتخاب کنی یا خدمات را دوباره مرور کنی." : "با فعال‌شدن خدمات در CMS، پیشنهادهای این بخش به‌صورت خودکار در دسترس قرار می‌گیرند."}</p>
+              <button type="button" className="growth-primary-action" onClick={() => updateProgress({ stage: "discover" })}>انتخاب مسیر دیگر</button>
+            </div>
+          )}
+        </>
+      )}
 
-          <div className="selected-mini-grid">
-            {secondary.map((item) => (
-              <button
-                type="button"
-                className="selected-mini-card"
-                key={item.id}
-                onClick={() => openItem(item)}
-              >
-                <span className="selected-mini-top">
-                  <small>{item.badge}</small>
-                  <span><Icon name="arrow" /></span>
-                </span>
-                <strong>{item.title}</strong>
-                <span>{item.description}</span>
-              </button>
-            ))}
-          </div>
+      {progress.stage === "reflect" && activeService && (
+        <section className="growth-reflect-card">
+          <div className="growth-reflect-symbol"><Icon name={activeService.category === "candle" ? "candle" : activeService.category === "psychotherapy" ? "conversation" : "energy"} /></div>
+          <span className="growth-kicker">قدم انتخاب‌شده‌ی تو</span>
+          <h3>{activeService.title}</h3>
+          <p>{activeService.description || "می‌توانی ابتدا جزئیات این خدمت را بخوانی و بعد تصمیم بگیری."}</p>
+          <button type="button" className="growth-primary-action growth-full-action" onClick={() => onOpenService(activeService)}>دیدن جزئیات این خدمت ←</button>
+          <button type="button" className="growth-complete-action" onClick={finishStep}><Icon name="check" /> این قدم را انجام داده‌ام</button>
+          <button type="button" className="growth-text-action" onClick={() => updateProgress({ stage: "choose", activeServiceId: null })}>فعلاً رد می‌کنم</button>
+          <small>ثبت این قدم دستی است؛ کائنات‌چی انجام خدمت یا نتیجه‌ی آن را خودکار تشخیص نمی‌دهد.</small>
         </section>
       )}
 
-      <section className={`selected-reveal ${revealOpen ? "is-open" : ""}`}>
-        <div className="selected-reveal-stars">✦ &nbsp; ✦ &nbsp; ✦</div>
-        <span className="selected-eyebrow">یک انتخاب برای امروز</span>
-        <h2>{revealOpen && revealItem ? revealItem.title : "امروز چی ببینم؟"}</h2>
-        <p>
-          {revealOpen && revealItem
-            ? revealItem.description
-            : "یک انتخاب از چیزهایی که همین حالا در کائنات‌چی وجود دارند؛ نه فال، فقط یک پیشنهاد خوب."}
-        </p>
-        <button
-          type="button"
-          className="selected-reveal-button"
-          onClick={() => {
-            setRevealOpen(true);
-            if (revealItem) {
-              window.setTimeout(() => openItem(revealItem), 620);
-            }
-          }}
-        >
-          {revealOpen ? "مشاهده انتخاب ←" : "✦ امروز چی ببینم؟"}
-        </button>
-      </section>
+      {progress.completedIds.length > 0 && (
+        <section className="growth-history">
+          <div className="growth-history-heading"><span>مسیر طی‌شده</span><strong>{progress.completedIds.length} قدم</strong></div>
+          {progress.completedIds.map((id, index) => {
+            const service = mainServices.find((item) => item.id === id);
+            return service ? <div className="growth-history-item" key={id}><span><Icon name="check" /></span><div><small>قدم {index + 1}</small><strong>{service.title}</strong></div><span className="growth-history-done">ثبت شد</span></div> : null;
+          })}
+        </section>
+      )}
 
+      <section className="growth-footer">
+        <div><span>مسیر تو، انتخاب توست</span><strong>هر وقت خواستی، از نو شروع کن.</strong></div>
+        <button type="button" onClick={resetPath}>شروع دوباره</button>
+      </section>
+      <p className="growth-storage-note">نسخه‌ی فعلی، مسیرت را فقط روی همین دستگاه ذخیره می‌کند. همگام‌سازی بین دستگاه‌ها در این نسخه فعال نیست.</p>
       <section className="selected-discover">
-        <div>
-          <span>اگر می‌خواهی بیشتر ببینی</span>
-          <strong>کائنات‌چی را کشف کن</strong>
-        </div>
+        <div><span>اگر می‌خواهی آزادانه مرور کنی</span><strong>تمام خدمات کائنات‌چی</strong></div>
         <div className="selected-discover-links">
-          <button type="button" onClick={() => onNavigate("services")}>خدمات <span>←</span></button>
-          <button type="button" onClick={() => {
-            onNavigate("services");
-            window.setTimeout(() => document.getElementById("services-classes")?.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
-          }}>کلاس‌ها <span>←</span></button>
-          <button type="button" onClick={() => {
-            onNavigate("services");
-            window.setTimeout(() => document.getElementById("services-events")?.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
-          }}>ایونت‌ها <span>←</span></button>
+          <button type="button" onClick={() => onNavigate("services")}>دیدن همه‌ی خدمات <span>←</span></button>
         </div>
       </section>
     </div>
