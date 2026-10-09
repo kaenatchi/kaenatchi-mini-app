@@ -4342,7 +4342,7 @@ function VipPage({
         <SectionHeaderCard kicker="VIP" title="کلاس‌های من" description="کلاس‌ها و دوره‌هایی که در آن‌ها ثبت‌نام کرده‌ای." icon="class" />
         <VipFilterTabs value={classFilter} onChange={value => setClassFilter(value as "all" | "current" | "completed")} options={[{ id: "all", title: "همه" }, { id: "current", title: "در حال برگزاری" }, { id: "completed", title: "گذرانده‌شده" }]} />
         {filtered.length > 0 ? filtered.map(item => <VipClassEventCard key={item.id} item={item} type="class" />) : (
-          <div className="glass-list-card" style={{ display: "block", textAlign: "center" }}><div className="list-icon" style={{ margin: "0 auto 12px" }}><Icon name="class" /></div><div className="list-copy"><strong>هنوز کلاسی برای شما ثبت نشده</strong><span>وقتی اطلاعات ثبت‌نام کلاس‌ها به حساب VIP متصل شود، اینجا نمایش داده می‌شود.</span></div></div>
+          <div className="glass-list-card" style={{ display: "block", textAlign: "center" }}><div className="list-icon" style={{ margin: "0 auto 12px" }}><Icon name="class" /></div><div className="list-copy"><strong>هنوز ثبت‌نام کلاسی برای این حساب پیدا نشد</strong><span>وقتی ثبت‌نام با همین حساب تلگرام در سامانه ثبت شود، اطلاعات کلاس اینجا نمایش داده می‌شود.</span></div></div>
         )}
       </div>
     );
@@ -4360,7 +4360,7 @@ function VipPage({
         <SectionHeaderCard kicker="VIP" title="ایونت‌های من" description="رویدادهایی که برای آن‌ها ثبت‌نام کرده‌ای یا در آن‌ها شرکت کرده‌ای." icon="event" />
         <VipFilterTabs value={eventFilter} onChange={value => setEventFilter(value as "all" | "upcoming" | "attended")} options={[{ id: "all", title: "همه" }, { id: "upcoming", title: "پیش‌رو" }, { id: "attended", title: "شرکت‌کرده" }]} />
         {filtered.length > 0 ? filtered.map(item => <VipClassEventCard key={item.id} item={item} type="event" />) : (
-          <div className="glass-list-card" style={{ display: "block", textAlign: "center" }}><div className="list-icon" style={{ margin: "0 auto 12px" }}><Icon name="event" /></div><div className="list-copy"><strong>هنوز ایونتی برای شما ثبت نشده</strong><span>وقتی اطلاعات ثبت‌نام ایونت‌ها به حساب VIP متصل شود، اینجا نمایش داده می‌شود.</span></div></div>
+          <div className="glass-list-card" style={{ display: "block", textAlign: "center" }}><div className="list-icon" style={{ margin: "0 auto 12px" }}><Icon name="event" /></div><div className="list-copy"><strong>هنوز ثبت‌نام ایونتی برای این حساب پیدا نشد</strong><span>وقتی ثبت‌نام با همین حساب تلگرام در سامانه ثبت شود، اطلاعات ایونت اینجا نمایش داده می‌شود.</span></div></div>
         )}
       </div>
     );
@@ -4710,6 +4710,18 @@ function MorePage({
   const [vipPanel, setVipPanel] = useState<VipPanel | null>(null);
   const [vipData, setVipData] = useState<VipApiResponse | null>(null);
   const [clock, setClock] = useState(new Date());
+  const moreScrollPosition = useRef(0);
+
+  useLayoutEffect(() => {
+    if (selected || vipPanel) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    } else if (moreScrollPosition.current > 0) {
+      const restoreAt = moreScrollPosition.current;
+      window.requestAnimationFrame(() => window.scrollTo({ top: restoreAt, behavior: "auto" }));
+    }
+  }, [selected, vipPanel]);
 
   useEffect(() => {
     let active = true;
@@ -4920,7 +4932,7 @@ function MorePage({
                 key={item.id}
                 type="button"
                 className="more-category-card"
-                onClick={() => setSelected(item)}
+                onClick={() => { moreScrollPosition.current = window.scrollY || document.documentElement.scrollTop || 0; setSelected(item); }}
               >
                 <span className="more-category-icon">
                   <Icon name={item.icon} />
