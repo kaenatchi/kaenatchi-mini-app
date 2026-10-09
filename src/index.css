@@ -4516,3 +4516,62 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .growth-goal-card,.growth-primary-action,.growth-secondary-action,.growth-skip-action,.growth-complete-action,.growth-progress-track span { transition:none; }
 }
+
+
+/* PATH POLISH + RESPONSIVE DARK-MODE CONTRAST */
+.selected-growth-page { width:min(100%,760px);min-width:0;gap:22px;padding-inline:clamp(14px,4vw,22px);padding-top:10px;margin-inline:auto; }
+.selected-growth-page > * { min-width:0;max-width:100%; }
+.selected-growth-page .selected-intro { margin-bottom:2px; }
+.selected-growth-page .growth-welcome { padding:19px 19px 16px;border-radius:23px;box-shadow:0 14px 32px rgba(23,56,43,.16),inset 0 1px 0 rgba(255,255,255,.12);animation:growthWelcomeIn .42s cubic-bezier(.2,.8,.2,1) both,growthWelcomeGlow 5.5s ease-in-out 1s infinite;transform-origin:center; }
+.selected-growth-page .growth-welcome:active { transform:scale(.985);filter:brightness(1.04); }
+.selected-growth-page .growth-welcome h2 { margin:8px 0 6px;font-size:clamp(17px,4.6vw,20px);line-height:1.55; }
+.selected-growth-page .growth-welcome p { font-size:10px;line-height:1.85; }
+.selected-growth-page .growth-progress-meta { margin-top:17px; }
+.selected-growth-page .growth-history { margin-top:7px; }
+.selected-growth-page .growth-quiz-card { border:1px solid rgba(36,77,59,.15);border-radius:22px;background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(247,245,237,.88));color:#26372f;box-shadow:0 14px 30px rgba(36,77,59,.08),inset 0 1px 0 rgba(255,255,255,.8); }
+.selected-growth-page .growth-quiz-card h2 { color:#17382b; }
+.selected-growth-page .growth-quiz-card p { color:#4e6055; }
+.selected-growth-page .growth-quiz-card button[aria-pressed] { font-weight:700; }
+.selected-growth-page .growth-quiz-card button:active { transform:scale(.985); }
+@keyframes growthWelcomeIn { from { opacity:0;transform:translateY(7px) scale(.99); } to { opacity:1;transform:translateY(0) scale(1); } }
+@keyframes growthWelcomeGlow { 0%,100% { box-shadow:0 14px 32px rgba(23,56,43,.16),inset 0 1px 0 rgba(255,255,255,.12); } 50% { box-shadow:0 17px 35px rgba(23,56,43,.21),inset 0 1px 0 rgba(255,255,255,.16); } }
+@media (prefers-color-scheme:dark) {
+ .selected-growth-page .growth-quiz-card { color:#e8efe9!important;border-color:rgba(218,232,220,.15)!important;background:linear-gradient(145deg,rgba(35,49,40,.98),rgba(26,38,31,.98))!important;box-shadow:0 14px 30px rgba(0,0,0,.2),inset 0 1px 0 rgba(218,232,220,.05); }
+ .selected-growth-page .growth-quiz-card h2,.selected-growth-page .growth-quiz-card h3,.selected-growth-page .growth-quiz-card strong { color:#edf4ee!important; }
+ .selected-growth-page .growth-quiz-card p,.selected-growth-page .growth-quiz-card label,.selected-growth-page .growth-quiz-card small { color:#c5d2c8!important; }
+ .selected-growth-page .growth-quiz-card button { color:#e4eee6!important;border-color:rgba(205,224,209,.2)!important;background:rgba(218,232,220,.07)!important; }
+ .selected-growth-page .growth-quiz-card button[aria-pressed="true"] { color:#f2f7f2!important;border-color:rgba(177,211,184,.68)!important;background:rgba(111,157,121,.24)!important; }
+ .selected-growth-page .growth-quiz-card .growth-kicker { color:#d8c59b!important; }
+}
+@media (max-width:390px) {
+ .selected-growth-page { gap:18px;padding-inline:14px; }
+ .selected-growth-page .growth-welcome { padding:17px 15px 14px;border-radius:20px; }
+ .selected-growth-page .growth-welcome h2 { font-size:17px; }
+ .selected-growth-page .growth-progress-meta { font-size:8px;gap:7px; }
+ .selected-growth-page .growth-quiz-card { padding:16px!important; }
+ .selected-growth-page .growth-quiz-card button { overflow-wrap:anywhere; }
+}
+@media (prefers-reduced-motion:reduce) {
+ .selected-growth-page .growth-welcome { animation:none!important; }
+ .selected-growth-page .growth-welcome:active,.selected-growth-page .growth-quiz-card button:active { transform:none; }
+}
+
+
+/* GLOBAL DARK-MODE TEXT LEGIBILITY SAFETY NET */
+@media (prefers-color-scheme:dark) {
+  .app-shell :is(h1,h2,h3,h4,h5,p,small,label,li,strong,em,dt,dd,a,legend,figcaption) {
+    color:#e4ece5!important;
+  }
+  .app-shell :is(input,textarea,select) {
+    color:#edf4ee!important;
+    background-color:rgba(38,53,44,.96);
+    border-color:rgba(218,232,220,.2);
+  }
+  .app-shell :is(input,textarea,select)::placeholder {
+    color:#aebdb2!important;
+    opacity:1;
+  }
+  .app-shell :is(.muted,.description,.subtitle,.helper-text,[data-muted="true"]) {
+    color:#c0cdc4!important;
+  }
+}
