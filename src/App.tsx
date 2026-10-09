@@ -848,6 +848,14 @@ function getDailyContentForToday() {
   return getEditorialContentForPlacement("حال‌وهوای امروز");
 }
 
+type DailyEditorialLayout = "typographic" | "split" | "image-led" | "graphic" | "asymmetric";
+
+function getDailyEditorialLayout(now = new Date()): DailyEditorialLayout {
+  const layouts: DailyEditorialLayout[] = ["typographic", "split", "image-led", "graphic", "asymmetric"];
+  const localDay = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000);
+  return layouts[((localDay % layouts.length) + layouts.length) % layouts.length];
+}
+
 type TodaySuggestion = {
   id: string;
   title: string;
@@ -1349,6 +1357,9 @@ function HomePage({
   const today = getTodayJalali();
   const dailyContent = getDailyContentForToday();
   const suggestion = getTodaySuggestion();
+  const editorialLayout = getDailyEditorialLayout();
+  const showEditorialImage = Boolean(dailyContent?.imageUrl) && ["split", "image-led", "asymmetric"].includes(editorialLayout);
+  const editorialArtMark = ({ typographic: "✳", split: "◌", "image-led": "✧", graphic: "✳", asymmetric: "✦" } as Record<DailyEditorialLayout, string>)[editorialLayout];
   const openSuggestion = () => {
     if (suggestion.service) {
       onOpenService(suggestion.service);
@@ -1432,30 +1443,41 @@ function HomePage({
           </div>
         </section>
 
-        <section className="today-section">
+        <section className={`today-section daily-editorial-section daily-editorial-section--${editorialLayout}`}>
           <div className="section-heading-row">
             <div>
-              <div className="section-kicker">
-                TODAY
-              </div>
-
+              <div className="section-kicker">DAILY EDITION</div>
               <h2>حال‌وهوای امروز</h2>
             </div>
-
             <Icon name="spark" />
           </div>
 
-          <div className="today-card daily-content-card">
-            {dailyContent?.imageUrl ? (
-              <img className="today-card-image" src={getDailyContentImageSrc(dailyContent.imageUrl)} alt={dailyContent.title} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+          <article className={`daily-editorial daily-editorial--${editorialLayout}`}>
+            {showEditorialImage && dailyContent?.imageUrl ? (
+              <div className="daily-editorial-media">
+                <img
+                  src={getDailyContentImageSrc(dailyContent.imageUrl)}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                  onError={(event) => { event.currentTarget.parentElement?.classList.add("is-image-unavailable"); event.currentTarget.remove(); }}
+                />
+              </div>
             ) : (
-              <div className="today-decoration"><Icon name="spark" /></div>
+              <div className="daily-editorial-art" aria-hidden="true">
+                <span className="daily-editorial-art-mark">{editorialArtMark}</span>
+                <span className="daily-editorial-art-line" />
+                <span className="daily-editorial-art-orbit" />
+              </div>
             )}
-            <div className="today-content">
-              <strong style={{ display: 'block', color: 'var(--green-dark)', fontSize: 'clamp(15px, 2vw, 18px)', lineHeight: 1.7, overflowWrap: 'anywhere' }}>{dailyContent?.title || 'آرام‌تر نگاه کن.'}</strong>
-              <span style={{ display: 'block', marginTop: '12px', color: 'var(--muted)', fontSize: 'clamp(11px, 1.5vw, 13px)', lineHeight: 1.9, overflowWrap: 'anywhere' }}>{dailyContent?.text || 'گاهی یک نشانه کوچک، شروع یک نگاه تازه است.'}</span>
+            <div className="daily-editorial-copy">
+              <span className="daily-editorial-eyebrow">{dailyContent?.category || "یادداشت روز"}</span>
+              <h3>{dailyContent?.title || "آرام‌تر نگاه کن."}</h3>
+              <p>{dailyContent?.text || "گاهی یک نشانه کوچک، شروع یک نگاه تازه است."}</p>
             </div>
-          </div>
+            <span className="daily-editorial-index" aria-hidden="true">K.</span>
+          </article>
         </section>
 
         <section className="featured-section">
