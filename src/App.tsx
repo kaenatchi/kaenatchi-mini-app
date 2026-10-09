@@ -1359,7 +1359,6 @@ function HomePage({
   const suggestion = getTodaySuggestion();
   const editorialLayout = getDailyEditorialLayout();
   const showEditorialImage = Boolean(dailyContent?.imageUrl) && ["split", "image-led", "asymmetric"].includes(editorialLayout);
-  const editorialArtMark = ({ typographic: "✳", split: "◌", "image-led": "✧", graphic: "✳", asymmetric: "✦" } as Record<DailyEditorialLayout, string>)[editorialLayout];
   const openSuggestion = () => {
     if (suggestion.service) {
       onOpenService(suggestion.service);
@@ -1466,17 +1465,15 @@ function HomePage({
               </div>
             ) : (
               <div className="daily-editorial-art" aria-hidden="true">
-                <span className="daily-editorial-art-mark">{editorialArtMark}</span>
                 <span className="daily-editorial-art-line" />
                 <span className="daily-editorial-art-orbit" />
               </div>
             )}
             <div className="daily-editorial-copy">
-              <span className="daily-editorial-eyebrow">{dailyContent?.category || "یادداشت روز"}</span>
+              {dailyContent?.category && !["عمومی", "general", "all", "همه"].includes(normalizeCmsLabel(dailyContent.category).toLowerCase()) && <span className="daily-editorial-eyebrow">{dailyContent.category}</span>}
               <h3>{dailyContent?.title || "آرام‌تر نگاه کن."}</h3>
               <p>{dailyContent?.text || "گاهی یک نشانه کوچک، شروع یک نگاه تازه است."}</p>
             </div>
-            <span className="daily-editorial-index" aria-hidden="true">K.</span>
           </article>
         </section>
 
