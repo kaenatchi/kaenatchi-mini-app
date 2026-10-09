@@ -850,9 +850,10 @@ function getDailyContentForToday() {
 
 type DailyEditorialLayout = "typographic" | "split" | "image-led" | "graphic" | "asymmetric";
 
-function getDailyEditorialLayout(today = getTodayJalaliKey()): DailyEditorialLayout {
+function getDailyEditorialLayout(now = new Date()): DailyEditorialLayout {
   const layouts: DailyEditorialLayout[] = ["typographic", "split", "image-led", "graphic", "asymmetric"];
-  return layouts[stableDailyIndex(today + "|home-editorial-layout", layouts.length)];
+  const localDay = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000);
+  return layouts[((localDay % layouts.length) + layouts.length) % layouts.length];
 }
 
 type TodaySuggestion = {
