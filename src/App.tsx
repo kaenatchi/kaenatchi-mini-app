@@ -728,7 +728,7 @@ function normalizeCmsLabel(value: string): string {
     .trim()
     .replace(/[يى]/g, "ی")
     .replace(/ك/g, "ک")
-    .replace(/[\\u200c\\u200e\\u200f\\uFEFF\\s]+/g, "");
+    .replace(/[\u200c\u200e\u200f\uFEFF\s]+/g, "");
 }
 
 function dailyContentPlacement(row: CmsRow): string {
