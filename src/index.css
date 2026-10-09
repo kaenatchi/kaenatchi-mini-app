@@ -4719,3 +4719,20 @@ button {
   .vip-mode .vip-journey-stat { border-color:rgba(218,232,220,.14); background:linear-gradient(145deg,rgba(44,59,49,.96),rgba(30,42,34,.96)); }
   .vip-mode .nav-fab-actions .nav-fab-action { background:linear-gradient(145deg,rgba(39,54,46,.98),rgba(28,40,33,.98)); border-color:rgba(218,232,220,.16); color:#edf3ed; }
 }
+
+/* The + menu uses the same card material in every app section. */
+.app-shell .nav-fab-actions .nav-fab-action {
+  background:linear-gradient(145deg,rgba(255,253,247,.98),rgba(241,243,233,.96));
+  border-color:rgba(36,77,59,.14);
+  color:#26372f;
+  box-shadow:0 12px 28px rgba(36,77,59,.12);
+}
+.app-shell .nav-fab-actions .nav-fab-action :is(span,strong,small) { color:inherit; }
+@media (prefers-color-scheme:dark) {
+  .app-shell .nav-fab-actions .nav-fab-action {
+    background:linear-gradient(145deg,rgba(39,54,46,.98),rgba(28,40,33,.98))!important;
+    border-color:rgba(218,232,220,.16)!important;
+    color:#edf3ed!important;
+  }
+  .app-shell .nav-fab-actions .nav-fab-action :is(span,strong,small) { color:#edf3ed!important; }
+}
