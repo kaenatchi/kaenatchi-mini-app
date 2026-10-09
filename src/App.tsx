@@ -762,8 +762,8 @@ function getDailyContentImageSrc(value: string) {
     if (parsed.hostname === 'drive.google.com' || parsed.hostname === 'www.drive.google.com') {
       let fileId = parsed.searchParams.get('id') || '';
       if (!fileId) {
-        const match = parsed.pathname.match(/\\/file\\/d\\/([^/]+)/);
-        if (match) fileId = match[1];
+        const pathParts = parsed.pathname.split('/');
+        if (pathParts[1] === 'file' && pathParts[2] === 'd') fileId = pathParts[3] || '';
       }
       if (fileId) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1600`;
     }
