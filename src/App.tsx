@@ -3223,63 +3223,38 @@ function normalizeVipTokens(value: unknown): VipToken[] {
 }
 
 function formatVipJalaliDate(value: unknown): string {
-  if (!value) return "";
+  if (value === null || value === undefined || String(value).trim() === "") return "";
+  const raw = String(value).trim();
+  const match = raw.match(/(?:^|\s)(\d{3,4})[\/-](\d{1,2})[\/-](\d{1,2})/);
 
-  const text = String(value).trim();
-
-  // The VIP sheet can return a date as "00:00 784/04/16".
-  // Strip the time and normalize the legacy 3-digit Jalali year.
-  const match = text.match(/(?:^|\\s)(\\d{3,4})[\\/-](\\d{1,2})[\\/-](\\d{1,2})/);
-
-  if (!match) return text;
-
-  let year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-
-  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-    return text;
+  if (match) {
+    let year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    // Legacy Sheets formatting sometimes drops the leading "1" from 1400s years.
+    if (year >= 700 && year < 900) year += 620;
+    if (year >= 1200 && year <= 1600 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const monthNames = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+      return `${day.toLocaleString("fa-IR")} ${monthNames[month - 1]} ${year.toLocaleString("fa-IR")}`;
+    }
   }
 
-  // Legacy backend formatting can drop the leading "1" from a Jalali
-  // year in the 1400s (e.g. 784 => 1404).
-  if (year >= 700 && year < 900) {
-    year += 620;
+  // Token timestamps from the legacy VIP API may be Gregorian ISO dates.
+  // Convert those for display only; never change the source value or expiry logic.
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    try {
+      return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "Asia/Tehran",
+      }).format(parsed);
+    } catch {
+      return raw;
+    }
   }
-
-  if (year < 1200 || year > 1600 || month < 1 || month > 12 || day < 1 || day > 31) {
-    return text;
-  }
-
-  try {
-    const dateText = `${year}/${month}/${day}`;
-    const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }).formatToParts(
-      new Date(
-        new Intl.DateTimeFormat("en-US", {
-          timeZone: "Asia/Tehran",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        }).format(new Date()) + "T00:00:00"
-      )
-    );
-
-    // Use the Jalali fields directly so we never reinterpret the stored
-    // membership date as a Gregorian date.
-    const monthNames = [
-      "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
-      "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
-    ];
-
-    void parts;
-    return `${day.toLocaleString("fa-IR") } ${monthNames[month - 1]} ${year.toLocaleString("fa-IR")}`;
-  } catch {
-    return `${day.toLocaleString("fa-IR")}/${month.toLocaleString("fa-IR")}/${year.toLocaleString("fa-IR")}`;
-  }
+  return raw;
 }
 
 function getVipTokenDisplayStatus(token: VipToken): {
