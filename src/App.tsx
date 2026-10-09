@@ -942,7 +942,7 @@ function getDailyEditorialImage(content: { title?: string; text?: string; catego
       "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1400&q=85"
     ]},
     { match: /یادگیری|کلاس|دانش|کتاب|مسیر|انتخاب|هدف/, urls: [
-      "https://images.unsplash.com/photo-1455390582262-044c      ?auto=format&fit=crop&w=1400&q=85"
+      "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1400&q=85"
     ]}
   ];
   const matched = imageSets.find((set) => set.match.test(topic));
