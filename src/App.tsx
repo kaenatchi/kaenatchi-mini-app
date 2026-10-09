@@ -1965,7 +1965,7 @@ function SelectedPage({
     .filter((row) => isDailyContentInRange(row, getTodayJalaliKey()))
     .sort((a, b) => (Number(cmsText(a, ["ترتیب", "order"])) || 0) - (Number(cmsText(b, ["ترتیب", "order"])) || 0));
 
-  const uniqueServices = Array.from(new Map(mainServices.map((service) => [service.id, service])).values());
+  const uniqueServices = Array.from(new Map<string, Service>(mainServices.map((service) => [service.id, service] as const)).values());
   const allSelected: Array<SearchItem & { badge: string }> = [
     ...uniqueServices.map((service) => ({
       id: service.id,
