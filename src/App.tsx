@@ -5391,7 +5391,7 @@ function BookingPage({
         icon="calendar"
       />
 
-      {renderBookingContent(["booking_intro", "booking_guide"])}
+      {/* متن‌های معرفی و راهنمای کلی در بالای صفحه نمایش داده نمی‌شوند. */}
 
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
@@ -5527,7 +5527,7 @@ function BookingPage({
             {selectedService.description}
           </div>
         )}
-        {renderBookingContent(["service_guide"])}
+        {renderBookingContent(["booking_intro", "service_guide"])}
       </div>
 
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
@@ -5576,7 +5576,7 @@ function BookingPage({
             </option>
           ))}
         </select>
-        {renderBookingContent(["date_time_guide"])}
+        {renderBookingContent(["booking_guide", "date_time_guide"])}
       </div>
 
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
