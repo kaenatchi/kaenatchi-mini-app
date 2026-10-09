@@ -2223,17 +2223,13 @@ button:active,
   box-shadow: 0 18px 42px rgba(39, 69, 49, .11), inset 0 1px 0 rgba(255,255,255,.86);
   text-align: right;
   color: var(--green-dark);
-  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  appearance: none;
-  -webkit-appearance: none;
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 .home-page .daily-editorial-card:active {
   transform: translateY(1px) scale(.985);
   box-shadow: 0 9px 22px rgba(39, 69, 49, .12), inset 0 1px 0 rgba(255,255,255,.8);
 }
-.home-page .daily-editorial-card:focus-visible,
 .home-page .featured-card:focus-visible {
   outline: 3px solid var(--gold);
   outline-offset: 4px;
