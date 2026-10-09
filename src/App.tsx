@@ -820,9 +820,12 @@ function getEditorialContentForPlacement(placement: "حال‌وهوای امر�
     if (calendarOccasions.length) {
       return calendarOccasions[stableDailyIndex(today + "|" + placement + "|calendar", calendarOccasions.length)];
     }
+    // Undated CMS occasions remain eligible for the general daily rotation, as promised by the CMS UI.
     pool = activeRows.filter((row) => {
       const slot = dailyContentPlacement(row);
-      return normalizeCmsLabel(slot) === normalizeCmsLabel("حال‌وهوای امروز") || normalizeCmsLabel(slot) === normalizeCmsLabel("همه بخش‌ها");
+      return normalizeCmsLabel(slot) === normalizeCmsLabel("حال‌وهوای امروز") ||
+        normalizeCmsLabel(slot) === normalizeCmsLabel("همه بخش‌ها") ||
+        (normalizeCmsLabel(slot) === normalizeCmsLabel("مناسبت‌ها") && !hasDateWindow(row));
     });
   } else {
     pool = activeRows.filter((row) => {
@@ -921,6 +924,16 @@ function getTodaySuggestion(): TodaySuggestion {
     .filter(cmsActive)
     .filter((row) => isDailyContentInRange(row, today))
     .filter((row) => normalizeCmsLabel(dailyContentPlacement(row)) === normalizeCmsLabel("پیشنهاد امروز"))
+    // Keep the daily suggestion practical. Existing CMS rows are preserved; promotional rows are simply not selected here.
+    .filter((row) => {
+      const category = normalizeCmsLabel(cmsText(row, ["دسته", "دسته‌بندی", "category"]));
+      const title = cmsText(row, ["عنوان", "title"]);
+      const body = cmsText(row, ["متن", "محتوا", "توضیحات", "text", "content", "شرح کوتاه", "خلاصه"]);
+      const combined = normalizeCmsLabel(title + " " + body);
+      if (category === normalizeCmsLabel("معرفی خدمات")) return false;
+      if (/خدماتکائناتچی|کلاسها|دورهها|رویدادهایفعال|خدماتکائناتچی|گزینههایخدمات/.test(combined)) return false;
+      return true;
+    })
     .sort((a, b) => (Number(cmsText(a, ["ترتیب", "order"])) || 0) - (Number(cmsText(b, ["ترتیب", "order"])) || 0));
 
   if (editorialRows.length) {
