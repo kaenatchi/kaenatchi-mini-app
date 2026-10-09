@@ -4675,3 +4675,30 @@ button {
   .loading-progress span { transition:none!important; }
   .services-accordion-panel,.faq-question-panel,.faq-answer-panel { transition:none!important; }
 }
+
+/* Keep the My Path heading visually distinct from its green hero card. */
+.selected-growth-page .selected-intro { margin-bottom:10px; padding-bottom:4px; }
+.services-accordion-panel,.faq-question-panel,.faq-answer-panel {
+  display:block;
+  max-height:0;
+  visibility:hidden;
+  opacity:0;
+  overflow:hidden;
+  padding:0 12px;
+  transition:max-height .32s ease,opacity .22s ease,padding .32s ease,visibility .22s ease;
+}
+.services-accordion-panel.is-open,.faq-question-panel.is-open {
+  max-height:5000px;
+  visibility:visible;
+  opacity:1;
+  padding:0 12px 12px;
+}
+.faq-answer-panel.is-open {
+  max-height:1800px;
+  visibility:visible;
+  opacity:1;
+  padding:0 13px 13px;
+}
+@media (prefers-reduced-motion:reduce) {
+  .services-accordion-panel,.faq-question-panel,.faq-answer-panel { transition:none!important; }
+}
