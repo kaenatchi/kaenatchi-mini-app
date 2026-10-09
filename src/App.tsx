@@ -724,19 +724,22 @@ async function loadCmsData(): Promise<boolean> {
 }
 
 function getDailyContentForToday() {
-  const normalizeDate = (value: string) => value
-    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
-    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
-    .replace(/-/g, '/')
-    .replace(/[^0-9/]/g, '');
-  const today = normalizeDate(getTodayJalali());
+  const normalizeDate = (value: string) => {
+    const normalized = value
+      .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+      .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+      .replace(/-/g, '/')
+      .replace(/[^0-9/]/g, '');
+    return normalized.includes('/') ? normalizeJalaliKey(normalized) : '';
+  };
+  const today = getTodayJalaliKey();
   const rows = cmsRows.dailyContent.filter(cmsActive).filter((row) => {
     const start = normalizeDate(cmsText(row, ['تاریخ شروع', 'شروع', 'start date']));
     const end = normalizeDate(cmsText(row, ['تاریخ پایان', 'پایان', 'end date']));
     return (!start || start <= today) && (!end || end >= today);
   }).sort((a, b) => (Number(cmsText(a, ['ترتیب', 'order'])) || 0) - (Number(cmsText(b, ['ترتیب', 'order'])) || 0));
   if (!rows.length) return null;
-  const day = getTodayJalali();
+  const day = today;
   let hash = 0;
   for (let i = 0; i < day.length; i += 1) hash = (hash * 31 + day.charCodeAt(i)) >>> 0;
   const index = hash % rows.length;
