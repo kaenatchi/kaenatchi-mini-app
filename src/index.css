@@ -3957,15 +3957,7 @@ button {
     var(--cream-soft);
 }
 
-.daily-editorial-art-mark {
-  position: relative;
-  z-index: 2;
-  font-family: Georgia, serif;
-  font-size: clamp(64px, 16vw, 132px);
-  line-height: 1;
-  color: currentColor;
-  opacity: .76;
-}
+
 
 .daily-editorial-art-line {
   position: absolute;
@@ -4001,18 +3993,7 @@ button {
   object-position: center;
 }
 
-.daily-editorial-index {
-  position: absolute;
-  z-index: 3;
-  left: 3px;
-  bottom: 0;
-  color: var(--gold);
-  font-family: Georgia, serif;
-  font-size: 12px;
-  letter-spacing: .12em;
-  opacity: .8;
-  pointer-events: none;
-}
+
 
 /* 01 — typography first: open page, oversized headline, no image frame. */
 .daily-editorial--typographic {
@@ -4036,9 +4017,7 @@ button {
   opacity: .42;
 }
 
-.daily-editorial--typographic .daily-editorial-art-mark {
-  font-size: clamp(90px, 23vw, 190px);
-}
+
 
 .daily-editorial--typographic .daily-editorial-copy {
   width: 86%;
@@ -4137,14 +4116,9 @@ button {
   color: #d8c59b;
 }
 
-.daily-editorial--graphic .daily-editorial-art-mark {
-  font-size: clamp(65px, 15vw, 120px);
-}
 
-.daily-editorial--graphic .daily-editorial-art-line,
-.daily-editorial--graphic .daily-editorial-art-orbit {
-  opacity: .36;
-}
+
+
 
 /* 05 — asymmetry: staggered layout, quiet rule and a shifted visual anchor. */
 .daily-editorial--asymmetric {
