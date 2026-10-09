@@ -1389,13 +1389,13 @@ function HomePage({
             <Icon name="spark" />
           </div>
 
-          <div className="today-card" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 3vw, 22px)', flexWrap: 'wrap', minWidth: 0 }}>
+          <div className="today-card daily-content-card">
             {dailyContent?.imageUrl ? (
-              <img src={getDailyContentImageSrc(dailyContent.imageUrl)} alt={dailyContent.title} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.style.display = 'none'; }} style={{ width: 'clamp(120px, 34%, 200px)', maxWidth: '100%', aspectRatio: '4 / 3', objectFit: 'cover', objectPosition: 'center', borderRadius: '16px', flex: '0 1 200px' }} />
+              <img className="today-card-image" src={getDailyContentImageSrc(dailyContent.imageUrl)} alt={dailyContent.title} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
             ) : (
               <div className="today-decoration"><Icon name="spark" /></div>
             )}
-            <div className="today-content" style={{ flex: '1 1 180px', minWidth: 0, overflowWrap: 'anywhere' }}>
+            <div className="today-content">
               <strong style={{ display: 'block', color: 'var(--green-dark)', fontSize: 'clamp(15px, 2vw, 18px)', lineHeight: 1.7, overflowWrap: 'anywhere' }}>{dailyContent?.title || 'آرام‌تر نگاه کن.'}</strong>
               <span style={{ display: 'block', marginTop: '12px', color: 'var(--muted)', fontSize: 'clamp(11px, 1.5vw, 13px)', lineHeight: 1.9, overflowWrap: 'anywhere' }}>{dailyContent?.text || 'گاهی یک نشانه کوچک، شروع یک نگاه تازه است.'}</span>
             </div>
