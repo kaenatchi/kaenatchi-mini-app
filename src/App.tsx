@@ -4626,7 +4626,7 @@ function MoreDetail({
                       <span>{item.question}</span><b className="faq-accordion-chevron">{open ? "−" : "+"}</b>
                     </button>
                     <div className={"faq-accordion-answer " + (open ? "is-open" : "")} aria-hidden={!open}>
-                      <p>{item.answer}</p>
+                      <div className="faq-accordion-answer-inner"><p>{item.answer}</p></div>
                     </div>
                   </section>
                 );
