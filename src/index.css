@@ -4555,3 +4555,23 @@ button {
  .selected-growth-page .growth-welcome { animation:none!important; }
  .selected-growth-page .growth-welcome:active,.selected-growth-page .growth-quiz-card button:active { transform:none; }
 }
+
+
+/* GLOBAL DARK-MODE TEXT LEGIBILITY SAFETY NET */
+@media (prefers-color-scheme:dark) {
+  .app-shell :is(h1,h2,h3,h4,h5,p,small,label,li,strong,em,dt,dd,a,legend,figcaption) {
+    color:#e4ece5!important;
+  }
+  .app-shell :is(input,textarea,select) {
+    color:#edf4ee!important;
+    background-color:rgba(38,53,44,.96);
+    border-color:rgba(218,232,220,.2);
+  }
+  .app-shell :is(input,textarea,select)::placeholder {
+    color:#aebdb2!important;
+    opacity:1;
+  }
+  .app-shell :is(.muted,.description,.subtitle,.helper-text,[data-muted="true"]) {
+    color:#c0cdc4!important;
+  }
+}
