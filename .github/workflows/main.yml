@@ -6,6 +6,7 @@ on:
       - main
       - design/home-daily-mood-card
       - design/todays-practical-suggestion
+      - feat/unified-design-services-vip-loading
   workflow_dispatch:
 
 jobs:
