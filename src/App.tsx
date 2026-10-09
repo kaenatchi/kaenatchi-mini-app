@@ -744,11 +744,21 @@ function getDailyContentForToday() {
   for (let i = 0; i < day.length; i += 1) hash = (hash * 31 + day.charCodeAt(i)) >>> 0;
   const index = hash % rows.length;
   const row = rows[index];
+  const rawImageUrl = cmsText(row, ['لینک تصویر', 'تصویر', 'image url', 'image']).trim();
+  // Google Drive's /uc?export=view URL can return an HTML preview instead of image bytes
+  // in embedded browsers. Use Drive's thumbnail endpoint for reliable <img> rendering.
+  const driveFileId =
+    rawImageUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/)?.[1] ||
+    rawImageUrl.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/)?.[1];
+  const imageUrl =
+    /(^|\.)drive\.google\.com\//i.test(rawImageUrl) && driveFileId
+      ? `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w1200`
+      : rawImageUrl;
   return {
     id: cmsText(row, ['شناسه', 'id']) || `daily-${index + 1}`,
     title: cmsText(row, ['عنوان', 'title']) || 'حال‌وهوای امروز',
     text: cmsText(row, ['متن', 'محتوا', 'توضیحات', 'text', 'content']),
-    imageUrl: cmsText(row, ['لینک تصویر', 'تصویر', 'image url', 'image']),
+    imageUrl,
   };
 }
 
