@@ -475,6 +475,45 @@ function cmsActive(row: CmsRow): boolean {
   return !value || ["بله", "فعال", "true", "1", "yes"].includes(value);
 }
 
+function renderBookingContent(keys: string[]) {
+  const wanted = new Set(keys.map((key) => cmsSlug(key)));
+  const rows = cmsRows.bookingContent
+    .filter((row) => cmsActive(row))
+    .filter((row) => {
+      const key = cmsSlug(cmsText(row, ["کلید", "key"]));
+      const title = cmsText(row, ["عنوان", "title"]);
+      const titleSlug = cmsSlug(title);
+      const keyMatch = wanted.has(key);
+      const titleMatch = keys.some((wantedKey) => {
+        const labelByKey: Record<string, string[]> = {
+          booking_intro: ["معرفی رزرو"],
+          booking_guide: ["راهنمای رزرو"],
+          service_guide: ["راهنمای انتخاب خدمت"],
+          date_time_guide: ["راهنمای تاریخ و ساعت"],
+          payment_guide: ["راهنمای پرداخت"],
+          receipt_warning: ["هشدار ارسال رسید"],
+          tracking_guide: ["راهنمای پیگیری"],
+          custom_notice: ["نکته تکمیلی", "نکتهٔ تکمیلی"],
+        };
+        return (labelByKey[wantedKey] || []).some((label) => cmsSlug(label) === titleSlug);
+      });
+      return keyMatch || titleMatch;
+    })
+    .sort((a, b) => (Number(cmsText(a, ["ترتیب", "order"])) || 0) - (Number(cmsText(b, ["ترتیب", "order"])) || 0));
+
+  return rows.map((row, index) => {
+    const title = cmsText(row, ["عنوان", "title"]);
+    const content = cmsText(row, ["محتوا", "متن", "توضیحات", "content", "text"]);
+    if (!title && !content) return null;
+    return (
+      <div key={cmsText(row, ["کلید", "key"]) || keys.join("-") + "-" + index} className="booking-inline-content" style={{display:"block",marginTop:"10px",padding:"12px 14px",borderRadius:"16px",background:"rgba(36,99,71,.055)",border:"1px solid rgba(36,99,71,.10)"}}>
+        {title && <div className="list-copy"><strong>{title}</strong></div>}
+        {content && <div className="list-copy" style={{marginTop:title ? "6px" : 0}}><span style={{whiteSpace:"pre-wrap"}}>{content}</span></div>}
+      </div>
+    );
+  });
+}
+
 function cmsSlug(value: string): string {
   return value
     .trim()
@@ -5352,20 +5391,7 @@ function BookingPage({
         icon="calendar"
       />
 
-      {cmsRows.bookingContent
-        .filter((row) => cmsActive(row))
-        .sort((a, b) => (Number(cmsText(a, ["ترتیب", "order"])) || 0) - (Number(cmsText(b, ["ترتیب", "order"])) || 0))
-        .map((row, index) => {
-          const title = cmsText(row, ["عنوان", "title"]);
-          const content = cmsText(row, ["محتوا", "متن", "توضیحات", "content", "text"]);
-          if (!title && !content) return null;
-          return (
-            <div key={cmsText(row, ["کلید", "key"]) || index} className="glass-list-card" style={{display:"block",marginBottom:"12px"}}>
-              {title && <div className="list-copy"><strong>{title}</strong></div>}
-              {content && <div className="list-copy" style={{marginTop:title ? "8px" : 0}}><span style={{whiteSpace:"pre-wrap"}}>{content}</span></div>}
-            </div>
-          );
-        })}
+      {renderBookingContent(["booking_intro", "booking_guide"])}
 
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
@@ -5501,6 +5527,7 @@ function BookingPage({
             {selectedService.description}
           </div>
         )}
+        {renderBookingContent(["service_guide"])}
       </div>
 
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
@@ -5549,6 +5576,7 @@ function BookingPage({
             </option>
           ))}
         </select>
+        {renderBookingContent(["date_time_guide"])}
       </div>
 
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
@@ -5655,6 +5683,7 @@ function BookingPage({
           <strong>۵. پرداخت و رسید</strong>
           <span>{paymentNote}</span>
         </div>
+        {renderBookingContent(["payment_guide"])} 
 
         <div style={{
           marginTop:"14px",
@@ -5693,6 +5722,7 @@ function BookingPage({
           onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
         />
 
+        {renderBookingContent(["receipt_warning"])}
         <label
           style={{
             display:"block",
@@ -5723,8 +5753,9 @@ function BookingPage({
           {message}
         </div>
       )}
+      {renderBookingContent(["tracking_guide", "custom_notice"])}
 
-      <button type="button" onClick={()=>void submit()} disabled={state==="submitting"} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px",cursor:state==="submitting"?"default":"pointer",boxShadow:"0 10px 24px rgba(23,75,56,.2)"}}>
+      <button type="button" onClick={()=>void submit() disabled={state==="submitting"} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px",cursor:state==="submitting"?"default":"pointer",boxShadow:"0 10px 24px rgba(23,75,56,.2)"}}>
         {state==="submitting" ? "در حال ثبت نوبت و پرداخت..." : "ثبت نهایی نوبت"}
       </button>
     </div>
