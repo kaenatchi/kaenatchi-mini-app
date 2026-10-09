@@ -535,7 +535,7 @@ function cmsCategory(value: string, title: string): ServiceCategory {
 
   if (/شمعتراپی|شمع/.test(text)) return "candle";
   if (/سایکو?تراپی|سایکوتراپی|مشاوره|گفتوگو/.test(text)) return "psychotherapy";
-  if (/^تراپی$|^therapy$/.test(text)) return "therapy";
+  if (/تراپی|therapy/.test(text)) return "therapy";
   return "energy";
 }
 
