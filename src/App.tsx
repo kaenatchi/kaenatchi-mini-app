@@ -752,31 +752,37 @@ function stableDailyIndex(seed: string, length: number): number {
 
 function getEditorialContentForPlacement(placement: "حال‌وهوای امروز" | "پیشنهاد امروز" | "منتخب") {
   const today = getTodayJalaliKey();
-  const rows = cmsRows.dailyContent
+  const activeRows = cmsRows.dailyContent
     .filter(cmsActive)
     .filter((row) => isDailyContentInRange(row, today))
-    .filter((row) => {
-      const slot = dailyContentPlacement(row);
-      if (placement === "حال‌وهوای امروز") {
-        const hasDateWindow = Boolean(
-          cmsText(row, ["تاریخ شروع", "شروع", "start date"]) ||
-          cmsText(row, ["تاریخ پایان", "پایان", "end date"])
-        );
-        if (slot === "مناسبت‌ها") return hasDateWindow;
-        return slot === placement || slot === "همه بخش‌ها";
-      }
-      return slot === placement || slot === "همه بخش‌ها";
-    })
     .sort((a, b) => (Number(cmsText(a, ["ترتیب", "order"])) || 0) - (Number(cmsText(b, ["ترتیب", "order"])) || 0));
 
-  if (!rows.length) return null;
-  const specialRows = rows.filter((row) => {
-    const category = cmsText(row, ["دسته", "دسته‌بندی", "category"]);
-    const start = cmsText(row, ["تاریخ شروع", "شروع", "start date"]);
-    const end = cmsText(row, ["تاریخ پایان", "پایان", "end date"]);
-    return Boolean(start || end) && (/مناسبت/.test(category) || Boolean(start || end));
-  });
-  const pool = placement === "حال‌وهوای امروز" && specialRows.length ? specialRows : rows;
+  const hasDateWindow = (row: (typeof activeRows)[number]) => Boolean(
+    cmsText(row, ["تاریخ شروع", "شروع", "start date"]) ||
+    cmsText(row, ["تاریخ پایان", "پایان", "end date"])
+  );
+
+  let pool = activeRows;
+  if (placement === "حال‌وهوای امروز") {
+    // A date-bounded entry marked as an occasion takes priority over the normal daily rotation.
+    const occasions = activeRows.filter((row) =>
+      dailyContentPlacement(row) === "مناسبت‌ها" && hasDateWindow(row)
+    );
+    pool = occasions.length
+      ? occasions
+      : activeRows.filter((row) => {
+          const slot = dailyContentPlacement(row);
+          return slot === "حال‌وهوای امروز" || slot === "همه بخش‌ها";
+        });
+  } else {
+    pool = activeRows.filter((row) => {
+      const slot = dailyContentPlacement(row);
+      return slot === placement || slot === "همه بخش‌ها";
+    });
+  }
+
+  if (!pool.length) return null;
+  // Stable for the whole Jalali day: refreshing does not change the selected item.
   const index = stableDailyIndex(today + "|" + placement, pool.length);
   const row = pool[index];
   return {
