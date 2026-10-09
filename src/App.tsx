@@ -1493,8 +1493,13 @@ function HomePage({
             <Icon name="spark" />
           </div>
 
-          <article className={`daily-editorial daily-editorial--${editorialLayout}`}>
-            <div className="daily-editorial-media">
+          <button
+            type="button"
+            className={`daily-editorial daily-editorial-card daily-editorial--${editorialLayout}`}
+            onClick={() => onNavigate("selected")}
+            aria-label={`مشاهده حال‌وهوای امروز: ${dailyContent?.title || "آرام‌تر نگاه کن"}`}
+          >
+            <span className="daily-editorial-media">
               <img
                 src={editorialImageSrc}
                 alt=""
@@ -1513,19 +1518,20 @@ function HomePage({
                   }
                 }}
               />
-            </div>
-            <div className="daily-editorial-copy">
+            </span>
+            <span className="daily-editorial-copy">
               {dailyContent?.category && !["عمومی", "general", "all", "همه"].includes(normalizeCmsLabel(dailyContent.category).toLowerCase()) && <span className="daily-editorial-eyebrow">{dailyContent.category}</span>}
-              <h3>{dailyContent?.title || "آرام‌تر نگاه کن."}</h3>
-              <p>{dailyContent?.text || "گاهی یک نشانه کوچک، شروع یک نگاه تازه است."}</p>
-            </div>
-          </article>
+              <span className="daily-editorial-title">{dailyContent?.title || "آرام‌تر نگاه کن."}</span>
+              <span className="daily-editorial-description">{dailyContent?.text || "گاهی یک نشانه کوچک، شروع یک نگاه تازه است."}</span>
+              <span className="daily-editorial-action">مکثی برای خودت <span aria-hidden="true">←</span></span>
+            </span>
+          </button>
         </section>
 
         <section className="featured-section">
           <div className="section-heading-row">
             <div>
-              <div className="section-kicker">FEATURED</div>
+              <div className="section-kicker">DAILY SUGGESTION</div>
               <h2>پیشنهاد امروز</h2>
             </div>
           </div>
