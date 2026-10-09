@@ -4749,3 +4749,7 @@ button {
   .faq-accordion-item.is-open { border-color:rgba(169,199,173,.28); }
 }
 @media (prefers-reduced-motion: reduce) { .faq-accordion-answer { transition:none; } }
+
+.services-accordion-panel { overflow: hidden; }
+.services-accordion-panel-inner { min-height: 0; overflow: hidden; display: flow-root; }
+.services-accordion-panel-inner .services-detail-item + .services-detail-item { margin-top: 8px; }
