@@ -764,6 +764,29 @@ function stableDailyIndex(seed: string, length: number): number {
   return hash % length;
 }
 
+type AutomaticCalendarOccasion = { id: string; title: string; text: string; imageUrl: string; category: string };
+
+function getAutomaticCalendarOccasions(todayJalali: string, now = new Date()): AutomaticCalendarOccasion[] {
+  const parts = todayJalali.split("/").map(Number);
+  const jm = parts[1] || 0;
+  const jd = parts[2] || 0;
+  const gp = new Intl.DateTimeFormat("en-US", { month: "2-digit", day: "2-digit" }).formatToParts(now);
+  const gm = Number(gp.find((p) => p.type === "month")?.value || 0);
+  const gd = Number(gp.find((p) => p.type === "day")?.value || 0);
+  const items: AutomaticCalendarOccasion[] = [];
+  const add = (id: string, title: string, text: string, category: string) => items.push({ id, title, text, imageUrl: "", category });
+
+  if (jm === 1 && jd >= 1 && jd <= 13) add("calendar-nowruz", "نوروز؛ فصل تازه", "سال نو، فرصتی برای مکث، تازه‌کردن نیت‌ها و قدم‌گذاشتن به مسیرهای تازه است. لازم نیست همه‌چیز یک‌باره تغییر کند؛ گاهی یک شروع کوچک کافی است.", "نوروز");
+  if (jm === 9 && jd === 30) add("calendar-yalda", "شب یلدا؛ گرمای کنار هم بودن", "بلندترین شب سال یادآور این است که حتی طولانی‌ترین تاریکی‌ها هم می‌گذرند؛ گاهی گرمای یک گفت‌وگو و حضور عزیزان کافی است.", "شب یلدا");
+  if (gm === 2 && gd === 14) add("calendar-valentines-day", "ولنتاین؛ یادآوری مهر", "امروز بهانه‌ای است برای دیدن و گفتنِ دوست‌داشتن؛ از مهربانی با آدم‌های عزیز زندگی‌ات شروع کن و خودت را هم از قلم نینداز.", "ولنتاین");
+  if (gm === 3 && gd === 8) add("calendar-womens-day", "روز جهانی زن", "امروز فرصتی است برای به‌رسمیت‌شناختن توان، تجربه و حق انتخاب زنان؛ از جمله حق هر زن برای تعریف مسیر خودش.", "روز جهانی زن");
+  if (gm === 3 && gd === 20) add("calendar-happiness-day", "روز جهانی شادی", "شادی همیشه اتفاقی بزرگ نیست؛ گاهی در یک استراحت کوتاه، یک گفت‌وگوی خوب یا توجه به لحظه‌ای ساده پیدا می‌شود.", "روز جهانی شادی");
+  if (gm === 4 && gd === 22) add("calendar-earth-day", "روز زمین", "مراقبت از زمین با انتخاب‌های کوچک شروع می‌شود؛ کمتر هدر دادن، بیشتر توجه کردن و قدر دانستن خانه‌ای که با هم در آن زندگی می‌کنیم.", "روز زمین");
+  if (gm === 6 && gd === 21) add("calendar-yoga-day", "روز جهانی یوگا", "چند دقیقه توجه آرام به تنفس و بدن می‌تواند دعوتی باشد برای بازگشت به لحظهٔ اکنون؛ با مهربانی و بدون فشار به خودت.", "روز جهانی یوگا");
+  if (gm === 10 && gd === 10) add("calendar-mental-health-day", "روز جهانی سلامت روان", "رسیدگی به حال درونی بخشی از مراقبت از خود است. درخواست کمک، استراحت و حرف‌زدن با فردی امن می‌تواند قدمی ارزشمند باشد.", "روز جهانی سلامت روان");
+  return items;
+}
+
 function getEditorialContentForPlacement(placement: "حال‌وهوای امروز" | "پیشنهاد امروز" | "منتخب") {
   const today = getTodayJalaliKey();
   const activeRows = cmsRows.dailyContent
