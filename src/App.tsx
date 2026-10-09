@@ -24,7 +24,8 @@ type IconName =
   | "ticket"
   | "user"
   | "check"
-  | "search";
+  | "search"
+  | "footsteps";
 
 type ServiceCategory =
   | "energy"
@@ -1048,6 +1049,16 @@ function Icon({ name }: { name: IconName }) {
           <path d="M3.5 10.8 12 3.8l8.5 7" />
           <path d="M5.5 9.8v10.4h13V9.8" />
           <path d="M9.5 20.2v-6h5v6" />
+        </svg>
+      );
+
+    case "footsteps":
+      return (
+        <svg {...common}>
+          <path d="M8.2 4.1c1.1-.3 2.2.4 2.5 1.5l.5 1.8c.3 1.1-.4 2.2-1.5 2.5s-2.2-.4-2.5-1.5l-.5-1.8c-.3-1.1.4-2.2 1.5-2.5Z" />
+          <path d="M15.5 13.2c1.1-.3 2.2.4 2.5 1.5l.5 1.8c.3 1.1-.4 2.2-1.5 2.5s-2.2-.4-2.5-1.5l-.5-1.8c-.3-1.1.4-2.2 1.5-2.5Z" />
+          <path d="M5.1 13.8c.7-1.5 2.1-2.4 3.8-2.2 1.7.2 2.9 1.5 3 3.2.1 1.2-.5 2.2-1.5 3l-2.1 1.7c-.9.7-2.2.6-2.9-.3-.5-.6-.6-1.4-.3-2.1l.5-1.1c.3-.7.1-1.5-.5-2.2Z" />
+          <path d="M12.1 5.3c.7-1.5 2.1-2.4 3.8-2.2 1.7.2 2.9 1.5 3 3.2.1 1.2-.5 2.2-1.5 3l-2.1 1.7c-.9.7-2.2.6-2.9-.3-.5-.6-.6-1.4-.3-2.1l.5-1.1c.3-.7.1-1.5-.5-2.2Z" />
         </svg>
       );
 
@@ -2282,17 +2293,17 @@ function SelectedPage({
 
   return (
     <div className="inner-page selected-page selected-growth-page">
-      <section className="selected-intro"><div className="selected-intro-mark"><Icon name="spark" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>مسیر من</h1><p>قدم‌به‌قدم، متناسب با خودت.</p></div><div className="selected-intro-line" /></section>
+      <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>مسیر من</h1><p>قدم‌به‌قدم، متناسب با خودت.</p></div><div className="selected-intro-line" /></section>
       <section className="growth-welcome">
         <div className="growth-welcome-orbit growth-orbit-one" /><div className="growth-welcome-orbit growth-orbit-two" />
-        <span className="growth-kicker">منتخب کائنات‌چی · مسیر رشد</span>
+        <span className="growth-kicker">مسیر من · مسیر رشد</span>
         <h2>{screen === "intro" || screen === "quiz" ? "مسیرت را از شناخت خودت شروع کن." : "هر قدم کوچک، بخشی از مسیر توست."}</h2>
         <p>این آزمون برای خودشناسی و پیشنهاد تمرین طراحی شده؛ تشخیص روان‌شناختی یا سنجش علمی شخصیت نیست.</p>
         <div className="growth-progress-meta"><span>{progress.quizComplete ? "آزمون اولیه تکمیل شد" : "آغاز مسیر شخصی"}</span><span>{progress.answers.length} از {questions.length} پرسش</span></div>
         <div className="growth-progress-track"><span style={{ width: (progress.answers.length / questions.length * 100) + "%" }} /></div>
       </section>
 
-      {screen === "intro" && <section className="glass-list-card" style={{ display: "block", padding: "20px" }}>
+      {screen === "intro" && <section className="glass-list-card growth-quiz-card" style={{ display: "block", padding: "20px" }}>
         <div className="growth-kicker">برای همه · حتی بدون هدف مشخص</div><h2 style={{ margin: "8px 0", fontSize: "21px" }}>نمی‌دانی از کجا شروع کنی؟</h2>
         <p style={{ lineHeight: 2, fontSize: "13px" }}>با پنج سؤال کوتاه شروع می‌کنیم. در پایان، نقطهٔ شروع و یک تمرین رایگان می‌گیری؛ برای این مرحله لازم نیست خدمتی بخری یا VIP باشی.</p>
         <button type="button" style={primary} onClick={startQuiz}>شروع آزمون کوتاه ←</button>
@@ -6169,8 +6180,8 @@ function BottomNav({
           onChange("selected");
         }}
       >
-        <span className="nav-icon"><Icon name="spark" /></span>
-        <span>منتخب</span>
+        <span className="nav-icon"><Icon name="footsteps" /></span>
+         <span>مسیر من</span>
       </button>
 
       <button
