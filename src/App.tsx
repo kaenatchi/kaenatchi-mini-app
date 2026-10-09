@@ -1055,10 +1055,10 @@ function Icon({ name }: { name: IconName }) {
     case "footsteps":
       return (
         <svg {...common}>
-          <path d="M8.2 4.1c1.1-.3 2.2.4 2.5 1.5l.5 1.8c.3 1.1-.4 2.2-1.5 2.5s-2.2-.4-2.5-1.5l-.5-1.8c-.3-1.1.4-2.2 1.5-2.5Z" />
-          <path d="M15.5 13.2c1.1-.3 2.2.4 2.5 1.5l.5 1.8c.3 1.1-.4 2.2-1.5 2.5s-2.2-.4-2.5-1.5l-.5-1.8c-.3-1.1.4-2.2 1.5-2.5Z" />
-          <path d="M5.1 13.8c.7-1.5 2.1-2.4 3.8-2.2 1.7.2 2.9 1.5 3 3.2.1 1.2-.5 2.2-1.5 3l-2.1 1.7c-.9.7-2.2.6-2.9-.3-.5-.6-.6-1.4-.3-2.1l.5-1.1c.3-.7.1-1.5-.5-2.2Z" />
-          <path d="M12.1 5.3c.7-1.5 2.1-2.4 3.8-2.2 1.7.2 2.9 1.5 3 3.2.1 1.2-.5 2.2-1.5 3l-2.1 1.7c-.9.7-2.2.6-2.9-.3-.5-.6-.6-1.4-.3-2.1l.5-1.1c.3-.7.1-1.5-.5-2.2Z" />
+          <ellipse cx="8.2" cy="6.3" rx="2.05" ry="3.05" transform="rotate(-18 8.2 6.3)" />
+          <path d="M5.2 11.1c1.3-.6 3.1-.1 3.9 1.2.7 1.2.4 2.6-.6 3.7l-1.7 2c-.8.9-2.2 1.1-3 .3-.6-.6-.7-1.6-.3-2.4l.7-1.2c.5-.9.8-2.1 1-3.6Z" />
+          <ellipse cx="16.1" cy="16.7" rx="2.05" ry="3.05" transform="rotate(-18 16.1 16.7)" />
+          <path d="M13.1 11.5c1.3-.6 3.1-.1 3.9 1.2.7 1.2.4 2.6-.6 3.7l-1.7 2c-.8.9-2.2 1.1-3 .3-.6-.6-.7-1.6-.3-2.4l.7-1.2c.5-.9.8-2.1 1-3.6Z" />
         </svg>
       );
 
@@ -1932,6 +1932,7 @@ function ServicesPage({
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [activeCategory, setActiveCategory] = useState<ServiceCategory | null>(null);
   const [energyFilter, setEnergyFilter] = useState<"all" | "emotional" | "career" | "general">("all");
+  const [expandedClassEventId, setExpandedClassEventId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!focus || focus === "all") return;
@@ -1940,7 +1941,7 @@ function ServicesPage({
     const timer = window.setTimeout(() => {
       document.getElementById(targetId)?.scrollIntoView({
         behavior: "smooth",
-        block: "center",
+        block: "start",
       });
     }, 120);
 
@@ -1977,8 +1978,8 @@ function ServicesPage({
     },
     {
       id: "psychotherapy",
-      title: "گفت‌وگو",
-      description: "جلسه‌ای گفت‌وگومحور برای صحبت درباره موضوع مورد نظر تو.",
+      title: "سایکوتراپی",
+      description: "بخشی برای آشنایی با خدمات سایکوتراپی و جزئیات هر جلسه.",
       icon: "conversation",
     },
   ];
@@ -2099,7 +2100,7 @@ function ServicesPage({
                   ? "انرژی‌خوانی"
                   : activeCategory === "candle"
                     ? "شمع‌تراپی"
-                    : "گفت‌وگو"}
+                    : "سایکوتراپی"}
               </strong>
             </div>
           </div>
@@ -2146,51 +2147,45 @@ function ServicesPage({
           </div>
 
           <div className="services-content-lobby">
-            <button
+            <section
               id="services-classes"
-              type="button"
-              className={"services-content-card services-content-button " + (focus === "classes" ? "is-focused" : "")}
-              onClick={() => {
-                document.getElementById("services-classes")?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "center",
-                });
-              }}
+              className={"services-content-card services-accordion " + (focus === "classes" ? "is-focused" : "")}
+              aria-label="کلاس‌ها"
             >
-              <div className="services-content-icon"><Icon name="class" /></div>
-              <div className="list-copy">
-                <strong>کلاس‌ها</strong>
-                {publishedClasses.length > 0
-                  ? publishedClasses.map((item) => (
-                      <span key={item.id}>{item.title} — {item.description}</span>
-                    ))
-                  : <span>آموزش‌ها و دوره‌های کائنات‌چی به‌صورت خودکار اینجا نمایش داده می‌شوند.</span>}
+              <button type="button" className="services-accordion-trigger" aria-expanded={expandedClassEventId === "classes"} onClick={() => setExpandedClassEventId((current) => current === "classes" ? null : "classes")}>
+                <span className="services-content-icon"><Icon name="class" /></span>
+                <span className="services-accordion-heading"><strong>کلاس‌ها</strong><small>{publishedClasses.length ? `${publishedClasses.length.toLocaleString("fa-IR")} دوره برای بررسی` : "آموزش‌ها و دوره‌های کائنات‌چی"}</small></span>
+                <span className={"services-accordion-chevron " + (expandedClassEventId === "classes" ? "is-open" : "")}><Icon name="arrow" /></span>
+              </button>
+              <div className={"services-accordion-panel " + (expandedClassEventId === "classes" ? "is-open" : "")} aria-hidden={expandedClassEventId !== "classes"}>
+                {publishedClasses.length > 0 ? publishedClasses.map((item) => (
+                  <article className="services-detail-item" key={item.id}>
+                    <strong>{item.title}</strong>
+                    {item.description && <p>{item.description}</p>}
+                  </article>
+                )) : <p className="services-accordion-empty">هنوز دوره‌ای برای نمایش منتشر نشده است.</p>}
               </div>
-              <div className="list-arrow"><Icon name="arrow" /></div>
-            </button>
+            </section>
 
-            <button
+            <section
               id="services-events"
-              type="button"
-              className={"services-content-card services-content-button " + (focus === "events" ? "is-focused" : "")}
-              onClick={() => {
-                document.getElementById("services-events")?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "center",
-                });
-              }}
+              className={"services-content-card services-accordion " + (focus === "events" ? "is-focused" : "")}
+              aria-label="ایونت‌ها"
             >
-              <div className="services-content-icon"><Icon name="event" /></div>
-              <div className="list-copy">
-                <strong>ایونت‌ها</strong>
-                {publishedEvents.length > 0
-                  ? publishedEvents.map((item) => (
-                      <span key={item.id}>{item.title} — {item.description}</span>
-                    ))
-                  : <span>رویدادها و برنامه‌های پیش روی کائنات‌چی اینجا قرار می‌گیرند.</span>}
+              <button type="button" className="services-accordion-trigger" aria-expanded={expandedClassEventId === "events"} onClick={() => setExpandedClassEventId((current) => current === "events" ? null : "events")}>
+                <span className="services-content-icon"><Icon name="event" /></span>
+                <span className="services-accordion-heading"><strong>ایونت‌ها</strong><small>{publishedEvents.length ? `${publishedEvents.length.toLocaleString("fa-IR")} رویداد برای بررسی` : "رویدادها و برنامه‌های پیش رو"}</small></span>
+                <span className={"services-accordion-chevron " + (expandedClassEventId === "events" ? "is-open" : "")}><Icon name="arrow" /></span>
+              </button>
+              <div className={"services-accordion-panel " + (expandedClassEventId === "events" ? "is-open" : "")} aria-hidden={expandedClassEventId !== "events"}>
+                {publishedEvents.length > 0 ? publishedEvents.map((item) => (
+                  <article className="services-detail-item" key={item.id}>
+                    <strong>{item.title}</strong>
+                    {item.description && <p>{item.description}</p>}
+                  </article>
+                )) : <p className="services-accordion-empty">هنوز رویدادی برای نمایش منتشر نشده است.</p>}
               </div>
-              <div className="list-arrow"><Icon name="arrow" /></div>
-            </button>
+            </section>
           </div>
         </>
       )}
