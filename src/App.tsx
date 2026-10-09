@@ -862,41 +862,84 @@ type TodaySuggestion = {
   description: string;
   badge: string;
   icon: IconName;
-  service?: Service;
-  type: "service" | "class" | "event" | "editorial";
+  type: "editorial";
   imageUrl?: string;
+  category?: string;
 };
 
+const BUILT_IN_DAILY_PRACTICES: TodaySuggestion[] = [
+  {
+    id: "practice-autumn-tea",
+    title: "آیین کوتاه چای پاییزی",
+    description: "یک فنجان چای آماده کن و پنج دقیقه فقط به گرما، عطر و مزه‌اش توجه کن؛ بدون عجله و بدون صفحه‌نمایش.",
+    badge: "آیین فصل",
+    icon: "spark",
+    type: "editorial",
+    category: "پیشنهاد فصلی",
+  },
+  {
+    id: "practice-three-breaths",
+    title: "سه نفس برای بازگشت",
+    description: "کمی راحت بنشین. سه بار آرام نفس بکش و هنگام بازدم، شانه‌هایت را رها کن. لازم نیست چیزی را تغییر بدهی؛ فقط متوجه نفس‌ها باش.",
+    badge: "مکث کوتاه",
+    icon: "spark",
+    type: "editorial",
+    category: "آرام‌سازی",
+  },
+  {
+    id: "practice-five-minute-focus",
+    title: "پنج دقیقه تمرکز",
+    description: "یک کار کوچک انتخاب کن، اعلان‌ها را کنار بگذار و فقط پنج دقیقه با همان کار بمان. قرار نیست تمامش کنی؛ فقط شروع کن.",
+    badge: "تمرین روزانه",
+    icon: "spark",
+    type: "editorial",
+    category: "تمرکز",
+  },
+  {
+    id: "practice-notice-light",
+    title: "لحظه‌ای برای دیدن نور",
+    description: "کنار پنجره یا در فضای روشن بایست و یک دقیقه به تغییر نور و سایه‌ها نگاه کن. سه جزئیات کوچک را که قبلاً ندیده بودی پیدا کن.",
+    badge: "کشف کوچک",
+    icon: "spark",
+    type: "editorial",
+    category: "توجه‌آگاهی",
+  },
+  {
+    id: "practice-gentle-reset",
+    title: "یک شروع دوبارهٔ کوچک",
+    description: "سطح کوچکی مثل میز یا گوشه‌ای از اتاقت را مرتب کن. هنگام انجامش فقط همان کار را انجام بده و از تمام‌شدن یک قدم کوچک لذت ببر.",
+    badge: "مراقبت روزانه",
+    icon: "spark",
+    type: "editorial",
+    category: "تازگی",
+  },
+];
+
 function getTodaySuggestion(): TodaySuggestion {
-  const editorial = getEditorialContentForPlacement("پیشنهاد امروز");
-  const pool: TodaySuggestion[] = [
-    ...mainServices.map((service) => ({
-      id: "service-" + service.id,
-      title: service.title,
-      description: service.description,
-      badge: "خدمت قابل رزرو",
-      icon: (service.category === "candle" ? "candle" : service.category === "psychotherapy" ? "conversation" : "energy") as IconName,
-      service,
-      type: "service" as const,
-    })),
-    ...publishedClasses.map((item) => ({ id: item.id, title: item.title, description: item.description, badge: "کلاس", icon: "class" as IconName, type: "class" as const })),
-    ...publishedEvents.map((item) => ({ id: item.id, title: item.title, description: item.description, badge: "رویداد", icon: "event" as IconName, type: "event" as const })),
-  ];
-  const candidates: TodaySuggestion[] = editorial
-    ? [{ id: editorial.id, title: editorial.title, description: editorial.text, badge: "محتوای کاربردی", icon: "spark", type: "editorial", imageUrl: editorial.imageUrl }, ...pool]
-    : pool;
-  if (!candidates.length) {
+  const today = getTodayJalaliKey();
+  const editorialRows = cmsRows.dailyContent
+    .filter(cmsActive)
+    .filter((row) => isDailyContentInRange(row, today))
+    .filter((row) => normalizeCmsLabel(dailyContentPlacement(row)) === normalizeCmsLabel("پیشنهاد امروز"))
+    .sort((a, b) => (Number(cmsText(a, ["ترتیب", "order"])) || 0) - (Number(cmsText(b, ["ترتیب", "order"])) || 0));
+
+  if (editorialRows.length) {
+    const index = stableDailyIndex(today + "|practical-suggestion", editorialRows.length);
+    const row = editorialRows[index];
     return {
-      id: "default-pause",
-      title: "برای خودت یک مکث بساز.",
-      description: "گاهی چند دقیقه مکث، فرصت تازه‌ای برای دیدن چیزهای ساده به ما می‌دهد.",
-      badge: "پیشنهاد کائنات‌چی",
+      id: cmsText(row, ["شناسه", "id"]) || "daily-practice-" + (index + 1),
+      title: cmsText(row, ["عنوان", "title"]) || "پیشنهاد امروز",
+      description: cmsText(row, ["متن", "محتوا", "توضیحات", "text", "content", "شرح کوتاه", "خلاصه"]),
+      badge: cmsText(row, ["دسته", "دسته‌بندی", "category"]) || "پیشنهاد روزانه",
       icon: "spark",
       type: "editorial",
+      imageUrl: cmsText(row, ["لینک تصویر", "تصویر", "image url", "image"]),
+      category: cmsText(row, ["دسته", "دسته‌بندی", "category"]),
     };
   }
-  const index = stableDailyIndex(getTodayJalaliKey() + "|suggestion", candidates.length);
-  return candidates[index];
+
+  // Useful, non-commercial fallback: rotate only among practical activities, never paid services.
+  return BUILT_IN_DAILY_PRACTICES[stableDailyIndex(today + "|seasonal-practice", BUILT_IN_DAILY_PRACTICES.length)];
 }
 
 function getDailyContentImageSrc(value: string) {
@@ -1389,32 +1432,19 @@ function HomePage({
   onSearch,
   onOpenVip,
   onNavigate,
-  onOpenService,
 }: {
   onSearch: () => void;
   onOpenVip: () => void;
   onNavigate: (section: Section) => void;
-  onOpenService: (service: Service) => void;
 }) {
   const today = getTodayJalali();
   const dailyContent = getDailyContentForToday();
   const suggestion = getTodaySuggestion();
   const editorialLayout = getDailyEditorialLayout();
   const editorialImageSrc = getDailyEditorialImage(dailyContent);
-  const openSuggestion = () => {
-    if (suggestion.service) {
-      onOpenService(suggestion.service);
-      return;
-    }
-    if (suggestion.type === "class" || suggestion.type === "event") {
-      onNavigate("services");
-      window.setTimeout(() => {
-        document.getElementById(suggestion.type === "class" ? "services-classes" : "services-events")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 120);
-      return;
-    }
-    if (suggestion.type === "editorial") onNavigate("selected");
-  };
+  const [suggestionOpen, setSuggestionOpen] = useState(false);
+  const suggestionImageSrc = getDailyEditorialImage(suggestion);
+  const openSuggestion = () => setSuggestionOpen(true);
 
   return (
     <>
@@ -1525,36 +1555,64 @@ function HomePage({
           </article>
         </section>
 
-        <section className="featured-section">
+        <section className="featured-section practical-suggestion-section">
           <div className="section-heading-row">
             <div>
-              <div className="section-kicker">DAILY SUGGESTION</div>
+              <div className="section-kicker">A SMALL MOMENT FOR YOU</div>
               <h2>پیشنهاد امروز</h2>
+              <p className="practical-suggestion-intro">یک تجربهٔ کوچک، فقط برای همین لحظه</p>
             </div>
           </div>
 
-          <button type="button" className="featured-card" onClick={openSuggestion} aria-label={`مشاهده ${suggestion.title}`} style={{ width: "100%", textAlign: "inherit", cursor: "pointer", fontFamily: "inherit", color: "inherit" }}>
-            <div className="featured-art">
-              {suggestion.imageUrl ? (
-                <img src={getDailyContentImageSrc(suggestion.imageUrl)} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
-              ) : (
-                <div className="featured-circle">
-                  <div className="featured-leaf leaf-a" />
-                  <div className="featured-leaf leaf-b" />
-                  <div className="featured-leaf leaf-c" />
-                  <Icon name={suggestion.icon} />
-                </div>
-              )}
+          <article className="featured-card practical-suggestion-card">
+            <div className="featured-art practical-suggestion-art">
+              <img
+                src={suggestionImageSrc}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                referrerPolicy="no-referrer"
+                onError={(event) => {
+                  const img = event.currentTarget;
+                  const fallbackIndex = Number(img.dataset.fallbackIndex || "0");
+                  if (fallbackIndex < DAILY_EDITORIAL_IMAGE_FALLBACKS.length) {
+                    img.dataset.fallbackIndex = String(fallbackIndex + 1);
+                    img.src = DAILY_EDITORIAL_IMAGE_FALLBACKS[fallbackIndex];
+                  } else {
+                    img.style.visibility = "hidden";
+                  }
+                }}
+              />
+              <span className="practical-suggestion-art-mark" aria-hidden="true">✦</span>
             </div>
-
-            <div className="featured-copy">
-              <div className="featured-label">{suggestion.badge}</div>
+            <div className="featured-copy practical-suggestion-copy">
+              <div className="featured-label">{suggestion.category || suggestion.badge}</div>
               <h3>{suggestion.title}</h3>
-              <p>{suggestion.description || "برای آشنایی بیشتر، این انتخاب را ببین."}</p>
-              <span className="selected-feature-link" style={{ display: "inline-block", marginTop: "10px" }}>مشاهده <span>←</span></span>
+              <p>{suggestion.description || "چند دقیقه برای یک تجربهٔ ساده و دلنشین کنار بگذار."}</p>
+              <button type="button" className="practical-suggestion-start" onClick={openSuggestion}>
+                شروع تمرین <span aria-hidden="true">←</span>
+              </button>
             </div>
-          </button>
+          </article>
         </section>
+
+        {suggestionOpen && (
+          <div className="practical-suggestion-overlay" role="presentation" onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSuggestionOpen(false);
+          }}>
+            <section className="practical-suggestion-dialog" role="dialog" aria-modal="true" aria-labelledby="practical-suggestion-dialog-title">
+              <button type="button" className="practical-suggestion-close" onClick={() => setSuggestionOpen(false)} aria-label="بستن پیشنهاد">×</button>
+              <div className="practical-suggestion-dialog-kicker">{suggestion.category || "لحظه‌ای برای خودت"}</div>
+              <h2 id="practical-suggestion-dialog-title">{suggestion.title}</h2>
+              <p>{suggestion.description || "چند دقیقه برای یک تجربهٔ ساده و دلنشین کنار بگذار."}</p>
+              <div className="practical-suggestion-guidance">
+                <span aria-hidden="true">✦</span>
+                <span>با آرامش شروع کن؛ لازم نیست کامل یا بی‌نقص انجامش بدهی. همین چند دقیقه برای خودت است.</span>
+              </div>
+              <button type="button" className="practical-suggestion-done" onClick={() => setSuggestionOpen(false)}>تمام، برمی‌گردم <span aria-hidden="true">←</span></button>
+            </section>
+          </div>
+        )}
 
       </main>
     </>
@@ -6491,10 +6549,6 @@ function App() {
             onSearch={openSearch}
             onOpenVip={openVip}
             onNavigate={changeSection}
-            onOpenService={(service) => {
-              setSearchOpen(true);
-              setSearchService(service);
-            }}
           />
         )}
 
