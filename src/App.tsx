@@ -431,6 +431,7 @@ const cmsRows: {
   faq: CmsRow[];
   pages: CmsRow[];
   settings: CmsRow[];
+  bookingContent: CmsRow[];
 } = {
   services: [],
   courses: [],
@@ -438,6 +439,7 @@ const cmsRows: {
   faq: [],
   pages: [],
   settings: [],
+  bookingContent: [],
 };
 
 let energyServices: Service[] = [];
@@ -625,6 +627,7 @@ function rebuildCmsContent(data: Partial<typeof cmsRows>) {
   cmsRows.faq = Array.isArray(data.faq) ? data.faq : [];
   cmsRows.pages = Array.isArray(data.pages) ? data.pages : [];
   cmsRows.settings = Array.isArray(data.settings) ? data.settings : [];
+  cmsRows.bookingContent = Array.isArray(data.bookingContent) ? data.bookingContent : [];
 
   const allServices = mapCmsServices(cmsRows.services);
   mainServices = allServices;
@@ -5348,6 +5351,21 @@ function BookingPage({
         description="خدمت، تاریخ و ساعت موردنظر را انتخاب کن؛ مبلغ نهایی از سامانه محاسبه می‌شود."
         icon="calendar"
       />
+
+      {cmsRows.bookingContent
+        .filter((row) => cmsActive(row))
+        .sort((a, b) => (Number(cmsText(a, ["ترتیب", "order"])) || 0) - (Number(cmsText(b, ["ترتیب", "order"])) || 0))
+        .map((row, index) => {
+          const title = cmsText(row, ["عنوان", "title"]);
+          const content = cmsText(row, ["محتوا", "متن", "توضیحات", "content", "text"]);
+          if (!title && !content) return null;
+          return (
+            <div key={cmsText(row, ["کلید", "key"]) || index} className="glass-list-card" style={{display:"block",marginBottom:"12px"}}>
+              {title && <div className="list-copy"><strong>{title}</strong></div>}
+              {content && <div className="list-copy" style={{marginTop:title ? "8px" : 0}}><span style={{whiteSpace:"pre-wrap"}}>{content}</span></div>}
+            </div>
+          );
+        })}
 
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
