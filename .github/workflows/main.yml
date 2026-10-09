@@ -6,6 +6,9 @@ on:
       - main
       - design/home-daily-mood-card
       - design/todays-practical-suggestion
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
