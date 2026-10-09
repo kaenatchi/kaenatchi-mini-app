@@ -1391,7 +1391,7 @@ function HomePage({
 
           <div className="today-card" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 3vw, 22px)', flexWrap: 'wrap', minWidth: 0 }}>
             {dailyContent?.imageUrl ? (
-              <img src={getDailyContentImageSrc(dailyContent.imageUrl)} alt={dailyContent.title} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.style.display = 'none'; }} style={{ width: 'clamp(96px, 28%, 168px)', maxWidth: '100%', aspectRatio: '4 / 5', objectFit: 'cover', objectPosition: 'center', borderRadius: '16px', flex: '0 1 168px' }} />
+              <img src={getDailyContentImageSrc(dailyContent.imageUrl)} alt={dailyContent.title} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.style.display = 'none'; }} style={{ width: 'clamp(120px, 34%, 200px)', maxWidth: '100%', aspectRatio: '4 / 3', objectFit: 'cover', objectPosition: 'center', borderRadius: '16px', flex: '0 1 200px' }} />
             ) : (
               <div className="today-decoration"><Icon name="spark" /></div>
             )}
