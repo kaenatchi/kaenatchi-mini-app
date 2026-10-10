@@ -2266,7 +2266,7 @@ function PathPersonalDashboard({
     return () => { active = false; };
   }, []);
   useEffect(() => {
-    const timer = window.setInterval(() => setSlide((current) => (current + 1) % slides.length), 20000);
+    const timer = window.setInterval(() => setSlide((current) => (current + 1) % 4), 20000);
     return () => window.clearInterval(timer);
   }, []);
   if (vipPanel) return <VipPage initialPanel={vipPanel} onBack={() => setVipPanel(null)} />;
