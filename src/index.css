@@ -4766,6 +4766,3 @@ button {
   .cms-loading-orbit { filter:none; opacity:1; }
   .cms-loading-splash .loading-progress > span { transition:none!important; }
 }
-  .cms-loading-orbit::before { opacity:.65; transform:none; }
-  .cms-loading-splash .loading-progress > span { transition:none!important; }
-}
