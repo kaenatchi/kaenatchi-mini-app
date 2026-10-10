@@ -144,11 +144,10 @@ export default function MyPathExperience({ onBack, entry = "main" }: { onBack: (
   const [data, setData] = useState<PathData | null>(null);
   const [identityLoaded, setIdentityLoaded] = useState(false);
   const [questionIndex, setQuestionIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [followupDraft, setFollowupDraft] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [showEditInitial, setShowEditInitial] = useState(false);
-  const [showStagePicker, setShowStagePicker] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -203,6 +202,27 @@ export default function MyPathExperience({ onBack, entry = "main" }: { onBack: (
   const completedInitial = data ? INITIAL.every((_, i) => Number.isInteger(data.initialAnswers[i])) : false;
   const followups = data ? Object.keys(data.followupAnswers).filter(k => data.followupAnswers[k]?.trim()) : [];
   const completedFollowups = followups.length >= 5;
+  const nextFollowup = useMemo(() => {
+    if (!data) return null;
+    const ranking = scoreAxes(data.initialAnswers, data.followupAnswers);
+    const answeredCount = Object.values(data.followupAnswers).filter(value => value.trim()).length;
+    const primary = ranking[0]?.id || "A";
+    const secondary = ranking[1]?.id;
+    const preferred = answeredCount % 3 === 2 && secondary ? [secondary, primary] : [primary, secondary];
+    const candidates = [...preferred, ...ranking.map(item => item.id)].filter((id, index, all): id is AxisId => Boolean(id) && all.indexOf(id) === index);
+    for (const id of candidates) {
+      const axis = AXES.find(item => item.id === id);
+      if (!axis) continue;
+      for (let index = 0; index < axis.questions.length; index += 1) {
+        const key = id + ":" + index;
+        if (!data.followupAnswers[key]?.trim()) return { axis, index, key, answeredCount };
+      }
+    }
+    return null;
+  }, [data]);
+  useEffect(() => {
+    setFollowupDraft(nextFollowup && data ? data.followupAnswers[nextFollowup.key] || "" : "");
+  }, [data?.userKey, nextFollowup?.key, data?.updatedAt]);
   const currentStage = data?.stage || 1;
   const stageNames = ["نقطهٔ شروع شخصی", "کشف مسیر اختصاصی", "تمرین در زندگی واقعی", "تثبیت رشد"];
   const persist = (next: PathData, successText: string) => {
@@ -222,7 +242,6 @@ export default function MyPathExperience({ onBack, entry = "main" }: { onBack: (
     const ranked = scoreAxes(answers, data.followupAnswers);
     const next: PathData = { ...data, initialAnswers: answers, primaryAxis: ranked[0]?.id || null, secondaryAxis: ranked[1]?.id || null, stage: data.stage, completedStages: data.completedStages.filter(n => n !== 1) };
     persist(next, "پاسخت روی همین دستگاه ذخیره شد.");
-    setSelectedOption(null);
   };
   const startFollowups = () => {
     if (!data || !completedInitial) return;
@@ -285,7 +304,15 @@ export default function MyPathExperience({ onBack, entry = "main" }: { onBack: (
         <div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ width:74, flexShrink:0 }}><StageArtwork stage={2}/></div><div><span style={{ color:"#63836a", fontSize:11, fontWeight:800 }}>LEVEL 02 · DISCOVER</span><h2 style={{ margin:"4px 0", color:"#244b35" }}>کشف مسیر اختصاصی</h2><p style={{ margin:0, fontSize:12, lineHeight:1.8, color:"#667364" }}>سؤال‌ها از محورهای مرتبط با پاسخ‌های تو انتخاب می‌شوند؛ اگر نیازت تغییر کند، مسیر هم قابل بازبینی است.</p></div></div>
         <div style={{ marginTop:14, padding:13, borderRadius:14, background:"#f0f4e9", lineHeight:1.9 }}><strong>محور اصلی: {primary?.title || "در حال مشخص‌شدن"}</strong><div style={{ fontSize:12, color:"#60705f" }}>محور همراه: {secondary?.title || "هنوز مشخص نیست"}</div></div>
         {(!completedInitial || scores.length===0) && <p style={{ fontSize:13, lineHeight:1.8 }}>برای پیشنهاد دقیق‌تر، ابتدا پنج سؤال نقطهٔ شروع را تکمیل کن.</p>}
-        {primary && Array.from({length:5},(_,i)=>({axis:i===2&&secondary?secondary:primary,index:i})).map(({axis,index})=>{const key=axis.id+":"+index;return <div key={key} style={{ marginTop:18 }}><label htmlFor={"follow-"+key} style={{ display:"block", fontWeight:700, fontSize:14, lineHeight:1.9, marginBottom:7 }}>{(index+1).toLocaleString("fa-IR")}. {axis.questions[index]} {index===2&&secondary?<span style={{fontSize:10,color:"#63836a"}}> · محور همراه</span>:null}</label><textarea id={"follow-"+key} value={data.followupAnswers[key]||""} maxLength={800} rows={3} placeholder="پاسخت را با زبان خودت بنویس… (اختیاری)" onChange={e=>{const answers={...data.followupAnswers,[key]:e.target.value};const ranked=scoreAxes(data.initialAnswers,answers);const next={...data,followupAnswers:answers,primaryAxis:ranked[0]?.id||axis.id,secondaryAxis:ranked.find(x=>x.id!==ranked[0]?.id)?.id||null};persist(next,"");}} style={{ width:"100%", boxSizing:"border-box", resize:"vertical", border:"1px solid rgba(49,93,66,.2)", borderRadius:13, padding:12, fontFamily:"inherit", fontSize:13, lineHeight:1.9, background:"#fffdf7", color:"#344a38" }}/></div>})}
+        {nextFollowup && !completedFollowups && <>
+          <div style={{ marginTop:18, borderRadius:16, padding:14, background:"#fbf7eb" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", gap:8, fontSize:11, color:"#63836a", fontWeight:800 }}><span>پرسش تکمیلی · {nextFollowup.axis.title}</span><span>{(nextFollowup.answeredCount+1).toLocaleString("fa-IR")} از ۵</span></div>
+            <h3 style={{ fontSize:15, lineHeight:1.9, margin:"10px 0" }}>{nextFollowup.axis.questions[nextFollowup.index]}</h3>
+            <textarea value={followupDraft} onChange={e=>setFollowupDraft(e.target.value)} maxLength={800} rows={4} placeholder="پاسخت را با زبان خودت بنویس…" style={{ width:"100%", boxSizing:"border-box", resize:"vertical", border:"1px solid rgba(49,93,66,.2)", borderRadius:13, padding:12, fontFamily:"inherit", fontSize:13, lineHeight:1.9, background:"#fffdf7", color:"#344a38" }}/>
+            <button type="button" disabled={!followupDraft.trim()||saving} style={{...buttonStyle,marginTop:10,opacity:(!followupDraft.trim() || saving) ? .55 : 1}} onClick={()=>{if(!data||!nextFollowup||!followupDraft.trim())return;const answers={...data.followupAnswers,[nextFollowup.key]:followupDraft.trim()};const ranked=scoreAxes(data.initialAnswers,answers);persist({...data,followupAnswers:answers,primaryAxis:ranked[0]?.id||nextFollowup.axis.id,secondaryAxis:ranked.find(item=>item.id!==ranked[0]?.id)?.id||null},"پاسخ ثبت شد؛ سؤال بعدی با توجه به پاسخ‌ها انتخاب می‌شود.");setFollowupDraft("");}}>ثبت پاسخ و رفتن به سؤال بعدی ←</button>
+            <button type="button" style={{...softButton,marginTop:8}} onClick={()=>setShowEditInitial(v=>!v)}>بازبینی پاسخ‌های اولیه</button>
+          </div>
+        </>}
         {completedFollowups && <div style={{ marginTop:18, padding:14, background:"#edf3e8", borderRadius:14 }}><strong>تمرین پیشنهادی برای تو</strong><p style={{ lineHeight:1.9, fontSize:13 }}>{primary?.exercise}</p><label style={{display:"block",fontSize:13,fontWeight:700,marginBottom:7}}>تمرینی که انتخاب می‌کنی</label><textarea rows={3} value={data.exercise} onChange={e=>update({exercise:e.target.value})} placeholder="می‌توانی تمرین را مطابق شرایط خودت تغییر بدهی…" style={{width:"100%",boxSizing:"border-box",border:"1px solid rgba(49,93,66,.2)",borderRadius:12,padding:12,fontFamily:"inherit",lineHeight:1.8,background:"#fffdf7"}}/><button type="button" style={{...buttonStyle,marginTop:10}} onClick={()=>markStage(2)}>ثبت تمرین و رفتن به مرحلهٔ سوم ←</button></div>}
       </section>}
       {currentStage===3 && <section style={cardStyle}>
