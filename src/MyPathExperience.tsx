@@ -127,16 +127,53 @@ function scoreAxes(initial: Record<number, number>, followup: AnswerMap) {
   return order.sort((a,b) => scores[b]-scores[a] || a.localeCompare(b)).map(id => ({ id, score: scores[id] }));
 }
 function StageArtwork({ stage }: { stage: number }) {
-  const common = <><circle cx="90" cy="80" r="54" fill="#f3e8d1"/><circle cx="90" cy="80" r="40" fill="#fffaf0" opacity=".8"/></>;
-  return <svg viewBox="0 0 180 150" role="img" aria-label={["نقطهٔ شروع","کشف مسیر","قدم‌های واقعی","رشد و تثبیت"][stage-1]} style={{ width:"100%", height:"auto", maxHeight:150, display:"block" }}>
-    {common}
-    {stage===1 && <><path d="M90 118 C88 95 91 76 91 54" stroke="#315d42" strokeWidth="4" fill="none" strokeLinecap="round"/><path d="M90 91 C61 90 56 72 59 61 C77 62 91 73 90 91" fill="#76a879"/><path d="M91 75 C113 73 124 57 121 45 C103 46 91 57 91 75" fill="#a9c99b"/><path d="M70 120 Q90 108 110 120" stroke="#c8a66b" strokeWidth="3" fill="none" strokeLinecap="round"/><circle cx="125" cy="30" r="5" fill="#d5ad66"/><path d="M125 18v-5 M125 42v-5 M113 30h-5 M142 30h-5" stroke="#d5ad66" strokeWidth="2" strokeLinecap="round"/></>}
-    {stage===2 && <><path d="M33 119 C55 99 70 116 87 94 S120 89 145 43" stroke="#7eaa83" strokeWidth="4" strokeDasharray="4 7" fill="none" strokeLinecap="round"/><circle cx="44" cy="109" r="7" fill="#315d42"/><circle cx="86" cy="95" r="7" fill="#7eaa83"/><circle cx="118" cy="76" r="7" fill="#c6a263"/><path d="M132 39l13 4-3 13" fill="none" stroke="#315d42" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/><path d="M54 48l7-9 7 9-7 9z" fill="#c6a263"/><circle cx="37" cy="53" r="3" fill="#7eaa83"/><circle cx="139" cy="104" r="4" fill="#7eaa83"/></>}
-    {stage===3 && <><path d="M33 119 Q90 93 147 119" stroke="#c8a66b" strokeWidth="3" fill="none" strokeLinecap="round"/><ellipse cx="57" cy="105" rx="13" ry="7" fill="#b9d0a9" transform="rotate(-18 57 105)"/><ellipse cx="91" cy="97" rx="13" ry="7" fill="#7eaa83" transform="rotate(12 91 97)"/><ellipse cx="124" cy="105" rx="13" ry="7" fill="#d9bd85" transform="rotate(-8 124 105)"/><path d="M91 92 C86 78 88 65 90 52" stroke="#315d42" strokeWidth="4" fill="none" strokeLinecap="round"/><path d="M89 69 C68 70 62 55 66 46 C80 47 90 56 89 69" fill="#7eaa83"/><path d="M90 60 C108 59 117 46 113 37 C99 38 90 47 90 60" fill="#a9c99b"/></>}
-    {stage===4 && <><path d="M37 118 C53 101 62 112 77 91 S103 84 115 63 S133 49 146 35" stroke="#315d42" strokeWidth="3" fill="none" strokeLinecap="round"/><path d="M133 34l14 1-1 14" fill="none" stroke="#315d42" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/><circle cx="77" cy="91" r="6" fill="#c8a66b"/><circle cx="115" cy="63" r="6" fill="#7eaa83"/><path d="M57 50l3-7 3 7 7 3-7 3-3 7-3-7-7-3z" fill="#c8a66b"/><path d="M121 106l2-5 2 5 5 2-5 2-2 5-2-5-5-2z" fill="#7eaa83"/><circle cx="43" cy="79" r="3" fill="#c8a66b"/></>}
+  const labels = ["آغاز","شناخت","اقدام","رشد"];
+  const label = labels[stage - 1] || "مسیر";
+  const symbol = stage === 1
+    ? <><circle cx="129" cy="37" r="14" fill="none" stroke="var(--mp-gold)" strokeWidth="2"/><path d="M129 27v20M119 37h20" stroke="var(--mp-gold)" strokeWidth="2" strokeLinecap="round"/></>
+    : stage === 2
+    ? <><path d="M124 22c-10 0-16 8-16 16s6 16 16 16 16-8 16-16-6-16-16-16Z" fill="none" stroke="var(--mp-gold)" strokeWidth="2"/><path d="M124 28v20M114 38h20" stroke="var(--mp-gold)" strokeWidth="1.5"/></>
+    : stage === 3
+    ? <><path d="M122 24l18 25h-36z" fill="none" stroke="var(--mp-gold)" strokeWidth="2" strokeLinejoin="round"/><circle cx="122" cy="40" r="3" fill="var(--mp-gold)"/></>
+    : <><path d="M124 20l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="var(--mp-gold)"/><circle cx="145" cy="58" r="3" fill="var(--mp-sage)"/></>;
+  const figure = stage === 1
+    ? <g strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="72" cy="47" r="13" fill="var(--mp-sage)" />
+        <path d="M51 111V89c0-13 8-23 21-23s21 10 21 23v22Z" fill="var(--mp-figure)" />
+        <path d="M58 79l-12 17M86 79l11 17" stroke="var(--mp-figure)" strokeWidth="8" />
+        <path d="M61 110l-3 15M82 110l4 15" stroke="var(--mp-figure)" strokeWidth="8" />
+        <path d="M62 48q10 7 20 0" fill="none" stroke="var(--mp-figure-detail)" strokeWidth="1.5"/>
+      </g>
+    : stage === 2
+    ? <g strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="73" cy="42" r="12" fill="var(--mp-sage)" />
+        <path d="M56 111V77q0-13 17-13t17 13v34Z" fill="var(--mp-figure)" />
+        <path d="M59 78L43 66M87 78l13-13" stroke="var(--mp-figure)" strokeWidth="8"/>
+        <path d="M64 110l-2 15M82 110l3 15" stroke="var(--mp-figure)" strokeWidth="8"/>
+        <path d="M65 41q8 5 16 0" fill="none" stroke="var(--mp-figure-detail)" strokeWidth="1.5"/>
+      </g>
+    : stage === 3
+    ? <g strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="72" cy="42" r="12" fill="var(--mp-sage)" />
+        <path d="M59 67q13-8 26 2l-2 42H57Z" fill="var(--mp-figure)" />
+        <path d="M60 76L46 91M83 76l15 10" stroke="var(--mp-figure)" strokeWidth="8"/>
+        <path d="M64 109l-11 16M80 109l11 13" stroke="var(--mp-figure)" strokeWidth="8"/>
+        <path d="M65 42q7 5 14 0" fill="none" stroke="var(--mp-figure-detail)" strokeWidth="1.5"/>
+      </g>
+    : <g strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="72" cy="42" r="12" fill="var(--mp-sage)" />
+        <path d="M54 111V79q0-15 18-15t18 15v32Z" fill="var(--mp-figure)" />
+        <path d="M58 79L45 59M86 79l13-20" stroke="var(--mp-figure)" strokeWidth="8"/>
+        <path d="M64 110l-2 15M81 110l4 15" stroke="var(--mp-figure)" strokeWidth="8"/>
+        <path d="M65 42q7 5 14 0" fill="none" stroke="var(--mp-figure-detail)" strokeWidth="1.5"/>
+      </g>;
+  return <svg viewBox="0 0 180 150" role="img" aria-label={label+"؛ تصویر نمادین مسیر رشد"} style={{ width:"100%", height:"auto", maxHeight:150, display:"block", overflow:"visible" }}>
+    <circle cx="90" cy="76" r="59" fill="var(--mp-art-halo)" />
+    <path d="M25 126 Q90 112 155 126" fill="none" stroke="var(--mp-border)" strokeWidth="1.5" strokeLinecap="round"/>
+    {figure}
+    {symbol}
   </svg>;
 }
-
 export default function MyPathExperience({ onBack, entry = "main" }: { onBack: () => void; entry?: "main" | "vip" }) {
   const [userKey, setUserKey] = useState<string | null>(null);
   const [identityLabel, setIdentityLabel] = useState("در حال بررسی هویت");
@@ -148,6 +185,7 @@ export default function MyPathExperience({ onBack, entry = "main" }: { onBack: (
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [showEditInitial, setShowEditInitial] = useState(false);
+  const [expandedInitialIndex, setExpandedInitialIndex] = useState<number | null>(0);
   // Keep the stage selector close action available in the PR merge preview.
   const [, setShowStagePicker] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -184,7 +222,10 @@ export default function MyPathExperience({ onBack, entry = "main" }: { onBack: (
           }
         } catch {}
         if (!alive) return;
-        setData(loaded || blankPath(key));
+        const restored = loaded || blankPath(key);
+        setData(restored);
+        const firstUnanswered = INITIAL.findIndex((_, i) => !Number.isInteger(restored.initialAnswers[i]));
+        setExpandedInitialIndex(firstUnanswered >= 0 ? firstUnanswered : null);
         setIdentityLoaded(true);
       } catch {
         if (alive) {
@@ -244,6 +285,9 @@ export default function MyPathExperience({ onBack, entry = "main" }: { onBack: (
     const ranked = scoreAxes(answers, data.followupAnswers);
     const next: PathData = { ...data, initialAnswers: answers, primaryAxis: ranked[0]?.id || null, secondaryAxis: ranked[1]?.id || null, stage: data.stage, completedStages: data.completedStages.filter(n => n !== 1) };
     persist(next, "پاسخت روی همین دستگاه ذخیره شد.");
+    const firstUnanswered = INITIAL.findIndex((_, i) => !Number.isInteger(answers[i]));
+    const nextIndex = index < INITIAL.length - 1 ? index + 1 : firstUnanswered;
+    setExpandedInitialIndex(nextIndex >= 0 ? nextIndex : null);
   };
   const startFollowups = () => {
     if (!data || !completedInitial) return;
@@ -273,62 +317,77 @@ export default function MyPathExperience({ onBack, entry = "main" }: { onBack: (
   };
   const update = (patch: Partial<PathData>) => { if (data) persist({ ...data, ...patch }, "تغییرات ذخیره شد."); };
   const stageReady = (n: number) => n === 1 || (data?.completedStages.includes(n-1) ?? false);
-  const cardStyle: React.CSSProperties = { border:"1px solid rgba(49,93,66,.15)", borderRadius:22, background:"rgba(255,253,247,.88)", padding:16, boxShadow:"0 10px 28px rgba(49,75,52,.07)" };
-  const buttonStyle: React.CSSProperties = { border:0, borderRadius:15, padding:"13px 16px", background:"linear-gradient(135deg,#174b38,#3b7957)", color:"#fff", fontFamily:"inherit", fontSize:14, fontWeight:700, cursor:"pointer", width:"100%" };
-  const softButton: React.CSSProperties = { border:"1px solid rgba(49,93,66,.2)", borderRadius:14, padding:"11px 14px", background:"rgba(49,93,66,.06)", color:"#315d42", fontFamily:"inherit", fontSize:13, fontWeight:700, cursor:"pointer", width:"100%" };
+  const cardStyle: React.CSSProperties = { border:"1px solid var(--mp-border)", borderRadius:22, background:"var(--mp-surface)", color:"var(--mp-text)", padding:16, boxShadow:"var(--mp-shadow)" };
+  const buttonStyle: React.CSSProperties = { border:0, borderRadius:15, padding:"13px 16px", background:"linear-gradient(145deg,#315c48,#17382b)", color:"#fff", fontFamily:"inherit", fontSize:14, fontWeight:700, cursor:"pointer", width:"100%", boxShadow:"0 10px 24px rgba(23,75,56,.22)" };
+  const softButton: React.CSSProperties = { border:"1px solid var(--mp-border)", borderRadius:14, padding:"11px 14px", background:"var(--mp-surface-raised)", color:"var(--mp-text)", fontFamily:"inherit", fontSize:13, fontWeight:700, cursor:"pointer", width:"100%" };
 
-  return <div className="inner-page selected-growth-page" dir="rtl" style={{ display:"grid", gap:14 }}>
+  return <div className="inner-page selected-growth-page my-path-experience" dir="rtl" style={{ display:"grid", gap:14 }}>
     <button type="button" onClick={onBack} style={{ border:0, background:"transparent", textAlign:"right", color:"inherit", fontFamily:"inherit", padding:"4px 0", cursor:"pointer" }}>← بازگشت {entry === "vip" ? "به VIP" : "به مسیر من"}</button>
-    <section style={{ ...cardStyle, overflow:"hidden", position:"relative", background:"linear-gradient(140deg,#f8f0df,#fffdf6 55%,#e5efdf)" }}>
+    <section className="my-path-hero" style={{ ...cardStyle, overflow:"hidden", position:"relative", background:"var(--mp-hero)" }}>
       <div style={{ position:"absolute", top:-35, left:-30, width:120, height:120, borderRadius:"50%", background:"rgba(126,170,131,.12)" }} />
       <div style={{ display:"grid", gridTemplateColumns:"minmax(0,1fr) minmax(100px,150px)", alignItems:"center", gap:8, position:"relative" }}>
-        <div><span style={{ fontSize:11, letterSpacing:1.4, color:"#63836a", fontWeight:800 }}>YOUR PERSONAL PATH</span><h1 style={{ margin:"7px 0", fontSize:25, color:"#244b35" }}>مسیر من</h1><p style={{ margin:0, lineHeight:1.9, fontSize:13, color:"#4e6450" }}>مسیر تو با پاسخ‌ها و انتخاب‌های خودت شکل می‌گیرد؛ نه با یک برچسب ثابت.</p></div>
+        <div><span style={{ fontSize:11, letterSpacing:1.4, color:"var(--mp-muted)", fontWeight:800 }}>YOUR PERSONAL PATH</span><h1 style={{ margin:"7px 0", fontSize:25, color:"var(--mp-text)" }}>مسیر من</h1><p style={{ margin:0, lineHeight:1.9, fontSize:13, color:"var(--mp-muted)" }}>مسیر تو با پاسخ‌ها و انتخاب‌های خودت شکل می‌گیرد؛ نه با یک برچسب ثابت.</p></div>
         <StageArtwork stage={currentStage}/>
       </div>
-      <div style={{ marginTop:14, borderTop:"1px solid rgba(49,93,66,.13)", paddingTop:12, display:"flex", justifyContent:"space-between", gap:8, flexWrap:"wrap", fontSize:12, color:"#315d42" }}><span>مرحلهٔ {currentStage} از ۴</span><span>{data?.completedStages.length || 0} مرحله تکمیل‌شده</span><span>{identityLabel}</span></div>
-      <div style={{ height:5, borderRadius:9, background:"rgba(49,93,66,.12)", overflow:"hidden", marginTop:9 }}><div style={{ width:((data?.completedStages.length || 0)/4*100)+"%", height:"100%", background:"#477b53", transition:"width .25s" }}/></div>
+      <div style={{ marginTop:14, borderTop:"1px solid rgba(49,93,66,.13)", paddingTop:12, display:"flex", justifyContent:"space-between", gap:8, flexWrap:"wrap", fontSize:12, color:"var(--mp-text)" }}><span>مرحلهٔ {currentStage} از ۴</span><span>{data?.completedStages.length || 0} مرحله تکمیل‌شده</span><span>{identityLabel}</span></div>
+      <div style={{ height:5, borderRadius:9, background:"var(--mp-border)", overflow:"hidden", marginTop:9 }}><div style={{ width:((data?.completedStages.length || 0)/4*100)+"%", height:"100%", background:"linear-gradient(145deg,#315c48,#17382b)", transition:"width .25s" }}/></div>
     </section>
     {!identityLoaded && <div style={cardStyle} role="status">در حال آماده‌سازی مسیر شخصی…</div>}
-    {identityError && <div style={{ ...cardStyle, color:"#8b5548", lineHeight:1.9 }} role="alert">{identityError}<button style={{ ...softButton, marginTop:10 }} onClick={() => { setIdentityError(""); setIdentityLoaded(false); setRefreshKey(k=>k+1); }}>تلاش دوباره</button></div>}
+    {identityError && <div style={{ ...cardStyle, color:"var(--mp-text)", lineHeight:1.9 }} role="alert">{identityError}<button style={{ ...softButton, marginTop:10 }} onClick={() => { setIdentityError(""); setIdentityLoaded(false); setRefreshKey(k=>k+1); }}>تلاش دوباره</button></div>}
     {identityLoaded && !identityError && data && <>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,minmax(0,1fr))", gap:7 }}>
-        {stageNames.map((name,i) => { const n=i+1; const done=data.completedStages.includes(n); const locked=!stageReady(n); return <button key={name} type="button" disabled={locked} onClick={()=>{update({stage:n as 1|2|3|4}); setShowStagePicker(false);}} style={{ border: currentStage===n ? "1.5px solid #477b53" : "1px solid rgba(49,93,66,.15)", borderRadius:15, background:done?"#e4efdf":"#fffaf0", padding:"9px 4px", cursor:locked?"not-allowed":"pointer", opacity:locked ? .52 : 1, color:"#315d42", fontFamily:"inherit", minWidth:0 }}>
+        {stageNames.map((name,i) => { const n=i+1; const done=data.completedStages.includes(n); const locked=!stageReady(n); return <button key={name} type="button" disabled={locked} onClick={()=>{update({stage:n as 1|2|3|4}); setShowStagePicker(false);}} style={{ border: currentStage===n ? "1.5px solid var(--mp-sage)" : "1px solid var(--mp-border)", borderRadius:15, background:"var(--mp-surface-raised)", padding:"9px 4px", cursor:locked?"not-allowed":"pointer", opacity:locked ? .52 : 1, color:"var(--mp-text)", fontFamily:"inherit", minWidth:0 }}>
           <div style={{ height:57, display:"grid", placeItems:"center" }}><StageArtwork stage={n}/></div><strong style={{ fontSize:11, display:"block", lineHeight:1.5 }}>{n.toLocaleString("fa-IR")}. {name}</strong><span style={{ fontSize:10, display:"block", marginTop:4 }}>{done?"تکمیل‌شده":currentStage===n?"در حال انجام":locked?"هنوز باز نشده":"آماده"}</span>
         </button>; })}
       </div>
-      {message && <div role="status" style={{ ...cardStyle, fontSize:12, lineHeight:1.8, color:"#315d42" }}>{message}</div>}
+      {message && <div role="status" style={{ ...cardStyle, fontSize:12, lineHeight:1.8, color:"var(--mp-text)" }}>{message}</div>}
       {currentStage===1 && <section style={cardStyle}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ width:74, flexShrink:0 }}><StageArtwork stage={1}/></div><div><span style={{ color:"#63836a", fontSize:11, fontWeight:800 }}>LEVEL 01 · BEGIN</span><h2 style={{ margin:"4px 0", color:"#244b35" }}>نقطهٔ شروع شخصی</h2><p style={{ margin:0, fontSize:12, lineHeight:1.8, color:"#667364" }}>پنج پاسخ اختیاری؛ هر پاسخ را هر زمان خواستی می‌توانی تغییر بدهی.</p></div></div>
-        {INITIAL.map((q,i)=><div key={q.id} style={{ marginTop:20 }}><h3 style={{ fontSize:15, lineHeight:1.8, margin:"0 0 10px" }}>{(i+1).toLocaleString("fa-IR")}. {q.title}</h3><div style={{ display:"grid", gap:8 }}>{q.options.map((opt,j)=>{const chosen=data.initialAnswers[i]===j;return <button key={opt.label} type="button" onClick={()=>answerInitial(i,j)} style={{ textAlign:"right", border:chosen?"1.5px solid #477b53":"1px solid rgba(49,93,66,.15)", borderRadius:13, padding:"12px 13px", background:chosen?"#e8f0e3":"#fffdf7", color:"#344a38", fontFamily:"inherit", fontSize:13, lineHeight:1.8, cursor:"pointer" }}><span style={{ display:"inline-grid", placeItems:"center", width:21, height:21, borderRadius:"50%", marginLeft:8, background:chosen?"#477b53":"#eee8d9", color:chosen?"white":"#657665", fontSize:11 }}>{chosen?"✓":(j+1).toLocaleString("fa-IR")}</span>{opt.label}</button>})}</div></div>)}
-        {completedInitial && <div style={{ marginTop:20, borderRadius:16, padding:14, background:"#edf3e8" }}><strong style={{ color:"#315d42" }}>نقطهٔ شروع تو، بر اساس ترکیب پاسخ‌ها</strong><p style={{ lineHeight:1.9, fontSize:13 }}>به نظر می‌رسد فعلاً محور «{AXES.find(a=>a.id===scoreAxes(data.initialAnswers,{} )[0]?.id)?.title}» می‌تواند شروع مناسبی باشد. این فقط پیشنهاد اولیه بر اساس پاسخ‌های توست و با اطلاعات تازه تغییر می‌کند.</p><button type="button" style={buttonStyle} onClick={()=>{ const ranked=scoreAxes(data.initialAnswers,data.followupAnswers); const next={...data, primaryAxis:ranked[0]?.id||"A",secondaryAxis:ranked[1]?.id||"C",completedStages:Array.from(new Set([...data.completedStages,1])),stage:2 as const}; persist(next,"مرحلهٔ اول ثبت شد؛ مسیر تکمیلی آماده است."); }}>تأیید نقطهٔ شروع و رفتن به مرحلهٔ بعد ←</button></div>}
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ width:74, flexShrink:0 }}><StageArtwork stage={1}/></div><div><span style={{ color:"var(--mp-muted)", fontSize:11, fontWeight:800 }}>LEVEL 01 · BEGIN</span><h2 style={{ margin:"4px 0", color:"var(--mp-text)" }}>نقطهٔ شروع شخصی</h2><p style={{ margin:0, fontSize:12, lineHeight:1.8, color:"var(--mp-muted)" }}>پنج پاسخ اختیاری؛ هر پاسخ را هر زمان خواستی می‌توانی تغییر بدهی.</p></div></div>
+        {INITIAL.map((q,i)=>{const chosenIndex=data.initialAnswers[i];const answered=Number.isInteger(chosenIndex);const expanded=expandedInitialIndex===i;return <div key={q.id} className={"my-path-question"+(expanded?" is-expanded":"")} style={{ marginTop:10 }}>
+          <button type="button" aria-expanded={expanded} onClick={()=>setExpandedInitialIndex(expanded?null:i)} className="my-path-question-trigger">
+            <span className="my-path-question-number">{(i+1).toLocaleString("fa-IR")}</span>
+            <span className="my-path-question-title">{q.title}<small>{answered&&!expanded ? "پاسخ انتخاب‌شده: "+q.options[chosenIndex as number]?.label : expanded ? "یک گزینه را انتخاب کن" : "برای پاسخ یا ویرایش لمس کن"}</small></span>
+            <span className="my-path-chevron" aria-hidden="true">{expanded?"−":"+"}</span>
+          </button>
+          {expanded&&<div className="my-path-options">{q.options.map((opt,j)=>{const chosen=chosenIndex===j;return <button key={opt.label} type="button" aria-pressed={chosen} onClick={()=>answerInitial(i,j)} className="my-path-option"><span className="my-path-option-mark">{chosen?"✓":(j+1).toLocaleString("fa-IR")}</span>{opt.label}</button>})}</div>}
+        </div>})}
+        {completedInitial && <div className="my-path-insight" style={{ marginTop:20, borderRadius:16, padding:14 }}><strong>نقطهٔ شروع تو، بر اساس ترکیب پاسخ‌ها</strong><p style={{ lineHeight:1.9, fontSize:13 }}>به نظر می‌رسد فعلاً محور «{AXES.find(a=>a.id===scoreAxes(data.initialAnswers,{} )[0]?.id)?.title}» می‌تواند شروع مناسبی باشد. این فقط پیشنهاد اولیه بر اساس پاسخ‌های توست و با اطلاعات تازه تغییر می‌کند.</p><button type="button" style={buttonStyle} onClick={()=>{ const ranked=scoreAxes(data.initialAnswers,data.followupAnswers); const next={...data, primaryAxis:ranked[0]?.id||"A",secondaryAxis:ranked[1]?.id||"C",completedStages:Array.from(new Set([...data.completedStages,1])),stage:2 as const}; persist(next,"مرحلهٔ اول ثبت شد؛ مسیر تکمیلی آماده است."); }}>تأیید نقطهٔ شروع و رفتن به مرحلهٔ بعد ←</button></div>}
       </section>}
       {currentStage===2 && <section style={cardStyle}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ width:74, flexShrink:0 }}><StageArtwork stage={2}/></div><div><span style={{ color:"#63836a", fontSize:11, fontWeight:800 }}>LEVEL 02 · DISCOVER</span><h2 style={{ margin:"4px 0", color:"#244b35" }}>کشف مسیر اختصاصی</h2><p style={{ margin:0, fontSize:12, lineHeight:1.8, color:"#667364" }}>سؤال‌ها از محورهای مرتبط با پاسخ‌های تو انتخاب می‌شوند؛ اگر نیازت تغییر کند، مسیر هم قابل بازبینی است.</p></div></div>
-        <div style={{ marginTop:14, padding:13, borderRadius:14, background:"#f0f4e9", lineHeight:1.9 }}><strong>محور اصلی: {primary?.title || "در حال مشخص‌شدن"}</strong><div style={{ fontSize:12, color:"#60705f" }}>محور همراه: {secondary?.title || "هنوز مشخص نیست"}</div></div>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ width:74, flexShrink:0 }}><StageArtwork stage={2}/></div><div><span style={{ color:"var(--mp-muted)", fontSize:11, fontWeight:800 }}>LEVEL 02 · DISCOVER</span><h2 style={{ margin:"4px 0", color:"var(--mp-text)" }}>کشف مسیر اختصاصی</h2><p style={{ margin:0, fontSize:12, lineHeight:1.8, color:"var(--mp-muted)" }}>سؤال‌ها از محورهای مرتبط با پاسخ‌های تو انتخاب می‌شوند؛ اگر نیازت تغییر کند، مسیر هم قابل بازبینی است.</p></div></div>
+        <div style={{ marginTop:14, padding:13, borderRadius:14, background:"var(--mp-surface-raised)", lineHeight:1.9 }}><strong>محور اصلی: {primary?.title || "در حال مشخص‌شدن"}</strong><div style={{ fontSize:12, color:"var(--mp-muted)" }}>محور همراه: {secondary?.title || "هنوز مشخص نیست"}</div></div>
         {(!completedInitial || scores.length===0) && <p style={{ fontSize:13, lineHeight:1.8 }}>برای پیشنهاد دقیق‌تر، ابتدا پنج سؤال نقطهٔ شروع را تکمیل کن.</p>}
         {nextFollowup && !completedFollowups && <>
-          <div style={{ marginTop:18, borderRadius:16, padding:14, background:"#fbf7eb" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", gap:8, fontSize:11, color:"#63836a", fontWeight:800 }}><span>پرسش تکمیلی · {nextFollowup.axis.title}</span><span>{(nextFollowup.answeredCount+1).toLocaleString("fa-IR")} از ۵</span></div>
+          <div style={{ marginTop:18, borderRadius:16, padding:14, background:"var(--mp-surface-raised)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", gap:8, fontSize:11, color:"var(--mp-muted)", fontWeight:800 }}><span>پرسش تکمیلی · {nextFollowup.axis.title}</span><span>{(nextFollowup.answeredCount+1).toLocaleString("fa-IR")} از ۵</span></div>
             <h3 style={{ fontSize:15, lineHeight:1.9, margin:"10px 0" }}>{nextFollowup.axis.questions[nextFollowup.index]}</h3>
-            <textarea value={followupDraft} onChange={e=>setFollowupDraft(e.target.value)} maxLength={800} rows={4} placeholder="پاسخت را با زبان خودت بنویس…" style={{ width:"100%", boxSizing:"border-box", resize:"vertical", border:"1px solid rgba(49,93,66,.2)", borderRadius:13, padding:12, fontFamily:"inherit", fontSize:13, lineHeight:1.9, background:"#fffdf7", color:"#344a38" }}/>
+            <textarea value={followupDraft} onChange={e=>setFollowupDraft(e.target.value)} maxLength={800} rows={4} placeholder="پاسخت را با زبان خودت بنویس…" style={{ width:"100%", boxSizing:"border-box", resize:"vertical", border:"1px solid var(--mp-border)", borderRadius:13, padding:12, fontFamily:"inherit", fontSize:13, lineHeight:1.9, background:"var(--mp-surface-raised)", color:"var(--mp-text)" }}/>
             <button type="button" disabled={!followupDraft.trim()||saving} style={{...buttonStyle,marginTop:10,opacity:(!followupDraft.trim() || saving) ? .55 : 1}} onClick={()=>{if(!data||!nextFollowup||!followupDraft.trim())return;const answers={...data.followupAnswers,[nextFollowup.key]:followupDraft.trim()};const ranked=scoreAxes(data.initialAnswers,answers);persist({...data,followupAnswers:answers,primaryAxis:ranked[0]?.id||nextFollowup.axis.id,secondaryAxis:ranked.find(item=>item.id!==ranked[0]?.id)?.id||null},"پاسخ ثبت شد؛ سؤال بعدی با توجه به پاسخ‌ها انتخاب می‌شود.");setFollowupDraft("");}}>ثبت پاسخ و رفتن به سؤال بعدی ←</button>
-            <button type="button" style={{...softButton,marginTop:8}} onClick={()=>setShowEditInitial(v=>!v)}>بازبینی پاسخ‌های اولیه</button>
+            
           </div>
         </>}
-        {completedFollowups && <div style={{ marginTop:18, padding:14, background:"#edf3e8", borderRadius:14 }}><strong>تمرین پیشنهادی برای تو</strong><p style={{ lineHeight:1.9, fontSize:13 }}>{primary?.exercise}</p><label style={{display:"block",fontSize:13,fontWeight:700,marginBottom:7}}>تمرینی که انتخاب می‌کنی</label><textarea rows={3} value={data.exercise} onChange={e=>update({exercise:e.target.value})} placeholder="می‌توانی تمرین را مطابق شرایط خودت تغییر بدهی…" style={{width:"100%",boxSizing:"border-box",border:"1px solid rgba(49,93,66,.2)",borderRadius:12,padding:12,fontFamily:"inherit",lineHeight:1.8,background:"#fffdf7"}}/><button type="button" style={{...buttonStyle,marginTop:10}} onClick={()=>markStage(2)}>ثبت تمرین و رفتن به مرحلهٔ سوم ←</button></div>}
+        {completedFollowups && <div style={{ marginTop:18, padding:14, background:"var(--mp-surface-raised)", borderRadius:14 }}><strong>تمرین پیشنهادی برای تو</strong><p style={{ lineHeight:1.9, fontSize:13 }}>{primary?.exercise}</p><label style={{display:"block",fontSize:13,fontWeight:700,marginBottom:7}}>تمرینی که انتخاب می‌کنی</label><textarea rows={3} value={data.exercise} onChange={e=>update({exercise:e.target.value})} placeholder="می‌توانی تمرین را مطابق شرایط خودت تغییر بدهی…" style={{width:"100%",boxSizing:"border-box",border:"1px solid var(--mp-border)",borderRadius:12,padding:12,fontFamily:"inherit",lineHeight:1.8,background:"var(--mp-surface-raised)"}}/><button type="button" style={{...buttonStyle,marginTop:10}} onClick={()=>markStage(2)}>ثبت تمرین و رفتن به مرحلهٔ سوم ←</button></div>}
       </section>}
       {currentStage===3 && <section style={cardStyle}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ width:74, flexShrink:0 }}><StageArtwork stage={3}/></div><div><span style={{ color:"#63836a", fontSize:11, fontWeight:800 }}>LEVEL 03 · PRACTICE</span><h2 style={{ margin:"4px 0", color:"#244b35" }}>تمرین در زندگی واقعی</h2><p style={{ margin:0, fontSize:12, lineHeight:1.8, color:"#667364" }}>هدف تجربه‌کردن است، نه کامل انجام‌دادن.</p></div></div>
-        <p style={{ lineHeight:1.9, fontSize:13, padding:12, borderRadius:13, background:"#f0f4e9" }}>{data.exercise || primary?.exercise || "یک قدم کوچک و شدنی برای خودت انتخاب کن."}</p>
-        {[["action","قدم انتخابی من"],["outcome","چه اتفاقی افتاد؟"],["barrier","چه چیزی دشوار بود؟"],["revised","اگر لازم باشد، قدم بعدی را چطور تغییر می‌دهم؟"]].map(([key,label])=><label key={key} style={{display:"block",fontSize:13,fontWeight:700,marginTop:13}}>{label}<textarea rows={2} value={data.stage3[key as keyof PathData["stage3"]]} onChange={e=>update({stage3:{...data.stage3,[key]:e.target.value}})} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:7,border:"1px solid rgba(49,93,66,.2)",borderRadius:12,padding:12,fontFamily:"inherit",fontSize:13,lineHeight:1.8,background:"#fffdf7"}}/></label>)}
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ width:74, flexShrink:0 }}><StageArtwork stage={3}/></div><div><span style={{ color:"var(--mp-muted)", fontSize:11, fontWeight:800 }}>LEVEL 03 · PRACTICE</span><h2 style={{ margin:"4px 0", color:"var(--mp-text)" }}>تمرین در زندگی واقعی</h2><p style={{ margin:0, fontSize:12, lineHeight:1.8, color:"var(--mp-muted)" }}>هدف تجربه‌کردن است، نه کامل انجام‌دادن.</p></div></div>
+        <p style={{ lineHeight:1.9, fontSize:13, padding:12, borderRadius:13, background:"var(--mp-surface-raised)" }}>{data.exercise || primary?.exercise || "یک قدم کوچک و شدنی برای خودت انتخاب کن."}</p>
+        {[["action","قدم انتخابی من"],["outcome","چه اتفاقی افتاد؟"],["barrier","چه چیزی دشوار بود؟"],["revised","اگر لازم باشد، قدم بعدی را چطور تغییر می‌دهم؟"]].map(([key,label])=><label key={key} style={{display:"block",fontSize:13,fontWeight:700,marginTop:13}}>{label}<textarea rows={2} value={data.stage3[key as keyof PathData["stage3"]]} onChange={e=>update({stage3:{...data.stage3,[key]:e.target.value}})} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:7,border:"1px solid var(--mp-border)",borderRadius:12,padding:12,fontFamily:"inherit",fontSize:13,lineHeight:1.8,background:"var(--mp-surface-raised)"}}/></label>)}
         <button type="button" style={{...buttonStyle,marginTop:18}} disabled={!data.stage3.action.trim()} onClick={()=>markStage(3)}>ثبت تجربه و رفتن به مرحلهٔ چهارم ←</button>
       </section>}
       {currentStage===4 && <section style={cardStyle}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ width:74, flexShrink:0 }}><StageArtwork stage={4}/></div><div><span style={{ color:"#63836a", fontSize:11, fontWeight:800 }}>LEVEL 04 · INTEGRATE</span><h2 style={{ margin:"4px 0", color:"#244b35" }}>تثبیت رشد</h2><p style={{ margin:0, fontSize:12, lineHeight:1.8, color:"#667364" }}>آنچه آموخته‌ای را مرور کن و قدم بعدی را به انتخاب خودت مشخص کن.</p></div></div>
-        {[["clear","چه چیزی برایم روشن‌تر شد؟"],["learning","چه چیزی کمک‌کننده یا دشوار بود؟"],["next","قدم بعدی که خودم انتخاب می‌کنم چیست؟"]].map(([key,label])=><label key={key} style={{display:"block",fontSize:13,fontWeight:700,marginTop:14}}>{label}<textarea rows={3} value={data.stage4[key as keyof PathData["stage4"]]} onChange={e=>update({stage4:{...data.stage4,[key]:e.target.value}})} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:7,border:"1px solid rgba(49,93,66,.2)",borderRadius:12,padding:12,fontFamily:"inherit",fontSize:13,lineHeight:1.8,background:"#fffdf7"}}/></label>)}
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ width:74, flexShrink:0 }}><StageArtwork stage={4}/></div><div><span style={{ color:"var(--mp-muted)", fontSize:11, fontWeight:800 }}>LEVEL 04 · INTEGRATE</span><h2 style={{ margin:"4px 0", color:"var(--mp-text)" }}>تثبیت رشد</h2><p style={{ margin:0, fontSize:12, lineHeight:1.8, color:"var(--mp-muted)" }}>آنچه آموخته‌ای را مرور کن و قدم بعدی را به انتخاب خودت مشخص کن.</p></div></div>
+        {[["clear","چه چیزی برایم روشن‌تر شد؟"],["learning","چه چیزی کمک‌کننده یا دشوار بود؟"],["next","قدم بعدی که خودم انتخاب می‌کنم چیست؟"]].map(([key,label])=><label key={key} style={{display:"block",fontSize:13,fontWeight:700,marginTop:14}}>{label}<textarea rows={3} value={data.stage4[key as keyof PathData["stage4"]]} onChange={e=>update({stage4:{...data.stage4,[key]:e.target.value}})} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:7,border:"1px solid var(--mp-border)",borderRadius:12,padding:12,fontFamily:"inherit",fontSize:13,lineHeight:1.8,background:"var(--mp-surface-raised)"}}/></label>)}
         <button type="button" style={{...buttonStyle,marginTop:18}} disabled={!data.stage4.clear.trim()||!data.stage4.next.trim()} onClick={()=>{markStage(4);setMessage("این دور از مسیرت تکمیل شد؛ هر زمان خواستی می‌توانی برگردی و آموخته‌هایت را مرور کنی.");}}>ثبت مرور مسیر و تکمیل این دور ✓</button>
       </section>}
-      <section style={{ ...cardStyle, background:"#fbf7eb" }}><strong style={{ color:"#315d42" }}>یادآوری کوچک</strong><p style={{ margin:"7px 0 0", fontSize:12, lineHeight:1.9, color:"#63705f" }}>این مسیر برای خودشناسی و تأمل طراحی شده و ابزار تشخیص روان‌شناختی نیست. پاسخ‌ها در نسخهٔ فعلی روی همین دستگاه ذخیره می‌شوند؛ برای همگام‌سازی امن بین دستگاه‌ها، اتصال ذخیره‌سازی سمت سرور هنوز لازم است.</p><button type="button" style={{...softButton,marginTop:10}} onClick={()=>setShowEditInitial(v=>!v)}>{showEditInitial?"بستن":"بازبینی پاسخ‌های اولیه"}</button>{showEditInitial&&<div style={{marginTop:12}}>{INITIAL.map((q,i)=><label key={q.id} style={{display:"block",fontSize:13,marginTop:10}}>{q.title}<select value={data.initialAnswers[i]===undefined?"":String(data.initialAnswers[i])} onChange={e=>{if(e.target.value==="")return;answerInitial(i,Number(e.target.value));}} style={{display:"block",width:"100%",marginTop:6,padding:10,borderRadius:10,border:"1px solid #d5dfd0",background:"#fffdf7",fontFamily:"inherit"}}><option value="">بدون پاسخ</option>{q.options.map((o,j)=><option value={j} key={o.label}>{o.label}</option>)}</select></label>)}</div>}</section>
+      <section className="my-path-reminder" style={{ ...cardStyle }}>
+        <strong>یادآوری کوتاه</strong>
+        <p style={{ margin:"7px 0 0", fontSize:12, lineHeight:1.9 }}>این مسیر برای خودشناسی و تأمل طراحی شده و جایگزین تشخیص یا مشاورهٔ تخصصی روان‌شناختی نیست. پاسخ‌های تو روی همین دستگاه ذخیره می‌شوند.</p>
+        {currentStage!==1&&<button type="button" style={{...softButton,marginTop:10}} onClick={()=>setShowEditInitial(v=>!v)}>{showEditInitial?"بستن بازبینی":"بازبینی پاسخ‌های اولیه"}</button>}
+        {showEditInitial&&currentStage!==1&&<div className="my-path-review-editor" style={{marginTop:12}}>{INITIAL.map((q,i)=>{const chosenIndex=data.initialAnswers[i];const expanded=expandedInitialIndex===i;return <div key={q.id} className="my-path-question">
+          <button type="button" aria-expanded={expanded} onClick={()=>setExpandedInitialIndex(expanded?null:i)} className="my-path-question-trigger"><span className="my-path-question-number">{(i+1).toLocaleString("fa-IR")}</span><span className="my-path-question-title">{q.title}<small>{Number.isInteger(chosenIndex)?"پاسخ انتخاب‌شده: "+q.options[chosenIndex as number]?.label:"هنوز پاسخ نداده‌ای"}</small></span><span className="my-path-chevron">{expanded?"−":"+"}</span></button>
+          {expanded&&<div className="my-path-options">{q.options.map((o,j)=>{const chosen=chosenIndex===j;return <button type="button" key={o.label} aria-pressed={chosen} className="my-path-option" onClick={()=>answerInitial(i,j)}><span className="my-path-option-mark">{chosen?"✓":(j+1).toLocaleString("fa-IR")}</span>{o.label}</button>})}</div>}
+        </div>})}</div>}
+      </section>
     </>}
   </div>;
 }
