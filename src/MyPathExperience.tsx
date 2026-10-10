@@ -117,7 +117,7 @@ function scoreAxes(initial: Record<number, number>, followup: AnswerMap) {
   const scores: Record<AxisId, number> = { A:0, B:0, C:0, D:0, E:0, F:0 };
   Object.entries(initial).forEach(([q, option]) => {
     const item = INITIAL[Number(q)]?.options[option];
-    item?.axes.forEach(axis => { scores[axis] += Number(q) === 1 ? 3 : 1; });
+    item?.axes.forEach(axis => { scores[axis] += Number(q) === 0 ? 3 : 1; });
   });
   Object.entries(followup).forEach(([id, answer]) => {
     const [axisId] = id.split(":");
