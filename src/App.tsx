@@ -2242,6 +2242,105 @@ function ServicesPage({
 }
 
 
+
+function PathPersonalDashboard({
+  onNavigate,
+  onOpenVip,
+}: {
+  onNavigate: (section: Section) => void;
+  onOpenVip: () => void;
+}) {
+  const [vipData, setVipData] = useState<VipApiResponse | null>(null);
+  const [vipPanel, setVipPanel] = useState<VipPanel | null>(null);
+  const [slide, setSlide] = useState(0);
+  const [hafezOpen, setHafezOpen] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const slides = [
+    { eyebrow: "قدم بعدی تو", title: "مسیرت را با یک قدم کوچک ادامه بده.", body: "خدمات و تجربه‌هایی را پیدا کن که با حال‌وهوای امروزت هماهنگ‌اند.", action: "دیدن خدمات", run: () => onNavigate("services") },
+    { eyebrow: "پیشنهاد برای تو", title: "گاهی یک مکث کوتاه، شروع خوبی است.", body: "با آرامش گزینه‌ها را ببین و هر وقت آماده بودی انتخاب کن.", action: "کشف تجربه‌ها", run: () => onNavigate("services") },
+    { eyebrow: "دنیای کائنات‌چی", title: "تجربه‌ای تازه در انتظارت است.", body: "انرژی‌خوانی، تراپی و تجربه‌های دیگر را در یک جا مرور کن.", action: "مرور خدمات", run: () => onNavigate("services") },
+    { eyebrow: "باشگاه کائنات‌چی", title: "مزایای عضویتت را بشناس.", body: "وضعیت و امکانات VIP را از مسیر رسمی عضویت بررسی کن.", action: "مشاهدهٔ VIP", run: onOpenVip },
+  ];
+  useEffect(() => {
+    let active = true;
+    loadTelegramIdentity().then((data) => { if (active) setVipData(data); }).catch(() => { if (active) setVipData(null); });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    const timer = window.setInterval(() => setSlide((current) => (current + 1) % 4), 20000);
+    return () => window.clearInterval(timer);
+  }, []);
+  if (vipPanel) return <VipPage initialPanel={vipPanel} onBack={() => setVipPanel(null)} />;
+  const customer = vipData?.customer;
+  const isVip = customer?.vipStatus?.trim().toLowerCase() === "active" || customer?.vipStatus?.trim() === "فعال";
+  const displayName = isVip ? [customer?.firstName, customer?.lastName].filter(Boolean).join(" ") || "عضو VIP" : "کاربر مهمان";
+  const requestVip = () => {
+    const message = encodeURIComponent("سلام، برای عضویت در باشگاه VIP کائنات‌چی درخواست عضویت دارم.");
+    window.location.href = "https://t.me/AD_Kaenatchi?text=" + message;
+  };
+  const moveSlide = (direction: number) => setSlide((current) => (current + direction + slides.length) % slides.length);
+  const activeSlide = slides[slide];
+  return (
+    <section className="path-personal-dashboard">
+      <section className={"more-welcome-card " + (isVip ? "is-vip" : "is-guest")}>
+        <div className="more-welcome-orbit orbit-one" /><div className="more-welcome-orbit orbit-two" />
+        <div className="more-welcome-top">
+          <div className="more-welcome-copy">
+            <span className="more-welcome-kicker">{isVip ? "VIP MEMBER" : "KAENATCHI"}</span>
+            <strong>{"خوش اومدی، " + displayName + " 🌿"}</strong>
+            <div className="more-status-line"><span className={"more-status-dot " + (isVip ? "vip" : "guest")} /><span>{isVip ? "عضو باشگاه VIP" : "به مسیر شخصی‌ات خوش اومدی"}</span></div>
+          </div>
+          <button type="button" className={"more-status-button " + (isVip ? "vip" : "guest")} onClick={onOpenVip} aria-label={isVip ? "وضعیت عضویت VIP" : "ورود به VIP"}><span /></button>
+        </div>
+        {isVip && customer?.joinedAt && <div className="path-member-since">عضو از {customer.joinedAt}</div>}
+        {isVip ? (
+          <div className="more-member-grid path-member-actions">
+            <button type="button" className="more-category-card" onClick={() => setVipPanel("profile")}><span className="more-category-icon gold"><Icon name="user" /></span><span className="more-category-copy"><strong>پروفایل من</strong><small>اطلاعات حساب و عضویت</small></span><Icon name="arrow" /></button>
+            <button type="button" className="more-category-card" onClick={() => setVipPanel("bookings")}><span className="more-category-icon"><Icon name="calendar" /></span><span className="more-category-copy"><strong>سابقه نوبت‌ها</strong><small>نوبت‌های ثبت‌شدهٔ شما</small></span><Icon name="arrow" /></button>
+          </div>
+        ) : (
+          <button type="button" className="path-vip-invite-button" onClick={requestVip}>آشنایی با باشگاه VIP <Icon name="arrow" /></button>
+        )}
+      </section>
+      <button type="button" className="hafez-today-card" onClick={() => setHafezOpen(true)} aria-haspopup="dialog" aria-label="باز کردن حافظ امروز">
+        <span className="hafez-card-ornament hafez-card-ornament-top" aria-hidden="true">❧</span>
+        <span className="hafez-card-inner">
+          <span className="hafez-card-kicker">از دیوان حافظ</span>
+          <strong className="hafez-card-title">حافظِ امروز</strong>
+          <span className="hafez-card-divider" aria-hidden="true"><i>✦</i></span>
+          <span className="hafez-card-verse" lang="fa" dir="rtl">الا یا ایها الساقی ادر کأساً و ناولها</span>
+          <span className="hafez-card-verse" lang="fa" dir="rtl">که عشق آسان نمود اول ولی افتاد مشکل‌ها</span>
+          <span className="hafez-card-open">خواندن غزل <span aria-hidden="true">←</span></span>
+        </span>
+        <span className="hafez-card-ornament hafez-card-ornament-bottom" aria-hidden="true">❧</span>
+      </button>
+      <section className="path-live-carousel" aria-roledescription="carousel" aria-label="پیشنهادهای مسیر من" onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={(event) => { const start = touchStartX.current; touchStartX.current = null; if (start === null) return; const end = event.changedTouches[0]?.clientX; if (end === undefined) return; const delta = end - start; if (Math.abs(delta) > 40) moveSlide(delta < 0 ? 1 : -1); }}>
+        <div className="path-live-topline"><span>{activeSlide.eyebrow}</span><span className="path-live-index">{(slide + 1).toLocaleString("fa-IR")} / {slides.length.toLocaleString("fa-IR")}</span></div>
+        <div className="path-live-copy" key={slide} aria-live="polite"><h2>{activeSlide.title}</h2><p>{activeSlide.body}</p><button type="button" onClick={activeSlide.run}>{activeSlide.action} <Icon name="arrow" /></button></div>
+        <div className="path-live-controls"><button type="button" onClick={() => moveSlide(-1)} aria-label="اسلاید قبلی"><Icon name="arrow" /></button><div className="path-live-dots">{slides.map((item, index) => <button key={item.eyebrow} type="button" className={index === slide ? "active" : ""} onClick={() => setSlide(index)} aria-label={"رفتن به اسلاید " + (index + 1)} aria-current={index === slide ? "true" : undefined} />)}</div><button type="button" onClick={() => moveSlide(1)} aria-label="اسلاید بعدی"><Icon name="arrow" /></button></div>
+      </section>
+      {hafezOpen && (
+        <div className="hafez-modal-backdrop" role="presentation" onClick={() => setHafezOpen(false)}>
+          <section className="hafez-manuscript-modal" role="dialog" aria-modal="true" aria-labelledby="hafez-modal-title" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="hafez-modal-close" onClick={() => setHafezOpen(false)} aria-label="بستن غزل">×</button>
+            <div className="hafez-manuscript-frame">
+              <span className="hafez-modal-kicker">برگی از دیوان</span>
+              <h2 id="hafez-modal-title">حافظِ امروز</h2>
+              <span className="hafez-manuscript-flourish" aria-hidden="true">۞</span>
+              <div className="hafez-full-verse" lang="fa" dir="rtl">
+                <p>الا یا ایها الساقی ادر کأساً و ناولها</p>
+                <p>که عشق آسان نمود اول ولی افتاد مشکل‌ها</p>
+              </div>
+              <p className="hafez-preview-note">پیش‌نمایش طراحی · متن کامل غزل و انتخاب روزانه در مرحلهٔ بعد تکمیل می‌شود.</p>
+              <button type="button" className="hafez-modal-done" onClick={() => setHafezOpen(false)}>بازگشت به مسیر من</button>
+            </div>
+          </section>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function SelectedPage({
   onNavigate,
   onOpenService,
@@ -2337,6 +2436,7 @@ function SelectedPage({
   return (
     <div className="inner-page selected-page selected-growth-page">
       <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>مسیر من</h1><p>قدم‌به‌قدم، متناسب با خودت.</p></div><div className="selected-intro-line" /></section>
+      <PathPersonalDashboard onNavigate={onNavigate} onOpenVip={onOpenVip} />
       <section className="growth-welcome">
         <div className="growth-welcome-orbit growth-orbit-one" /><div className="growth-welcome-orbit growth-orbit-two" />
         <span className="growth-kicker">مسیر من · مسیر رشد</span>
@@ -4726,13 +4826,10 @@ function MorePage({
 }) {
   const [selected, setSelected] =
     useState<(typeof moreItems)[number] | null>(null);
-  const [vipPanel, setVipPanel] = useState<VipPanel | null>(null);
-  const [vipData, setVipData] = useState<VipApiResponse | null>(null);
-  const [clock, setClock] = useState(new Date());
   const moreScrollPosition = useRef(0);
 
   useLayoutEffect(() => {
-    if (selected || vipPanel) {
+    if (selected) {
       window.scrollTo({ top: 0, behavior: "auto" });
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
@@ -4740,37 +4837,7 @@ function MorePage({
       const restoreAt = moreScrollPosition.current;
       window.requestAnimationFrame(() => window.scrollTo({ top: restoreAt, behavior: "auto" }));
     }
-  }, [selected, vipPanel]);
-
-  useEffect(() => {
-    let active = true;
-
-    loadTelegramIdentity()
-      .then((data) => {
-        if (active) setVipData(data);
-      })
-      .catch(() => {
-        if (active) setVipData(null);
-      });
-
-    const timer = window.setInterval(() => {
-      if (active) setClock(new Date());
-    }, 30000);
-
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-    };
-  }, []);
-
-  if (vipPanel) {
-    return (
-      <VipPage
-        initialPanel={vipPanel}
-        onBack={() => setVipPanel(null)}
-      />
-    );
-  }
+  }, [selected]);
 
   if (selected) {
     return (
@@ -4783,51 +4850,6 @@ function MorePage({
     );
   }
 
-  const customer = vipData?.customer;
-  const isVip =
-    customer?.vipStatus?.trim().toLowerCase() === "active" ||
-    customer?.vipStatus?.trim() === "فعال";
-
-  const displayName = isVip
-    ? [customer?.firstName, customer?.lastName].filter(Boolean).join(" ") || "عضو VIP"
-    : "کاربر مهمان";
-
-  const time = new Intl.DateTimeFormat("fa-IR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(clock);
-
-  const jalaliDate = (() => {
-    try {
-      const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }).formatToParts(clock);
-
-      const weekday = parts.find((part) => part.type === "weekday")?.value ?? "";
-      const day = parts.find((part) => part.type === "day")?.value ?? "";
-      const month = parts.find((part) => part.type === "month")?.value ?? "";
-      const year = parts.find((part) => part.type === "year")?.value ?? "";
-
-      return `امروز ${weekday} ${day} ${month} ${year}`.replace(/\\s+/g, " ").trim();
-    } catch {
-      return "امروز";
-    }
-  })();
-
-  const requestVip = () => {
-    const message = encodeURIComponent(
-      "سلام، برای عضویت در باشگاه VIP کائنات‌چی درخواست عضویت دارم."
-    );
-    window.location.href = "https://t.me/AD_Kaenatchi?text=" + message;
-  };
-
-  const openVipDashboard = () => {
-    setVipPanel("dashboard");
-  };
-
   return (
     <div className="inner-page more-dashboard">
       <div className="more-dashboard-heading">
@@ -4836,106 +4858,6 @@ function MorePage({
           <Icon name="search" />
         </button>
       </div>
-
-      <section className={"more-welcome-card " + (isVip ? "is-vip" : "is-guest")}>
-        <div className="more-welcome-orbit orbit-one" />
-        <div className="more-welcome-orbit orbit-two" />
-
-        <div className="more-welcome-top">
-          <div className="more-welcome-copy">
-            <span className="more-welcome-kicker">
-              {isVip ? "VIP MEMBER" : "KAENATCHI"}
-            </span>
-            <strong>
-              {"خوش اومدی" + (isVip ? "، " + displayName : " 🌿")}
-            </strong>
-            <div className="more-status-line">
-              <span className={"more-status-dot " + (isVip ? "vip" : "guest")} />
-              <span>{isVip ? "عضو باشگاه VIP" : "عضویت VIP هنوز فعال نیست"}</span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className={"more-status-button " + (isVip ? "vip" : "guest")}
-            onClick={openVipDashboard}
-            aria-label={isVip ? "وضعیت عضویت VIP" : "ورود به VIP"}
-          >
-            <span />
-          </button>
-        </div>
-
-        <div className="more-welcome-info">
-          <div>
-            <span>ساعت</span>
-            <strong>{time}</strong>
-          </div>
-          <div>
-            <span>امروز</span>
-            <strong>{jalaliDate}</strong>
-          </div>
-          {isVip && customer?.joinedAt && (
-            <div>
-              <span>عضو از</span>
-              <strong>{customer.joinedAt}</strong>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {!isVip && (
-        <section className="more-vip-invite">
-          <div className="more-vip-invite-icon">✦</div>
-          <div className="more-vip-invite-copy">
-            <span>باشگاه اختصاصی کائنات‌چی</span>
-            <strong>یک قدم تا دنیای VIP</strong>
-            <p>
-              برای آشنایی و درخواست عضویت، درخواستت را از طریق تلگرام برای کائنات‌چی ارسال کن.
-            </p>
-          </div>
-          <button type="button" onClick={requestVip}>
-            <span>⭐ درخواست عضویت VIP</span>
-            <Icon name="arrow" />
-          </button>
-        </section>
-      )}
-
-      {isVip && (
-        <section className="more-member-section">
-          <div className="more-member-heading">
-            <span>MEMBERSHIP</span>
-            <strong>عضویت فعال</strong>
-          </div>
-
-          <div className="more-member-grid">
-            <button
-              type="button"
-              className="more-category-card"
-              onClick={() => setVipPanel("profile")}
-            >
-              <span className="more-category-icon gold"><Icon name="user" /></span>
-              <span className="more-category-copy">
-                <strong>پروفایل من</strong>
-                <small>اطلاعات حساب و عضویت</small>
-              </span>
-              <Icon name="arrow" />
-            </button>
-
-            <button
-              type="button"
-              className="more-category-card"
-              onClick={() => setVipPanel("bookings")}
-            >
-              <span className="more-category-icon"><Icon name="calendar" /></span>
-              <span className="more-category-copy">
-                <strong>سابقه نوبت‌ها</strong>
-                <small>نوبت‌های ثبت‌شده شما</small>
-              </span>
-              <Icon name="arrow" />
-            </button>
-          </div>
-        </section>
-      )}
 
       <section className="more-category-section">
         <div className="more-category-title">
