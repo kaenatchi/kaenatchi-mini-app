@@ -2569,6 +2569,7 @@ function SelectedPage({
       </>}
       {quizOnly && <button type="button" style={{ width: "100%", border: "1px solid rgba(36,99,71,.18)", borderRadius: "15px", padding: "12px 16px", marginBottom: "14px", background: "rgba(36,99,71,.06)", color: "#246347", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, cursor: "pointer" }} onClick={() => setQuizOnly(false)}>← بازگشت به مسیر من</button>}
       {quizOnly && <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>آزمون و مراحل من</h1><p>از مرحلهٔ فعلی‌ات ادامه بده.</p></div><div className="selected-intro-line" /></section>}
+      {quizOnly && <>
       <section className="growth-welcome">
         <div className="growth-welcome-orbit growth-orbit-one" /><div className="growth-welcome-orbit growth-orbit-two" />
         <span className="growth-kicker">مسیر من · مسیر رشد</span>
@@ -2606,6 +2607,7 @@ function SelectedPage({
       </section>
       <section className="growth-footer"><div><span>مسیر تو، انتخاب توست</span><strong>هر وقت خواستی، از نو شروع کن.</strong></div><button type="button" onClick={reset}>شروع دوباره</button></section>
       <p className="growth-storage-note">پیشرفت این نسخه روی همین دستگاه ذخیره می‌شود و بین دستگاه‌ها همگام نیست. دسترسی VIP هنگام ادامه از سامانهٔ عضویت بررسی می‌شود.</p>
+      </>}
     </div>
   );
 }
