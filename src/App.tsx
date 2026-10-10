@@ -4928,7 +4928,7 @@ function VipPage({
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" }}>
         {[
-          ["journey", "route", "مسیر من", "خلاصه فعالیت‌ها و سوابق VIP"],
+          ["journey", "footsteps", "مسیر من", "خلاصه فعالیت‌ها و سوابق VIP"],
           ["bookings", "calendar", "نوبت‌های من", "سوابق و وضعیت نوبت‌ها"],
           ["payments", "card", "پرداخت‌های من", "سوابق پرداخت‌ها"],
           ["tokens", "ticket", "توکن‌های من", "تخفیف‌های اختصاصی VIP"],
