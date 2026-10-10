@@ -2377,7 +2377,7 @@ function PathPersonalDashboard({
     void loadDailyPoem();
     return () => { active = false; };
   }, []);
-  if (vipPanel) return <VipPage initialPanel={vipPanel} onBack={() => setVipPanel(null)} onOpenBooking={() => { setVipPanel(null); changeSection("booking"); }} />;
+  if (vipPanel) return <VipPage initialPanel={vipPanel} onBack={() => setVipPanel(null)} onOpenBooking={() => { setVipPanel(null); onNavigate("booking"); }} />;
   const customer = vipData?.customer;
   const isVip = customer?.vipStatus?.trim().toLowerCase() === "active" || customer?.vipStatus?.trim() === "فعال";
   const displayName = isVip ? [customer?.firstName, customer?.lastName].filter(Boolean).join(" ") || "عضو VIP" : "کاربر مهمان";
