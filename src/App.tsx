@@ -711,25 +711,15 @@ async function loadCmsData(
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 12000);
   try {
+    // Apps Script / cross-origin responses may omit or misreport Content-Length.
+    // Use an honest indeterminate animation instead of displaying a stuck 0%.
+    onProgress?.(null);
     const response = await fetch(
       `${CMS_API_URL}?action=getMiniAppData&_=${Date.now()}`,
       { method: "GET", cache: "no-store", signal: controller.signal }
     );
-    if (!response.ok || !response.body) return false;
-    const contentLength = Number(response.headers.get("content-length") || 0);
-    onProgress?.(contentLength > 0 ? 0 : null);
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let received = 0;
-    let body = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      received += value.byteLength;
-      body += decoder.decode(value, { stream: true });
-      if (contentLength > 0) onProgress?.(Math.min(95, Math.floor((received / contentLength) * 95)));
-    }
-    body += decoder.decode();
+    if (!response.ok) return false;
+    const body = await response.text();
     const data = JSON.parse(body) as Partial<typeof cmsRows> & { success?: boolean };
     if (data.success === false) return false;
     rebuildCmsContent(data);
@@ -6311,7 +6301,7 @@ function App() {
   const touchStart = useRef<{ x: number; y: number; identifier: number } | null>(null);
   const [cmsReady, setCmsReady] = useState(false);
   const [cmsLoading, setCmsLoading] = useState(true);
-  const [cmsLoadProgress, setCmsLoadProgress] = useState<number | null>(0);
+  const [cmsLoadProgress, setCmsLoadProgress] = useState<number | null>(null);
   useEffect(() => {
     let mounted = true;
     loadCmsData((progress) => {
