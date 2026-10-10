@@ -127,23 +127,50 @@ function scoreAxes(initial: Record<number, number>, followup: AnswerMap) {
   return order.sort((a,b) => scores[b]-scores[a] || a.localeCompare(b)).map(id => ({ id, score: scores[id] }));
 }
 function StageArtwork({ stage }: { stage: number }) {
-  const label = ["آغاز","شناخت","اقدام","رشد"][stage - 1] || "مسیر";
+  const labels = ["آغاز","شناخت","اقدام","رشد"];
+  const label = labels[stage - 1] || "مسیر";
   const symbol = stage === 1
-    ? <><path d="M125 27v20M115 37h20" stroke="var(--mp-gold)" strokeWidth="2.5" strokeLinecap="round"/><circle cx="125" cy="37" r="13" fill="none" stroke="var(--mp-gold)" strokeWidth="1.5"/></>
+    ? <><circle cx="129" cy="37" r="14" fill="none" stroke="var(--mp-gold)" strokeWidth="2"/><path d="M129 27v20M119 37h20" stroke="var(--mp-gold)" strokeWidth="2" strokeLinecap="round"/></>
     : stage === 2
-    ? <><circle cx="126" cy="36" r="14" fill="none" stroke="var(--mp-gold)" strokeWidth="2"/><path d="M126 26v20M116 36h20" stroke="var(--mp-gold)" strokeWidth="1.5"/></>
+    ? <><path d="M124 22c-10 0-16 8-16 16s6 16 16 16 16-8 16-16-6-16-16-16Z" fill="none" stroke="var(--mp-gold)" strokeWidth="2"/><path d="M124 28v20M114 38h20" stroke="var(--mp-gold)" strokeWidth="1.5"/></>
     : stage === 3
-    ? <><path d="M116 47l10-20 10 20z" fill="none" stroke="var(--mp-gold)" strokeWidth="2" strokeLinejoin="round"/><circle cx="126" cy="40" r="3" fill="var(--mp-gold)"/></>
-    : <><path d="M126 20l4.5 11.5L142 36l-11.5 4.5L126 52l-4.5-11.5L110 36l11.5-4.5z" fill="var(--mp-gold)"/><circle cx="145" cy="56" r="3" fill="var(--mp-sage)"/></>;
-  return <svg viewBox="0 0 180 150" role="img" aria-label={label+"؛ پیکرهٔ انسانی و نماد مسیر"} style={{ width:"100%", height:"auto", maxHeight:150, display:"block", overflow:"visible" }}>
+    ? <><path d="M122 24l18 25h-36z" fill="none" stroke="var(--mp-gold)" strokeWidth="2" strokeLinejoin="round"/><circle cx="122" cy="40" r="3" fill="var(--mp-gold)"/></>
+    : <><path d="M124 20l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="var(--mp-gold)"/><circle cx="145" cy="58" r="3" fill="var(--mp-sage)"/></>;
+  const figure = stage === 1
+    ? <g strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="72" cy="47" r="13" fill="var(--mp-sage)" />
+        <path d="M51 111V89c0-13 8-23 21-23s21 10 21 23v22Z" fill="var(--mp-figure)" />
+        <path d="M58 79l-12 17M86 79l11 17" stroke="var(--mp-figure)" strokeWidth="8" />
+        <path d="M61 110l-3 15M82 110l4 15" stroke="var(--mp-figure)" strokeWidth="8" />
+        <path d="M62 48q10 7 20 0" fill="none" stroke="var(--mp-figure-detail)" strokeWidth="1.5"/>
+      </g>
+    : stage === 2
+    ? <g strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="73" cy="42" r="12" fill="var(--mp-sage)" />
+        <path d="M56 111V77q0-13 17-13t17 13v34Z" fill="var(--mp-figure)" />
+        <path d="M59 78L43 66M87 78l13-13" stroke="var(--mp-figure)" strokeWidth="8"/>
+        <path d="M64 110l-2 15M82 110l3 15" stroke="var(--mp-figure)" strokeWidth="8"/>
+        <path d="M65 41q8 5 16 0" fill="none" stroke="var(--mp-figure-detail)" strokeWidth="1.5"/>
+      </g>
+    : stage === 3
+    ? <g strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="72" cy="42" r="12" fill="var(--mp-sage)" />
+        <path d="M59 67q13-8 26 2l-2 42H57Z" fill="var(--mp-figure)" />
+        <path d="M60 76L46 91M83 76l15 10" stroke="var(--mp-figure)" strokeWidth="8"/>
+        <path d="M64 109l-11 16M80 109l11 13" stroke="var(--mp-figure)" strokeWidth="8"/>
+        <path d="M65 42q7 5 14 0" fill="none" stroke="var(--mp-figure-detail)" strokeWidth="1.5"/>
+      </g>
+    : <g strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="72" cy="42" r="12" fill="var(--mp-sage)" />
+        <path d="M54 111V79q0-15 18-15t18 15v32Z" fill="var(--mp-figure)" />
+        <path d="M58 79L45 59M86 79l13-20" stroke="var(--mp-figure)" strokeWidth="8"/>
+        <path d="M64 110l-2 15M81 110l4 15" stroke="var(--mp-figure)" strokeWidth="8"/>
+        <path d="M65 42q7 5 14 0" fill="none" stroke="var(--mp-figure-detail)" strokeWidth="1.5"/>
+      </g>;
+  return <svg viewBox="0 0 180 150" role="img" aria-label={label+"؛ تصویر نمادین مسیر رشد"} style={{ width:"100%", height:"auto", maxHeight:150, display:"block", overflow:"visible" }}>
     <circle cx="90" cy="76" r="59" fill="var(--mp-art-halo)" />
     <path d="M25 126 Q90 112 155 126" fill="none" stroke="var(--mp-border)" strokeWidth="1.5" strokeLinecap="round"/>
-    <circle cx="79" cy="42" r="14" fill="var(--mp-sage)" />
-    <path d="M56 112 C57 87 62 68 79 66 C96 68 102 87 103 112Z" fill="var(--mp-figure)" />
-    <path d="M67 72 Q79 82 92 72" fill="none" stroke="var(--mp-figure-detail)" strokeWidth="2" strokeLinecap="round" opacity=".8"/>
-    <path d="M65 88l-14 17M94 88l13 17" stroke="var(--mp-figure)" strokeWidth="8" strokeLinecap="round"/>
-    <path d="M70 112l-4 14M88 112l5 14" stroke="var(--mp-figure)" strokeWidth="8" strokeLinecap="round"/>
-    <circle cx="79" cy="42" r="14" fill="none" stroke="var(--mp-figure-detail)" strokeWidth="1" opacity=".65"/>
+    {figure}
     {symbol}
   </svg>;
 }
