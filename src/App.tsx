@@ -2288,7 +2288,7 @@ function PathPersonalDashboard({
           category && category.FullUrl && !String(category.Title || "").includes("منتسب")
         );
         const catalogs = await Promise.all(categories.map(async (category: any) => {
-          try { return await readJson(category.FullUrl + "/_cat.json"); }
+          try { return await readJson("/poets" + category.FullUrl + "/_cat.json"); }
           catch { return { Poems: [] }; }
         }));
         const allPoems = [
@@ -2405,7 +2405,11 @@ function PathPersonalDashboard({
                 <p className="hafez-loading-message" role="status">در حال گشودن دیوان حافظ…</p>
               ) : hafezPoem ? (
                 <div className="hafez-full-verse" lang="fa" dir="rtl">
-                  {hafezPoem.lines.map((line, index) => <p key={index}>{line}</p>)}
+                  {Array.from({ length: Math.ceil(hafezPoem.lines.length / 2) }, (_, index) => hafezPoem.lines.slice(index * 2, index * 2 + 2)).map((couplet, index) => (
+                    <div className="hafez-couplet" key={index}>
+                      {couplet.map((line, lineIndex) => <p key={lineIndex}>{line}</p>)}
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <p className="hafez-loading-message" role="alert">دریافت شعر امروز ممکن نشد. لطفاً اتصال اینترنت را بررسی کن و دوباره تلاش کن.</p>
