@@ -1983,7 +1983,21 @@ function TherapyIntakePage({
     }
     setSubmitting(true);
     setMessage("");
-    const requestId = "TR-" + Date.now().toString(36).toUpperCase() + "-" + Math.random().toString(36).slice(2, 7).toUpperCase();
+    let requestId = "";
+    try {
+      // Use a cryptographically secure random bearer token (192 bits).
+      // The app is served over HTTPS; do not fall back to Math.random for privacy-sensitive tracking.
+      const randomBytes = new Uint8Array(24);
+      if (!globalThis.crypto || typeof globalThis.crypto.getRandomValues !== "function") {
+        throw new Error("SECURE_RANDOM_UNAVAILABLE");
+      }
+      globalThis.crypto.getRandomValues(randomBytes);
+      requestId = "TR-" + Array.from(randomBytes, byte => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
+    } catch {
+      setMessage("برای حفظ امنیت کد پیگیری، این مرورگر امکان ساخت شناسه امن را فراهم نکرد. لطفاً مینی‌اپ را به‌روز یا در مرورگر دیگری باز کن.");
+      setSubmitting(false);
+      return;
+    }
     const normalizeDigits = (value: string) => value.replace(/[۰-۹]/g, d => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
     const payload = {
       action: "createTherapyRequest", requestId,
