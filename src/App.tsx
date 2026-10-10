@@ -2609,7 +2609,7 @@ function SelectedPage({
         <PathPersonalDashboard
           onNavigate={onNavigate}
           onOpenVip={onOpenVip}
-          onOpenQuiz={async () => { setQuizOnly(true); setMyPathMode(true); setStage1Message(""); setStage1Editing(false); setStage1Access("checking"); try { const identity = await loadTelegramIdentity(); const status = identity?.customer?.vipStatus; const active = Boolean(identity?.success && identity?.customer && (status === "فعال" || status === "active")); if (!active) { setStage1Access("denied"); return; } const loaded = loadMyPath(); if (loaded.status === "valid") { setMyPath(loaded.path); setStage1Answers(loaded.path.stages[1].answers); setStage1Screen(loaded.path.stages[1].status === "completed" ? "summary" : "form"); setMyPathReadIssue(null); } else if (loaded.status === "missing") { setMyPath(createInitialMyPath()); setStage1Answers({}); setStage1Screen("form"); setMyPathReadIssue(null); } else { setMyPath(null); setMyPathReadIssue(loaded.status); } setStage1Access("allowed"); } catch { setStage1Access("error"); } }}
+          onOpenQuiz={() => { setQuizOnly(true); setMyPathMode(true); setStage1Message(""); setStage1Editing(false); }}
           onOpenService={onOpenService}
         />
       </>}
