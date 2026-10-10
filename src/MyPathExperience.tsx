@@ -195,7 +195,10 @@ export default function MyPathExperience({ onBack, entry = "main" }: { onBack: (
           }
         } catch {}
         if (!alive) return;
-        setData(loaded || blankPath(key));
+        const restored = loaded || blankPath(key);
+        setData(restored);
+        const firstUnanswered = INITIAL.findIndex((_, i) => !Number.isInteger(restored.initialAnswers[i]));
+        setExpandedInitialIndex(firstUnanswered >= 0 ? firstUnanswered : null);
         setIdentityLoaded(true);
       } catch {
         if (alive) {
