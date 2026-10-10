@@ -2647,7 +2647,7 @@ function SelectedPage({
               const changedCompleted = prior.status === "completed" && JSON.stringify(prior.answers) !== JSON.stringify(stage1Answers);
               const nextPath: MyPath = {
                 ...myPath, personalTitle: title, updatedAt: now,
-                stages: { ...myPath.stages, 1: { ...prior, status: "completed", answers: { ...stage1Answers }, summary, summaryConfirmed: true, startedAt: prior.startedAt || now, completedAt: now, version: changedCompleted ? prior.version + 1 : prior.version, lastReviewedAt: now } },
+                stages: { ...myPath.stages, 1: { ...prior, status: "completed", answers: { ...stage1Answers }, summary, summaryConfirmed: true, startedAt: prior.startedAt || now, completedAt: now, version: changedCompleted ? prior.version + 1 : prior.version, lastReviewedAt: now }, 2: myPath.stages[2].status === "locked" ? { ...myPath.stages[2], status: "ready" } : myPath.stages[2] },
                 history: changedCompleted ? [...myPath.history, { stageId: 1 as const, version: prior.version, savedAt: now, status: prior.status, answers: { ...prior.answers }, summary: prior.summary, summaryConfirmed: prior.summaryConfirmed, completedAt: prior.completedAt, reason: "stage_edit" as const }] : myPath.history,
               };
               const saved = writeMyPath(nextPath);
