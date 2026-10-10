@@ -5393,3 +5393,228 @@ button {
   .my-path-experience .my-path-question-trigger { gap: 8px; padding: 10px; }
   .my-path-experience .my-path-question-title { font-size: 13px; }
 }
+
+
+/* MY PATH — Mirrors of Awareness: layered, CSS-rendered editorial artwork.
+   Kept local to My Path; no SVG, external asset, or booking changes. */
+.my-path-experience .mp-artwork {
+  --art-ink: #17382b;
+  --art-green: #315c48;
+  --art-sage: #9db39a;
+  --art-cream: #f3eddf;
+  --art-gold: #b69a5b;
+  position: relative;
+  isolation: isolate;
+  display: block;
+  width: 100%;
+  height: 150px;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(49,92,72,.16);
+  border-radius: 46% 46% 25px 25px;
+  background:
+    radial-gradient(ellipse at 50% 28%, rgba(255,255,255,.86), transparent 34%),
+    radial-gradient(ellipse at 80% 78%, rgba(182,154,91,.18), transparent 36%),
+    linear-gradient(148deg, #f7f1e4 0%, #e4e8d9 49%, #d4dfd0 100%);
+  box-shadow: inset 0 0 0 5px rgba(255,255,255,.24), 0 9px 22px rgba(23,56,43,.08);
+}
+.my-path-experience .mp-artwork-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  opacity: .24;
+  pointer-events: none;
+  background: repeating-linear-gradient(7deg, transparent 0 5px, rgba(23,56,43,.055) 5.5px, transparent 6px 11px);
+  mix-blend-mode: multiply;
+}
+.my-path-experience .mp-artwork-orbit {
+  position: absolute;
+  border: 1px solid rgba(49,92,72,.24);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.my-path-experience .mp-artwork-orbit-outer {
+  width: 84%; aspect-ratio: 1;
+  left: 8%; top: -26%;
+  box-shadow: 0 0 0 8px rgba(255,255,255,.13), 0 0 0 17px rgba(182,154,91,.08);
+}
+.my-path-experience .mp-artwork-orbit-inner {
+  width: 61%; aspect-ratio: 1;
+  left: 19.5%; top: -8%;
+  border-color: rgba(182,154,91,.45);
+}
+.my-path-experience .mp-artwork-mirror {
+  position: absolute;
+  z-index: 2;
+  width: 44%; height: 66%;
+  left: 40%; top: 10%;
+  border-radius: 48% 48% 43% 43%;
+  transform: rotate(9deg);
+  background: linear-gradient(125deg, rgba(255,255,255,.9), rgba(213,226,210,.48) 38%, rgba(120,153,128,.28) 70%, rgba(255,255,255,.8));
+  border: 1px solid rgba(182,154,91,.82);
+  box-shadow: inset 0 0 0 4px rgba(255,255,255,.35), 0 8px 18px rgba(23,56,43,.11);
+}
+.my-path-experience .mp-artwork-mirror::before {
+  content: "";
+  position: absolute;
+  inset: 8% 12%;
+  border: 1px solid rgba(255,255,255,.72);
+  border-radius: inherit;
+}
+.my-path-experience .mp-artwork-mirror-glint {
+  position: absolute;
+  top: 14%; left: 18%; width: 20%; height: 46%;
+  border-radius: 50%;
+  transform: rotate(18deg);
+  background: linear-gradient(180deg, rgba(255,255,255,.72), transparent);
+}
+.my-path-experience .mp-artwork-landscape {
+  position: absolute;
+  z-index: 3;
+  left: -12%; right: -12%; bottom: -26%;
+  height: 66%;
+  border-radius: 50% 50% 0 0;
+}
+.my-path-experience .mp-artwork-landscape-back {
+  background: linear-gradient(135deg, rgba(157,179,154,.9), rgba(49,92,72,.5));
+  transform: rotate(-8deg);
+}
+.my-path-experience .mp-artwork-landscape-front {
+  bottom: -38%; left: 20%;
+  background: linear-gradient(120deg, #315c48, #17382b);
+  transform: rotate(12deg);
+  box-shadow: inset 0 2px rgba(255,255,255,.16);
+}
+.my-path-experience .mp-artwork-path {
+  position: absolute;
+  z-index: 4;
+  width: 24%; height: 69%;
+  left: 23%; top: 38%;
+  border: 1px solid rgba(182,154,91,.85);
+  border-top-color: transparent;
+  border-right-color: rgba(182,154,91,.72);
+  border-radius: 48% 40% 0 0;
+  transform: rotate(20deg);
+}
+.my-path-experience .mp-artwork-presence {
+  position: absolute;
+  z-index: 5;
+  left: 19%; bottom: 11%;
+  width: 31%; height: 68%;
+  filter: drop-shadow(0 5px 6px rgba(23,56,43,.12));
+}
+.my-path-experience .mp-artwork-presence-head {
+  position: absolute;
+  left: 35%; top: 0;
+  width: 36%; height: 29%;
+  border-radius: 48% 52% 46% 54%;
+  background: linear-gradient(145deg, #c9d5c2, #7f9c83);
+  box-shadow: inset -4px -3px 0 rgba(23,56,43,.08), 0 0 0 5px rgba(255,255,255,.14);
+}
+.my-path-experience .mp-artwork-presence-body {
+  position: absolute;
+  left: 12%; top: 23%;
+  width: 78%; height: 78%;
+  border-radius: 48% 52% 8% 8% / 28% 30% 8% 8%;
+  background: linear-gradient(125deg, #6d8e76 0%, #315c48 53%, #17382b 100%);
+  clip-path: none;
+  transform: rotate(-5deg);
+}
+.my-path-experience .mp-artwork-presence-veil {
+  position: absolute;
+  left: 0; top: 33%;
+  width: 100%; height: 65%;
+  border-radius: 50% 48% 10% 10%;
+  background: linear-gradient(110deg, rgba(243,237,223,.78), rgba(243,237,223,.12) 62%, transparent);
+  transform: rotate(13deg);
+}
+.my-path-experience .mp-artwork-symbol {
+  position: absolute;
+  z-index: 6;
+  border: 1px solid var(--art-gold);
+  pointer-events: none;
+}
+.my-path-experience .mp-artwork-symbol-a {
+  width: 13px; height: 13px; right: 16%; top: 25%;
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px rgba(182,154,91,.1), 0 0 16px rgba(182,154,91,.18);
+}
+.my-path-experience .mp-artwork-symbol-b {
+  width: 7px; height: 7px; right: 27%; top: 17%;
+  border-radius: 50%; background: var(--art-gold); border: 0;
+}
+.my-path-experience .mp-artwork-symbol-c {
+  width: 17px; height: 17px; left: 12%; top: 19%;
+  transform: rotate(45deg);
+  border-width: 1px 0 0 1px;
+  opacity: .8;
+}
+.my-path-experience .mp-artwork-stage-2 {
+  background: radial-gradient(ellipse at 55% 25%, #fffdf6, transparent 35%), linear-gradient(140deg,#e9e8d8,#cadbce 60%,#e9ddc4);
+}
+.my-path-experience .mp-artwork-stage-2 .mp-artwork-mirror {
+  left: 38%; width: 38%; height: 73%; top: 5%; transform: rotate(-10deg);
+}
+.my-path-experience .mp-artwork-stage-2 .mp-artwork-orbit-outer { transform: rotate(-22deg) scaleX(.82); }
+.my-path-experience .mp-artwork-stage-2 .mp-artwork-path {
+  left: 13%; width: 35%; border-radius: 50% 20% 0 0; transform: rotate(5deg);
+}
+.my-path-experience .mp-artwork-stage-2 .mp-artwork-presence { left: 12%; transform: rotate(-8deg) scale(.94); }
+.my-path-experience .mp-artwork-stage-3 {
+  background: radial-gradient(ellipse at 65% 20%, #fff9e9, transparent 37%), linear-gradient(155deg,#eee7d5,#cbd9c8 58%,#d8caa9);
+}
+.my-path-experience .mp-artwork-stage-3 .mp-artwork-mirror {
+  left: 47%; top: 4%; width: 36%; height: 58%; border-radius: 47% 47% 8% 8%;
+  transform: rotate(2deg);
+}
+.my-path-experience .mp-artwork-stage-3 .mp-artwork-landscape-back { transform: rotate(9deg); left: -20%; }
+.my-path-experience .mp-artwork-stage-3 .mp-artwork-path {
+  left: 33%; top: 31%; height: 84%; width: 32%; transform: rotate(-12deg);
+}
+.my-path-experience .mp-artwork-stage-3 .mp-artwork-presence { left: 17%; transform: rotate(8deg) scale(1.03); }
+.my-path-experience .mp-artwork-stage-4 {
+  background: radial-gradient(ellipse at 53% 24%, #fffdf3, transparent 40%), linear-gradient(145deg,#f2ebd8,#d5e0cf 55%,#c2d2c0);
+}
+.my-path-experience .mp-artwork-stage-4 .mp-artwork-mirror {
+  left: 29%; top: 1%; width: 47%; height: 72%;
+  transform: rotate(0deg);
+  box-shadow: 0 0 0 7px rgba(182,154,91,.12), 0 0 0 15px rgba(49,92,72,.07), 0 10px 24px rgba(23,56,43,.1);
+}
+.my-path-experience .mp-artwork-stage-4 .mp-artwork-presence { left: 35%; width: 32%; bottom: 9%; transform: scale(.94); }
+.my-path-experience .mp-artwork-stage-4 .mp-artwork-presence-veil { background: linear-gradient(110deg, rgba(243,237,223,.72), rgba(243,237,223,.1) 62%, transparent); }
+.my-path-experience .mp-artwork-stage-4 .mp-artwork-landscape-front { left: 2%; transform: rotate(-8deg); }
+.my-path-experience .mp-artwork-sprout {
+  position: absolute; z-index: 7; right: 16%; bottom: 24%; width: 23px; height: 30px;
+}
+.my-path-experience .mp-artwork-sprout::before {
+  content: ""; position: absolute; left: 10px; bottom: 0; height: 23px; width: 1px; background: #b69a5b;
+}
+.my-path-experience .mp-artwork-sprout i,
+.my-path-experience .mp-artwork-sprout b {
+  position: absolute; bottom: 13px; width: 13px; height: 8px;
+  background: #8fa78d; border-radius: 100% 0 100% 0;
+}
+.my-path-experience .mp-artwork-sprout i { left: 0; transform: rotate(18deg); }
+.my-path-experience .mp-artwork-sprout b { right: 0; transform: rotate(70deg) scaleX(-1); background: #315c48; }
+.my-path-experience .my-path-hero .mp-artwork { height: 150px; border-radius: 46% 46% 25px 25px; }
+.my-path-experience .mp-artwork-stage-1 { --art-sage: #9db39a; }
+@media (max-width: 420px) {
+  .my-path-experience .my-path-hero { grid-template-columns: minmax(0,1fr) minmax(92px,124px) !important; }
+  .my-path-experience .my-path-hero .mp-artwork { height: 124px; }
+  .my-path-experience .mp-artwork { height: 124px; }
+}
+@media (prefers-color-scheme: dark) {
+  .my-path-experience .mp-artwork {
+    background: radial-gradient(ellipse at 50% 22%, rgba(210,225,208,.2), transparent 38%), linear-gradient(145deg,#26392e,#354b3c 55%,#1b3025);
+    border-color: rgba(182,154,91,.35);
+    box-shadow: inset 0 0 0 5px rgba(255,255,255,.025), 0 9px 22px rgba(0,0,0,.16);
+  }
+  .my-path-experience .mp-artwork-mirror {
+    background: linear-gradient(125deg, rgba(236,242,224,.78), rgba(157,179,154,.35) 40%, rgba(49,92,72,.4) 70%, rgba(255,255,255,.48));
+  }
+  .my-path-experience .mp-artwork-landscape-back { background: linear-gradient(135deg,rgba(157,179,154,.75),rgba(49,92,72,.7)); }
+  .my-path-experience .mp-artwork-landscape-front { background: linear-gradient(120deg,#315c48,#10281d); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-path-experience .mp-artwork * { animation: none !important; }
+}
