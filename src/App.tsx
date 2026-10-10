@@ -3659,7 +3659,8 @@ function getVipTokenDisplayStatus(token: VipToken): {
     return { label: "استفاده شده", color: "#6f746d", background: "rgba(111,116,109,0.08)", border: "rgba(111,116,109,0.18)" };
   }
 
-  if (isVipTokenExpired(String(token.expiresAt ?? "").trim())) {
+  if (["منقضی", "منقضیشده", "expired", "expire", "expiredtoken"].includes(normalizedStatus) ||
+      isVipTokenExpired(String(token.expiresAt ?? "").trim())) {
     return { label: "منقضی شده", color: "#9a5c52", background: "rgba(154,92,82,0.08)", border: "rgba(154,92,82,0.18)" };
   }
 
