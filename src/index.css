@@ -3904,6 +3904,35 @@ button {
 }
 
 
+
+/* PATH — personal dashboard and live editorial carousel */
+.path-personal-dashboard { display:grid; gap:12px; margin:0 0 18px; }
+.path-personal-dashboard .more-welcome-card { margin-bottom:0; }
+.path-member-since { position:relative; z-index:2; margin-top:12px; color:rgba(255,255,255,.7); font-size:10px; }
+.path-member-actions { position:relative; z-index:2; margin-top:13px; }
+.path-vip-invite-button { position:relative; z-index:2; width:100%; min-height:42px; margin-top:15px; padding:10px 13px; display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid rgba(216,197,155,.2); border-radius:14px; background:rgba(255,255,255,.08); color:#fff; font:inherit; font-size:11px; font-weight:750; cursor:pointer; }
+.path-vip-invite-button svg { width:16px; height:16px; }
+.path-live-carousel { position:relative; overflow:hidden; padding:16px 16px 11px; border:1px solid rgba(255,255,255,.1); border-radius:24px; color:#fff; background:radial-gradient(circle at 8% 0%,rgba(216,197,155,.14),transparent 34%),linear-gradient(145deg,#353b32,#214c38 78%); box-shadow:0 16px 34px rgba(23,75,56,.13),inset 0 1px 0 rgba(255,255,255,.09); touch-action:pan-y; }
+.path-live-topline { display:flex; align-items:center; justify-content:space-between; gap:10px; color:rgba(216,197,155,.92); font-size:9px; font-weight:800; }
+.path-live-index { color:rgba(255,255,255,.5); font-variant-numeric:tabular-nums; }
+.path-live-copy { min-height:148px; padding:15px 0 9px; animation:path-slide-in .48s ease both; }
+.path-live-copy h2 { margin:0; color:#fff; font-size:17px; font-weight:700; line-height:1.85; }
+.path-live-copy p { margin:5px 0 14px; color:rgba(255,255,255,.7); font-size:11px; line-height:1.9; }
+.path-live-copy > button { display:inline-flex; align-items:center; gap:8px; min-height:34px; padding:7px 11px; border:1px solid rgba(216,197,155,.22); border-radius:12px; background:rgba(255,255,255,.07); color:#f4ead4; font:inherit; font-size:10px; font-weight:750; cursor:pointer; }
+.path-live-copy > button svg { width:15px; height:15px; }
+.path-live-controls { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.path-live-controls > button { width:29px; height:29px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.1); border-radius:50%; background:rgba(255,255,255,.055); color:rgba(255,255,255,.75); cursor:pointer; }
+.path-live-controls > button svg { width:15px; height:15px; }
+.path-live-dots { display:flex; align-items:center; justify-content:center; gap:7px; }
+.path-live-dots button { width:6px; height:6px; padding:0; border:1px solid rgba(255,255,255,.5); border-radius:99px; background:rgba(255,255,255,.22); transition:width .25s ease,background .25s ease,border-color .25s ease; cursor:pointer; }
+.path-live-dots button.active { width:19px; border-color:rgba(216,197,155,.95); background:rgba(216,197,155,.9); box-shadow:0 0 12px rgba(216,197,155,.16); }
+@keyframes path-slide-in { from { opacity:.45; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+@media (max-width:370px) { .path-live-carousel { padding:14px 13px 10px; } .path-live-copy h2 { font-size:15px; } .path-live-copy { min-height:155px; } }
+@media (prefers-reduced-motion:reduce) { .path-live-copy,.path-live-dots button { animation:none!important; transition:none!important; } }
+@media (prefers-color-scheme:dark) {
+  .path-live-carousel { border-color:rgba(218,232,220,.12); background:radial-gradient(circle at 8% 0%,rgba(216,197,155,.1),transparent 34%),linear-gradient(145deg,#26352c,#1c2d23 78%); }
+}
+
 /* CMS loading state */
 .app-shell-loading {
   min-height: var(--tg-viewport-height, 100dvh);
