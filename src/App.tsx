@@ -6464,7 +6464,7 @@ function App() {
           <div className="cms-loading-orbit" aria-hidden="true">
             <img
               className="cms-loading-logo"
-              src="https://i.ibb.co/hRBG6R6f/IMG-3856.jpg"
+              src="/kaenatchi-mini-app/IMG_4001.png"
               alt=""
               decoding="async"
               fetchPriority="high"
