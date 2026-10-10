@@ -4575,3 +4575,167 @@ button {
     color:#c0cdc4!important;
   }
 }
+
+
+/* KAENATCHI — unified tactile surface system */
+.app-shell {
+  --kc-surface: rgba(255,253,247,.84);
+  --kc-surface-raised: rgba(248,246,238,.96);
+  --kc-ink: #26372f;
+  --kc-muted: #59685f;
+  --kc-border: rgba(36,77,59,.13);
+  --kc-shadow: 0 12px 28px rgba(36,77,59,.075), inset 0 1px 0 rgba(255,255,255,.72);
+}
+.app-shell :is(.glass-list-card,.services-category-card,.services-content-card,.more-info-card,.more-contact-card,.more-category-card,.vip-journey-stat,.growth-service-card,.growth-goal-card,.growth-reflect-card) {
+  border-color: var(--kc-border);
+  box-shadow: var(--kc-shadow);
+}
+.app-shell :is(.services-category-card,.services-content-card,.more-category-card,.more-contact-card,.glass-list-card) {
+  transition: transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s ease, border-color .2s ease, background-color .2s ease;
+}
+.app-shell :is(.services-category-card,.services-content-trigger,.services-learning-item,.faq-category-trigger,.faq-question-trigger,.more-category-card,.more-contact-card):active {
+  transform: scale(.985);
+}
+.services-content-card.services-accordion-card { display:block; padding:0; overflow:hidden; }
+.services-content-trigger {
+  display:flex; align-items:center; gap:12px; width:100%; min-height:78px; padding:15px;
+  border:0; background:transparent; color:inherit; text-align:right; font:inherit; cursor:pointer;
+}
+.services-content-trigger .list-copy { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
+.services-accordion-chevron { display:grid; place-items:center; width:32px; height:32px; flex:0 0 32px; border-radius:11px; background:rgba(36,99,71,.07); color:var(--green); transition:transform .25s ease,background .25s ease; }
+.services-accordion-chevron svg { width:17px; height:17px; }
+.services-accordion-chevron.is-open { transform:rotate(90deg); background:rgba(36,99,71,.13); }
+.services-accordion-panel,.faq-question-panel,.faq-answer-panel { display:grid; grid-template-rows:0fr; opacity:0; overflow:hidden; transition:grid-template-rows .28s ease,opacity .22s ease,padding .28s ease; padding:0 12px; }
+.services-accordion-panel.is-open,.faq-question-panel.is-open { grid-template-rows:1fr; opacity:1; padding:0 12px 12px; }
+.services-accordion-panel-inner,.faq-question-panel-inner { min-height:0; overflow:hidden; }
+.services-accordion-panel-inner,.faq-question-panel-inner { display:flex; flex-direction:column; gap:0; }
+.services-accordion-panel > .services-accordion-panel-inner,.faq-question-panel > .faq-question-panel-inner { min-height:0; }
+.services-learning-item { display:flex; flex-direction:column; align-items:stretch; gap:6px; width:100%; margin-top:8px; padding:14px; border:1px solid var(--kc-border); border-radius:17px; background:var(--kc-surface-raised); color:var(--kc-ink); text-align:right; font:inherit; cursor:pointer; }
+.services-learning-item strong { color:var(--green-dark); font-size:13px; }
+.services-learning-item span { color:var(--kc-muted); font-size:11px; line-height:1.9; }
+.services-learning-item .services-learning-open { color:#8a7146; font-weight:800; }
+.services-learning-empty { padding:14px; border-radius:15px; background:var(--kc-surface-raised); color:var(--kc-muted); font-size:12px; line-height:1.9; }
+.therapy-filter-row { margin-bottom:14px; }
+.faq-explorer { display:grid; gap:12px; }
+.faq-breadcrumbs { display:flex; flex-wrap:wrap; align-items:center; gap:7px; padding:10px 12px; border:1px solid var(--kc-border); border-radius:15px; background:var(--kc-surface); color:var(--kc-muted); font-size:11px; line-height:1.8; }
+.faq-breadcrumbs button { border:0; padding:0; background:transparent; color:var(--green); font:inherit; font-weight:800; cursor:pointer; }
+.faq-category-list { display:grid; gap:9px; }
+.faq-category-card { overflow:hidden; border:1px solid var(--kc-border); border-radius:20px; background:var(--kc-surface); box-shadow:var(--kc-shadow); }
+.faq-category-trigger { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:15px; border:0; background:transparent; color:var(--kc-ink); text-align:right; font:inherit; cursor:pointer; }
+.faq-category-trigger > span:first-child { display:flex; flex-direction:column; gap:4px; }
+.faq-category-trigger strong { color:var(--green-dark); font-size:13px; }
+.faq-category-trigger small { color:var(--kc-muted); font-size:10px; }
+.faq-question-item { overflow:hidden; border:1px solid var(--kc-border); border-radius:15px; margin-top:8px; background:var(--kc-surface-raised); }
+.faq-question-trigger { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:13px; border:0; background:transparent; color:var(--kc-ink); text-align:right; font:inherit; font-size:12px; line-height:1.8; cursor:pointer; }
+.faq-question-trigger > span:last-child { color:var(--green); font-size:18px; flex:0 0 auto; }
+.faq-answer-panel.is-open { grid-template-rows:1fr; opacity:1; padding:0 13px 13px; }
+.faq-answer-panel p { min-height:0; margin:0; color:var(--kc-muted); font-size:11px; line-height:2; white-space:pre-wrap; }
+.loading-path-orbit { position:absolute; display:block; width:40px; height:40px; border:1.5px solid rgba(216,197,155,.75); border-radius:50%; animation:loadingPathRise 2.7s ease-in-out infinite; }
+.loading-path-one { animation-name:loadingPathRiseOne; }
+.loading-path-two { animation-name:loadingPathRiseTwo; animation-delay:-1.35s; }
+.cms-loading-mark { position:relative; overflow:hidden; isolation:isolate; }
+.loading-path-signature { position:relative; z-index:1; display:grid; place-items:center; width:30px; height:30px; border-radius:50%; color:#f7f1e4; background:#244d3b; font-size:20px; font-weight:800; box-shadow:0 0 0 5px rgba(36,77,59,.12); }
+.loading-progress { width:100%; height:5px; margin-top:22px; overflow:hidden; border-radius:999px; background:rgba(36,77,59,.12); }
+.loading-progress span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#b7c7ad,#246347,#d8c59b); transition:width .28s ease; }
+.loading-percent { margin-top:8px; color:var(--green-dark); font-size:12px; font-weight:850; font-variant-numeric:tabular-nums; }
+.loading-retry-button { margin-top:15px; padding:11px 16px; border:1px solid var(--kc-border); border-radius:14px; background:var(--kc-surface-raised); color:var(--green-dark); font:inherit; font-weight:800; cursor:pointer; }
+@keyframes loadingPathRiseOne { 0%,100% { opacity:.35; transform:translate(-5px,7px) rotate(-25deg) scaleX(.72); } 50% { opacity:1; transform:translate(-5px,-4px) rotate(-25deg) scaleX(.72); } }
+@keyframes loadingPathRiseTwo { 0%,100% { opacity:.35; transform:translate(6px,7px) rotate(25deg) scaleX(.72); } 50% { opacity:1; transform:translate(6px,-4px) rotate(25deg) scaleX(.72); } }
+@media (prefers-color-scheme:dark) {
+  .app-shell {
+    --kc-surface: rgba(35,47,39,.96);
+    --kc-surface-raised: rgba(28,39,32,.98);
+    --kc-ink: #edf3ed;
+    --kc-muted: #c0cdc4;
+    --kc-border: rgba(218,232,220,.15);
+    --kc-shadow: 0 14px 32px rgba(0,0,0,.2), inset 0 1px 0 rgba(218,232,220,.045);
+  }
+  .app-shell :is(.services-category-card,.services-content-card,.more-info-card,.more-contact-card,.more-category-card,.faq-category-card,.faq-question-item,.services-learning-item,.services-learning-empty,.faq-breadcrumbs) {
+    background:linear-gradient(145deg,rgba(38,53,44,.98),rgba(28,40,33,.98))!important;
+    border-color:rgba(218,232,220,.14)!important;
+    color:#edf3ed!important;
+  }
+  .app-shell :is(.services-category-copy strong,.services-content-card .list-copy strong,.services-section-intro strong,.services-world-heading strong,.services-learning-item strong,.faq-category-trigger strong,.faq-question-trigger,.loading-percent) { color:#edf3ed!important; }
+  .app-shell :is(.services-category-copy span,.services-content-card .list-copy span,.services-learning-item span,.faq-category-trigger small,.faq-answer-panel p,.faq-breadcrumbs) { color:#c0cdc4!important; }
+  .app-shell .services-accordion-chevron { background:rgba(177,211,184,.12); color:#d6e6d8; }
+  .app-shell .services-filter-chip { color:#dfe9e0; background:rgba(218,232,220,.07); border-color:rgba(218,232,220,.16); }
+  .app-shell .services-filter-chip.active { color:#f4f7f4; background:rgba(111,157,121,.25); border-color:rgba(177,211,184,.48); }
+  .app-shell .loading-progress { background:rgba(218,232,220,.14); }
+  .app-shell .loading-percent { color:#e2ece3; }
+  .app-shell .loading-retry-button { background:#26382d; color:#edf3ed; border-color:rgba(218,232,220,.18); }
+  .app-shell .cms-loading-card { background:linear-gradient(145deg,rgba(35,47,39,.98),rgba(28,39,32,.98)); border-color:rgba(218,232,220,.14); }
+  .app-shell .cms-loading-card strong { color:#edf3ed; }
+  .app-shell .cms-loading-card > span { color:#c0cdc4; }
+}
+@media (max-width:390px) {
+  .services-content-trigger,.faq-category-trigger { padding:12px; gap:8px; }
+  .services-learning-item,.faq-question-trigger { padding:12px; }
+  .faq-breadcrumbs { font-size:10px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .app-shell :is(.services-category-card,.services-content-trigger,.services-learning-item,.faq-category-trigger,.faq-question-trigger,.more-category-card,.more-contact-card) { transition:none!important; }
+  .loading-path-orbit { animation:none!important; }
+  .loading-progress span { transition:none!important; }
+  .services-accordion-panel,.faq-question-panel,.faq-answer-panel { transition:none!important; }
+}
+
+/* Keep the My Path heading visually distinct from its green hero card. */
+.selected-growth-page .selected-intro { margin-bottom:10px; padding-bottom:4px; }
+.services-accordion-panel,.faq-question-panel,.faq-answer-panel {
+  display:block;
+  max-height:0;
+  visibility:hidden;
+  opacity:0;
+  overflow:hidden;
+  padding:0 12px;
+  transition:max-height .32s ease,opacity .22s ease,padding .32s ease,visibility .22s ease;
+}
+.services-accordion-panel.is-open,.faq-question-panel.is-open {
+  max-height:5000px;
+  visibility:visible;
+  opacity:1;
+  padding:0 12px 12px;
+}
+.faq-answer-panel.is-open {
+  max-height:1800px;
+  visibility:visible;
+  opacity:1;
+  padding:0 13px 13px;
+}
+@media (prefers-reduced-motion:reduce) {
+  .services-accordion-panel,.faq-question-panel,.faq-answer-panel { transition:none!important; }
+}
+
+/* VIP dashboard needs a separate light palette as well as its dark palette. */
+.vip-mode .vip-journey-summary { color:#26372f; background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(241,243,233,.82)); border-color:rgba(36,77,59,.14); }
+.vip-mode .vip-journey-heading strong { color:#26372f; }
+.vip-mode .vip-journey-heading span { color:#5f6b62; }
+.vip-mode .vip-journey-stat { border-color:rgba(36,77,59,.12); background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(241,243,233,.86)); box-shadow:0 8px 20px rgba(36,77,59,.055),inset 0 1px 0 rgba(255,255,255,.9); }
+.vip-mode .vip-journey-stat-copy strong { color:#26372f; }
+.vip-mode .vip-journey-stat-copy span { color:#5f6b62; }
+.vip-mode .nav-fab-actions .nav-fab-action { background:linear-gradient(145deg,rgba(255,253,247,.98),rgba(238,241,231,.96)); border-color:rgba(36,77,59,.16); color:#26372f; box-shadow:0 12px 28px rgba(0,0,0,.13); }
+.vip-mode .nav-fab-actions .nav-fab-action span { color:inherit; }
+@media (prefers-color-scheme:dark) {
+  .vip-mode .vip-journey-summary { color:#edf3ed; background:linear-gradient(145deg,rgba(35,47,39,.98),rgba(28,39,32,.98)); border-color:rgba(218,232,220,.14); }
+  .vip-mode .vip-journey-heading strong,.vip-mode .vip-journey-stat-copy strong { color:#edf3ed; }
+  .vip-mode .vip-journey-heading span,.vip-mode .vip-journey-stat-copy span { color:#c0cdc4; }
+  .vip-mode .vip-journey-stat { border-color:rgba(218,232,220,.14); background:linear-gradient(145deg,rgba(44,59,49,.96),rgba(30,42,34,.96)); }
+  .vip-mode .nav-fab-actions .nav-fab-action { background:linear-gradient(145deg,rgba(39,54,46,.98),rgba(28,40,33,.98)); border-color:rgba(218,232,220,.16); color:#edf3ed; }
+}
+
+/* The + menu uses the same card material in every app section. */
+.app-shell .nav-fab-actions .nav-fab-action {
+  background:linear-gradient(145deg,rgba(255,253,247,.98),rgba(241,243,233,.96));
+  border-color:rgba(36,77,59,.14);
+  color:#26372f;
+  box-shadow:0 12px 28px rgba(36,77,59,.12);
+}
+.app-shell .nav-fab-actions .nav-fab-action :is(span,strong,small) { color:inherit; }
+@media (prefers-color-scheme:dark) {
+  .app-shell .nav-fab-actions .nav-fab-action {
+    background:linear-gradient(145deg,rgba(39,54,46,.98),rgba(28,40,33,.98))!important;
+    border-color:rgba(218,232,220,.16)!important;
+    color:#edf3ed!important;
+  }
+  .app-shell .nav-fab-actions .nav-fab-action :is(span,strong,small) { color:#edf3ed!important; }
+}
