@@ -2287,7 +2287,7 @@ function PathPersonalDashboard({
     return () => { active = false; };
   }, []);
   useEffect(() => {
-    const timer = window.setInterval(() => setSlide((current) => (current + 1) % 4), 20000);
+    const timer = window.setInterval(() => setSlide((current) => (current + 1) % 4), 12000);
     return () => window.clearInterval(timer);
   }, []);
   useEffect(() => {
@@ -2507,11 +2507,28 @@ function SelectedPage({
     } catch {}
     return "intro";
   });
-  const [qIndex, setQIndex] = useState(0);
+  const [qIndex, setQIndex] = useState(() => {
+    try {
+      const p = JSON.parse(window.localStorage.getItem(KEY) || "null");
+      const answers = Array.isArray(p?.answers) ? p.answers : [];
+      for (let i = 0; i < questions.length; i += 1) {
+        if (!answers.some((answer: any) => answer?.q === i && Number.isInteger(answer?.option))) return i;
+      }
+      return 0;
+    } catch { return 0; }
+  });
   const [checkingVip, setCheckingVip] = useState(false);
   const [vipMessage, setVipMessage] = useState("");
   const [vipActive, setVipActive] = useState(false);
   useEffect(() => { try { window.localStorage.setItem(KEY, JSON.stringify(progress)); } catch {} }, [progress]);
+
+  // A saved VIP step is progress, not proof of membership. Re-check membership
+  // before restoring the VIP exercise after a reload; never reset quiz answers.
+  useEffect(() => {
+    if (progress.vipDone && screen === "gate" && !checkingVip) {
+      void continueWithVipCheck();
+    }
+  }, [progress.vipDone]);
 
   const totals: Record<Profile, number> = { calm: 0, clarity: 0, habits: 0, exploration: 0 };
   progress.answers.forEach((a) => { totals[a.profile] += 1; });
@@ -2535,7 +2552,13 @@ function SelectedPage({
     if (qIndex < questions.length - 1) setQIndex((i) => i + 1);
     else { setProgress((p) => ({ ...p, quizComplete: true })); setScreen("result"); }
   };
-  const startQuiz = () => { setQIndex(0); setProgress(empty); setScreen("quiz"); };
+  const startQuiz = () => {
+    setQIndex(0);
+    setProgress(empty);
+    setVipActive(false);
+    setVipMessage("");
+    setScreen("quiz");
+  };
   const continueWithVipCheck = async () => {
     setCheckingVip(true); setVipMessage("");
     try {
@@ -2586,7 +2609,7 @@ function SelectedPage({
         <div className="selected-discover" style={{ marginTop: "16px" }}><div><span>دوست داری آزادانه مرور کنی؟</span><strong>تمام خدمات کائنات‌چی</strong></div><div className="selected-discover-links"><button type="button" onClick={() => onNavigate("services")}>دیدن همهٔ خدمات <span>←</span></button></div></div>
       </section>}
 
-      {screen === "quiz" && <section className="glass-list-card" style={{ display: "block", padding: "20px" }}>
+      {screen === "quiz" && <section className="glass-list-card growth-quiz-card" style={{ display: "block", padding: "20px" }}>
         <span className="growth-kicker">پرسش {qIndex + 1} از {questions.length}</span><h2 style={{ fontSize: "19px", lineHeight: 1.9, margin: "12px 0 16px" }}>{currentQuestion.title}</h2>
         <div style={{ display: "grid", gap: "10px" }}>{currentQuestion.options.map((option, index) => <button type="button" key={option.label} aria-pressed={answer?.option === index} onClick={() => chooseAnswer(index)} style={{ ...optionStyle, border: answer?.option === index ? "1px solid rgba(36,99,71,.7)" : optionStyle.border, background: answer?.option === index ? "rgba(36,99,71,.1)" : optionStyle.background }}>{option.label}{answer?.option === index ? "  ✓" : ""}</button>)}</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "16px" }}><button type="button" style={secondary} onClick={() => qIndex > 0 ? setQIndex((i) => i - 1) : setScreen("intro")}>{qIndex > 0 ? "پرسش قبلی" : "بازگشت"}</button><button type="button" style={{ ...primary, opacity: answer ? 1 : .45 }} disabled={!answer} onClick={nextQuestion}>{qIndex === questions.length - 1 ? "دیدن نتیجه" : "پرسش بعدی ←"}</button></div>
