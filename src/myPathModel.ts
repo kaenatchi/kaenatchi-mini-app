@@ -173,27 +173,74 @@ export function isMyPath(value: unknown): value is MyPath {
  * Safe storage helpers for later integration. They never remove or overwrite
  * the existing legacy key and return an explicit failure signal.
  */
-export function readMyPath(storage: Pick<Storage, "getItem"> = localStorage): MyPath | null {
+export type MyPathReadResult =
+  | { status: "missing" }
+  | { status: "valid"; path: MyPath }
+  | { status: "invalid" }
+  | { status: "unavailable" };
+
+function getBrowserStorage(): Storage | null {
   try {
-    const raw = storage.getItem(MY_PATH_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    return isMyPath(parsed) ? parsed : null;
+    return typeof localStorage === "undefined" ? null : localStorage;
   } catch {
     return null;
   }
 }
 
+/**
+ * Distinguishes a genuinely new path from unreadable or unknown stored data.
+ * Callers must not treat "invalid" as an empty path or overwrite it silently.
+ */
+export function loadMyPath(
+  storage?: Pick<Storage, "getItem">,
+): MyPathReadResult {
+  try {
+    const target = storage ?? getBrowserStorage();
+    if (!target) return { status: "unavailable" };
+
+    const raw = target.getItem(MY_PATH_STORAGE_KEY);
+    if (raw === null) return { status: "missing" };
+
+    const parsed: unknown = JSON.parse(raw);
+    return isMyPath(parsed)
+      ? { status: "valid", path: parsed }
+      : { status: "invalid" };
+  } catch {
+    return { status: "unavailable" };
+  }
+}
+
+/** Convenience reader; use loadMyPath when missing and invalid must differ. */
+export function readMyPath(
+  storage?: Pick<Storage, "getItem">,
+): MyPath | null {
+  const result = loadMyPath(storage);
+  return result.status === "valid" ? result.path : null;
+}
+
+/**
+ * Writes only when storage is new or already contains a recognized schema.
+ * Invalid/unknown data is preserved rather than overwritten.
+ */
 export function writeMyPath(
   path: MyPath,
-  storage: Pick<Storage, "setItem"> = localStorage,
+  storage?: Pick<Storage, "getItem" | "setItem">,
 ): boolean {
   try {
+    const target = storage ?? getBrowserStorage();
+    if (!target) return false;
+
+    const existing = target.getItem(MY_PATH_STORAGE_KEY);
+    if (existing !== null) {
+      const parsed: unknown = JSON.parse(existing);
+      if (!isMyPath(parsed)) return false;
+    }
+
     const updated: MyPath = {
       ...path,
       updatedAt: new Date().toISOString(),
     };
-    storage.setItem(MY_PATH_STORAGE_KEY, JSON.stringify(updated));
+    target.setItem(MY_PATH_STORAGE_KEY, JSON.stringify(updated));
     return true;
   } catch {
     return false;
