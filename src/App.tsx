@@ -2246,9 +2246,13 @@ function ServicesPage({
 function PathPersonalDashboard({
   onNavigate,
   onOpenVip,
+  onOpenQuiz,
+  onOpenService,
 }: {
   onNavigate: (section: Section) => void;
   onOpenVip: () => void;
+  onOpenQuiz: () => void;
+  onOpenService: (service: Service) => void;
 }) {
   const [vipData, setVipData] = useState<VipApiResponse | null>(null);
   const [vipPanel, setVipPanel] = useState<VipPanel | null>(null);
@@ -2258,11 +2262,24 @@ function PathPersonalDashboard({
   const [hafezLoading, setHafezLoading] = useState(true);
   const [hafezError, setHafezError] = useState(false);
   const touchStartX = useRef<number | null>(null);
+  const featuredEnergyServices = (energyServices.length ? energyServices : mainServices.filter((service) => service.category === "energy"))
+    .filter((service) => service.category === "energy");
+  const tehranDateParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const tehranPart = (type: string) => Number(tehranDateParts.find((item) => item.type === type)?.value || 0);
+  const tehranYear = tehranPart("year");
+  const tehranMonth = tehranPart("month");
+  const tehranDay = tehranPart("day");
+  const dayOfYear = Math.floor((Date.UTC(tehranYear, tehranMonth - 1, tehranDay) - Date.UTC(tehranYear, 0, 0)) / 86400000);
+  const featuredService = featuredEnergyServices.length
+    ? featuredEnergyServices[((dayOfYear % featuredEnergyServices.length) + featuredEnergyServices.length) % featuredEnergyServices.length]
+    : null;
   const slides = [
-    { eyebrow: "قدم بعدی تو", title: "مسیرت را با یک قدم کوچک ادامه بده.", body: "خدمات و تجربه‌هایی را پیدا کن که با حال‌وهوای امروزت هماهنگ‌اند.", action: "دیدن خدمات", run: () => onNavigate("services") },
-    { eyebrow: "پیشنهاد برای تو", title: "گاهی یک مکث کوتاه، شروع خوبی است.", body: "با آرامش گزینه‌ها را ببین و هر وقت آماده بودی انتخاب کن.", action: "کشف تجربه‌ها", run: () => onNavigate("services") },
     { eyebrow: "دنیای کائنات‌چی", title: "تجربه‌ای تازه در انتظارت است.", body: "انرژی‌خوانی، تراپی و تجربه‌های دیگر را در یک جا مرور کن.", action: "مرور خدمات", run: () => onNavigate("services") },
-    { eyebrow: "باشگاه کائنات‌چی", title: "مزایای عضویتت را بشناس.", body: "وضعیت و امکانات VIP را از مسیر رسمی عضویت بررسی کن.", action: "مشاهدهٔ VIP", run: onOpenVip },
+    { eyebrow: "مسیر من", title: "از همین‌جا ادامه بده.", body: "آزمون‌ها، مرحلهٔ فعلی و قدم بعدی‌ات را در مسیر شخصی ببین.", action: "ادامهٔ مسیر", run: onOpenQuiz },
+    { eyebrow: "باشگاه کائنات‌چی", title: "مزایای عضویتت را بشناس.", body: "وضعیت و امکانات VIP را از مسیر رسمی عضویت بررسی کن.", action: "VIP", run: onOpenVip },
+    { eyebrow: "پیشنهاد برای تو", title: featuredService?.title || "یک تجربه برای امروز", body: featuredService ? (featuredService.description || "با این انرژی‌خوانی منتخب امروز آشنا شو؛ جزئیات و امکان دریافت نوبت را ببین.") : "با یک پیشنهاد منتخب آشنا شو؛ هر وقت آماده بودی، جزئیاتش را ببین.", action: "کشف تجربه", run: () => featuredService ? onOpenService(featuredService) : onNavigate("services") },
   ];
   useEffect(() => {
     let active = true;
@@ -2459,6 +2476,7 @@ function SelectedPage({
   type Answer = { q: number; option: number; profile: Profile };
   type Progress = { answers: Answer[]; quizComplete: boolean; freeDone: boolean; vipDone: boolean };
   const KEY = "kaenatchi-selected-growth-v2";
+  const [quizOnly, setQuizOnly] = useState(false);
   const questions: Array<{ title: string; options: Array<{ label: string; profile: Profile }> }> = [
     { title: "این روزها بیشتر از همه به چه چیزی نیاز داری؟", options: [
       { label: "کمی آرامش و مکث", profile: "calm" }, { label: "روشن‌تر دیدن فکرها و انتخاب‌ها", profile: "clarity" }, { label: "ساختن یک عادت کوچک", profile: "habits" }, { label: "تجربه‌ای تازه و متفاوت", profile: "exploration" }] },
@@ -2540,8 +2558,17 @@ function SelectedPage({
 
   return (
     <div className="inner-page selected-page selected-growth-page">
-      <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>مسیر من</h1><p>قدم‌به‌قدم، متناسب با خودت.</p></div><div className="selected-intro-line" /></section>
-      <PathPersonalDashboard onNavigate={onNavigate} onOpenVip={onOpenVip} />
+      {!quizOnly && <>
+        <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>مسیر من</h1><p>قدم‌به‌قدم، متناسب با خودت.</p></div><div className="selected-intro-line" /></section>
+        <PathPersonalDashboard
+          onNavigate={onNavigate}
+          onOpenVip={onOpenVip}
+          onOpenQuiz={() => setQuizOnly(true)}
+          onOpenService={onOpenService}
+        />
+      </>}
+      {quizOnly && <button type="button" style={{ width: "100%", border: "1px solid rgba(36,99,71,.18)", borderRadius: "15px", padding: "12px 16px", marginBottom: "14px", background: "rgba(36,99,71,.06)", color: "#246347", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, cursor: "pointer" }} onClick={() => setQuizOnly(false)}>← بازگشت به مسیر من</button>}
+      {quizOnly && <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>آزمون و مراحل من</h1><p>از مرحلهٔ فعلی‌ات ادامه بده.</p></div><div className="selected-intro-line" /></section>}
       <section className="growth-welcome">
         <div className="growth-welcome-orbit growth-orbit-one" /><div className="growth-welcome-orbit growth-orbit-two" />
         <span className="growth-kicker">مسیر من · مسیر رشد</span>
