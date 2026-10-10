@@ -1952,6 +1952,7 @@ function TherapyIntakePage({
   const [mobile, setMobile] = useState("");
   const [telegramUsername, setTelegramUsername] = useState("");
   const [reason, setReason] = useState("");
+  const [candleGoals, setCandleGoals] = useState<string[]>([]);
   const [impact, setImpact] = useState("");
   const [duration, setDuration] = useState("");
   const [goal, setGoal] = useState("");
@@ -1990,7 +1991,8 @@ function TherapyIntakePage({
       firstName: firstName.trim(), lastName: lastName.trim(),
       mobile: normalizeDigits(mobile).replace(/[\s()-]/g, ""),
       telegramUsername: telegramUsername.trim().replace(/^@/, ""),
-      reason, impact, duration, goal, previousSupport, contactPreference,
+      reason: isCandle ? candleGoals.join("، ") : reason,
+      impact, duration, goal, previousSupport, contactPreference,
       freeText: freeText.trim(), privacyConsent, accuracyConfirmed
     };
     try {
@@ -2032,11 +2034,16 @@ function TherapyIntakePage({
           : "درخواستت را با آرامش تکمیل کن؛ پس از بررسی درخواست، مشاوره اولیه تلفنی انجام می‌شود و در صورت هماهنگی، نوبت را از بخش دریافت نوبت ثبت می‌کنی."}
         icon={isCandle ? "candle" : "conversation"}
       />
+      {isCandle && (
+        <div className="glass-list-card" style={{display:"block",marginTop:"14px",padding:"18px",lineHeight:1.9}}>
+          <strong style={{display:"block",color:"#244d3b",marginBottom:"6px"}}>شمع‌تراپی چیست؟ 🕯️</strong>
+          <span>جلسه‌ای با تمرکز بر آرامش، توجه به خود و ایجاد فضایی برای مکث و تأمل است. متناسب با هدف تو، در مشاوره اولیه درباره مسیر مناسب گفت‌وگو می‌کنیم. این روش جایگزین درمان پزشکی یا روان‌شناختی نیست و نتیجه مشخصی را تضمین نمی‌کند.</span>
+        </div>
+      )}
       <div className="glass-list-card" style={{display:"block",marginTop:"14px"}}>
         <div className="list-copy">
           <strong>مدت هر جلسه: {durationLabel}</strong>
           <span>کاملاً غیرحضوری</span>
-          <span>مدت هر جلسه: {durationLabel}</span>
           <span>پس از بررسی درخواست، برای مشاوره اولیه با تو تماس می‌گیریم. در صورت هماهنگی، نوبت را از بخش «دریافت نوبت» ثبت می‌کنی.</span>
         </div>
       </div>
@@ -2053,14 +2060,25 @@ function TherapyIntakePage({
 
           {step === 0 && (
             <div style={{display:"grid",gap:"14px"}}>
-              <label style={labelStyle}>دلیل اصلی درخواست
-                <select style={fieldStyle} value={reason} onChange={e=>setReason(e.target.value)}>
-                  <option value="">انتخاب کن</option>
-                  {options(isCandle
-                    ? ["آشنایی با فرایند شمع‌تراپی","آرامش و رسیدگی به خود","موضوع شخصی دیگر"]
-                    : ["اضطراب و نگرانی","روابط و ارتباطات","خودشناسی و اعتمادبه‌نفس","فشارهای زندگی و فرسودگی","سوگ یا تغییر مهم زندگی","موضوع دیگر"])}
-                </select>
-              </label>
+              {isCandle ? (
+                <fieldset style={{border:"1px solid rgba(36,77,59,.14)",borderRadius:"15px",padding:"14px",display:"grid",gap:"12px"}}>
+                  <legend style={{padding:"0 6px",color:"#294436",fontSize:"13px",fontWeight:700}}>هدف تو از شمع‌تراپی چیست؟</legend>
+                  <span style={{fontSize:"12px",color:"#718078"}}>می‌توانی بیش از یک گزینه را انتخاب کنی.</span>
+                  {["آرامش ذهنی و فاصله گرفتن از شلوغی روزمره","مراقبت از خود و توجه به احساساتم","ایجاد فضایی برای تمرکز و تأمل","آشنایی با فرایند شمع‌تراپی","هنوز مطمئن نیستم و به راهنمایی نیاز دارم","دلیل دیگری دارم"].map(item => (
+                    <label key={item} style={{display:"flex",gap:"9px",alignItems:"flex-start",fontSize:"13px",lineHeight:1.8,fontWeight:500}}>
+                      <input type="checkbox" checked={candleGoals.includes(item)} onChange={e=>setCandleGoals(old=>e.target.checked?[...old,item]:old.filter(value=>value!==item))} style={{marginTop:"5px"}} />
+                      <span>{item}</span>
+                    </label>
+                  ))}
+                </fieldset>
+              ) : (
+                <label style={labelStyle}>دلیل اصلی درخواست
+                  <select style={fieldStyle} value={reason} onChange={e=>setReason(e.target.value)}>
+                    <option value="">انتخاب کن</option>
+                    {options(["اضطراب و نگرانی","روابط و ارتباطات","خودشناسی و اعتمادبه‌نفس","فشارهای زندگی و فرسودگی","سوگ یا تغییر مهم زندگی","موضوع دیگر"])}
+                  </select>
+                </label>
+              )}
               {!isCandle && <>
                 <label style={labelStyle}>این موضوع چقدر بر زندگی روزمره‌ات اثر گذاشته؟
                   <select style={fieldStyle} value={impact} onChange={e=>setImpact(e.target.value)}>
@@ -2083,12 +2101,8 @@ function TherapyIntakePage({
                   </select>
                 </label>
               </>}
-              {isCandle && <label style={labelStyle}>چه چیزی برای هماهنگی اولیه مهم است؟ <span style={{fontWeight:400,color:"#718078"}}>(اختیاری)</span>
-                <select style={fieldStyle} value={goal} onChange={e=>setGoal(e.target.value)}>
-                  <option value="">انتخاب کن</option>{options(["آشنایی با مراحل","زمان‌بندی و نحوه انجام","هزینه و جزئیات","ترجیح می‌دهم تلفنی توضیح بدهم"])}
-                </select>
-              </label>}
-              <button type="button" onClick={()=>{if(!reason){setMessage("لطفاً دلیل اصلی درخواست را انتخاب کن.");return;}setMessage("");setStep(1);}} style={{width:"100%",padding:"14px",borderRadius:"16px",background:"#244d3b",color:"#fff",fontFamily:"inherit",fontWeight:700}}>ادامه</button>
+
+              <button type="button" onClick={()=>{if(isCandle ? candleGoals.length===0 : !reason){setMessage(isCandle?"لطفاً دست‌کم یک هدف را انتخاب کن.":"لطفاً دلیل اصلی درخواست را انتخاب کن.");return;}setMessage("");setStep(1);}} style={{width:"100%",padding:"14px",borderRadius:"16px",background:"#244d3b",color:"#fff",fontFamily:"inherit",fontWeight:700}}>ادامه</button>
             </div>
           )}
 
@@ -2128,7 +2142,7 @@ function TherapyIntakePage({
                 خدمت: {isCandle ? "شمع‌تراپی" : "سایکوتراپی"}<br/>
                 نام: {firstName} {lastName}<br/>
                 موبایل: {mobile}<br/>
-                دلیل درخواست: {reason}<br/>
+                دلیل درخواست: {isCandle ? candleGoals.join("، ") : reason}<br/>
                 {impact && <>اثر روزمره: {impact}<br/></>}
                 {duration && <>مدت درگیری: {duration}<br/></>}
                 {goal && <>هدف: {goal}<br/></>}
