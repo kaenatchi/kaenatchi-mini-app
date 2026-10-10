@@ -164,14 +164,14 @@ export default function MyPathExperience({ onBack, entry = "main" }: { onBack: (
         })();
         if (!alive) return;
         const trustedId = response?.success && response?.customer ? String(response.customer.telegramId || response.customer.id || "") : "";
-        const key = trustedId ? "vip:" + trustedId : (initUser ? "telegram-local:" + String(initUser) : null);
+        const key = initUser ? "telegram-local:" + String(initUser) : (trustedId ? "vip:" + trustedId : null);
         if (!key) {
           setIdentityError("برای ذخیرهٔ مسیر شخصی، اپ را از داخل تلگرام باز کن. در حال حاضر هیچ پاسخی ذخیره نشده است.");
           setIdentityLoaded(true);
           return;
         }
         setUserKey(key);
-        setIdentityLabel(trustedId ? "حساب متصل‌شده" : "ذخیرهٔ محلی روی همین دستگاه");
+        setIdentityLabel("ذخیرهٔ محلی روی همین دستگاه");
         const storageKey = "kaenatchi-my-path-user-v1:" + key;
         let loaded: PathData | null = null;
         try {
