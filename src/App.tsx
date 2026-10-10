@@ -2302,9 +2302,9 @@ function PathPersonalDashboard({
         )}
       </section>
       <section className="path-live-carousel" aria-roledescription="carousel" aria-label="پیشنهادهای مسیر من" onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={(event) => { const start = touchStartX.current; touchStartX.current = null; if (start === null) return; const end = event.changedTouches[0]?.clientX; if (end === undefined) return; const delta = end - start; if (Math.abs(delta) > 40) moveSlide(delta < 0 ? 1 : -1); }}>
-        <div className="path-live-topline"><span>{activeSlide.eyebrow}</span><span className="path-live-index">{String(slide + 1).toLocaleString("fa-IR")} / {String(slides.length).toLocaleString("fa-IR")}</span></div>
+        <div className="path-live-topline"><span>{activeSlide.eyebrow}</span><span className="path-live-index">{(slide + 1).toLocaleString("fa-IR")} / {slides.length.toLocaleString("fa-IR")}</span></div>
         <div className="path-live-copy" key={slide} aria-live="polite"><h2>{activeSlide.title}</h2><p>{activeSlide.body}</p><button type="button" onClick={activeSlide.run}>{activeSlide.action} <Icon name="arrow" /></button></div>
-        <div className="path-live-controls"><button type="button" onClick={() => moveSlide(-1)} aria-label="اسلاید قبلی"><Icon name="chevron-right" /></button><div className="path-live-dots">{slides.map((item, index) => <button key={item.eyebrow} type="button" className={index === slide ? "active" : ""} onClick={() => setSlide(index)} aria-label={"رفتن به اسلاید " + (index + 1)} aria-current={index === slide ? "true" : undefined} />)}</div><button type="button" onClick={() => moveSlide(1)} aria-label="اسلاید بعدی"><Icon name="chevron-left" /></button></div>
+        <div className="path-live-controls"><button type="button" onClick={() => moveSlide(-1)} aria-label="اسلاید قبلی"><Icon name="arrow" /></button><div className="path-live-dots">{slides.map((item, index) => <button key={item.eyebrow} type="button" className={index === slide ? "active" : ""} onClick={() => setSlide(index)} aria-label={"رفتن به اسلاید " + (index + 1)} aria-current={index === slide ? "true" : undefined} />)}</div><button type="button" onClick={() => moveSlide(1)} aria-label="اسلاید بعدی"><Icon name="arrow" /></button></div>
       </section>
     </section>
   );
@@ -4798,7 +4798,7 @@ function MorePage({
   const moreScrollPosition = useRef(0);
 
   useLayoutEffect(() => {
-    if (selected || vipPanel) {
+    if (selected) {
       window.scrollTo({ top: 0, behavior: "auto" });
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
@@ -4806,7 +4806,7 @@ function MorePage({
       const restoreAt = moreScrollPosition.current;
       window.requestAnimationFrame(() => window.scrollTo({ top: restoreAt, behavior: "auto" }));
     }
-  }, [selected, vipPanel]);
+  }, [selected]);
 
   if (selected) {
     return (
