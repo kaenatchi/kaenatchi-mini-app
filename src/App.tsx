@@ -3596,31 +3596,54 @@ function formatVipJalaliDate(value: unknown): string {
   if (value === null || value === undefined || value === "") return "";
   const raw = String(value).trim();
   if (!raw) return "";
+  const normalized = raw
+    .replace(/[۰-۹]/g, digit => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/[٠-٩]/g, digit => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+    .replace(/[،٬]/g, "")
+    .trim();
+  const monthNames = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+  const formatParts = (day: number, month: number, year: number) =>
+    `${day.toLocaleString("fa-IR-u-nu-latn").replace(/[0-9]/g, digit => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)])} ${monthNames[month - 1]} ${String(year).replace(/[0-9]/g, digit => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)])}`;
 
-  // Keep already-Jalali dates Jalali; handle common legacy shortened years.
-  const jalaliMatch = raw.match(/(?:^|\s)(\d{3,4})[\/-](\d{1,2})[\/-](\d{1,2})/);
-  if (jalaliMatch) {
-    let year = Number(jalaliMatch[1]);
-    const month = Number(jalaliMatch[2]);
-    const day = Number(jalaliMatch[3]);
-    year = normalizeVipJalaliYear(year);
+  // Jalali dates are shown explicitly as day month year; never let Intl group
+  // the year (e.g. ۱٬۴۰۵) or reorder parts in an RTL layout.
+  const ymd = normalized.match(/(?:^|\s)(\d{3,4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+  if (ymd) {
+    const year = normalizeVipJalaliYear(Number(ymd[1]));
+    const month = Number(ymd[2]);
+    const day = Number(ymd[3]);
     if (year >= 1200 && year <= 1600 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const monthNames = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
-      return `${day.toLocaleString("fa-IR")} ${monthNames[month - 1]} ${year.toLocaleString("fa-IR")}`;
+      return formatParts(day, month, year);
     }
   }
 
-  // API dates that are actual timestamps or Gregorian dates must be converted
-  // with the Persian calendar rather than displayed as English/Gregorian text.
-  const date = new Date(raw);
+  // Also accept day/month/year data returned by older sheets.
+  const dmy = normalized.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{3,4})(?:\s|$)/);
+  if (dmy) {
+    const year = normalizeVipJalaliYear(Number(dmy[3]));
+    const first = Number(dmy[1]);
+    const second = Number(dmy[2]);
+    if (year >= 1200 && year <= 1600) {
+      const day = first;
+      const month = second;
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) return formatParts(day, month, year);
+    }
+  }
+
+  // Gregorian dates/timestamps must be converted to Persian-calendar parts,
+  // formatting the year ourselves to prevent thousands separators.
+  const date = new Date(normalized);
   if (!Number.isNaN(date.getTime())) {
     try {
-      return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-        day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Tehran",
-      }).format(date);
+      const parts = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+        day: "numeric", month: "numeric", year: "numeric", timeZone: "Asia/Tehran",
+      }).formatToParts(date);
+      const part = (type: string) => Number(parts.find(item => item.type === type)?.value || 0);
+      const day = part("day"), month = part("month"), year = part("year");
+      if (day && month && year && month >= 1 && month <= 12) return formatParts(day, month, year);
     } catch {}
   }
-  return raw.replace(/[0-9]/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
+  return raw.replace(/[0-9]/g, digit => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]).replace(/[،٬]/g, "");
 }
 
 function getVipTokenDisplayStatus(token: VipToken): {
@@ -3651,17 +3674,26 @@ function normalizeVipJalaliYear(year: number): number {
 
 function isVipTokenExpired(value: string): boolean {
   if (!value) return false;
-  const normalizedValue = value.trim();
+  const normalizedValue = value.trim()
+    .replace(/[۰-۹]/g, digit => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/[٠-٩]/g, digit => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+    .replace(/[،٬]/g, "")
+    .trim();
 
-  // Backend timestamps may arrive as ISO/Gregorian dates. Parse those first;
-  // otherwise an expired token could incorrectly remain marked active.
+  // Backend timestamps may arrive as ISO/Gregorian dates.
   if (/^\d{4}-\d{2}-\d{2}(?:T|$)/.test(normalizedValue)) {
     const timestamp = Date.parse(normalizedValue);
     if (Number.isFinite(timestamp)) return timestamp <= Date.now();
   }
 
-  const match = normalizedValue.match(/^(\d{3,4})[\/-](\d{1,2})[\/-](\d{1,2})(?:\s*-\s*(\d{1,2}):(\d{2}))?$/);
-  if (!match) return false;
+  // Accept Jalali YYYY/MM/DD, YYYY-MM-DD, optional time separated by a
+  // space or dash, and optional seconds. Date-only expiry ends at 23:59.
+  const match = normalizedValue.match(/^(\d{3,4})[\/-](\d{1,2})[\/-](\d{1,2})(?:[ T-]+(\d{1,2}):(\d{2})(?::\d{2})?)?$/);
+  if (!match) {
+    // Some legacy rows include a status string rather than a parseable date;
+    // do not mark an unparseable date expired based on a guess.
+    return false;
+  }
 
   const year = normalizeVipJalaliYear(Number(match[1]));
   const month = Number(match[2]);
@@ -3670,21 +3702,14 @@ function isVipTokenExpired(value: string): boolean {
   const minute = match[5] == null ? 59 : Number(match[5]);
   if (year < 1200 || year > 1600 || month < 1 || month > 12 || day < 1 || day > 31 || hour < 0 || hour > 23 || minute < 0 || minute > 59) return false;
 
-  const target = [year, month, day, hour, minute];
   try {
     const parts = new Intl.DateTimeFormat("en-US-u-ca-persian", {
-      calendar: "persian", year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Tehran",
+      year: "numeric", month: "numeric", day: "numeric", hour: "2-digit",
+      minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Tehran",
     }).formatToParts(new Date());
-
-    const now = [
-      Number(parts.find((p) => p.type === "year")?.value ?? 0),
-      Number(parts.find((p) => p.type === "month")?.value ?? 0),
-      Number(parts.find((p) => p.type === "day")?.value ?? 0),
-      Number(parts.find((p) => p.type === "hour")?.value ?? 0),
-      Number(parts.find((p) => p.type === "minute")?.value ?? 0),
-    ];
-
+    const now = ["year", "month", "day", "hour", "minute"].map(type =>
+      Number(parts.find(item => item.type === type)?.value ?? 0));
+    const target = [year, month, day, hour, minute];
     for (let i = 0; i < target.length; i++) {
       if (now[i] > target[i]) return true;
       if (now[i] < target[i]) return false;
@@ -4278,41 +4303,37 @@ function VipPage({
   ===================================================== */
 
   if (activePanel === "journey") {
-    const journeyLinks: Array<[VipPanel, string, string, string]> = [
-      ["bookings", "calendar", "نوبت‌های من", `${vipHistory.length} مورد ثبت‌شده`],
-      ["experiences", "spark", "تجربه‌های من", `${vipHistory.length} سابقه`],
-      ["classes", "class", "کلاس‌های من", `${vipClasses.length} مورد`],
-      ["events", "event", "ایونت‌های من", `${vipEvents.length} مورد`],
-      ["payments", "card", "پرداخت‌های من", `${vipPayments.length} مورد`],
-      ["tokens", "ticket", "توکن‌های من", `${vipTokens.length} توکن`],
-    ];
+    const journeyItems = [
+      ["calendar", "نوبت‌ها", vipHistory.length],
+      ["ticket", "توکن‌ها", vipTokens.filter(token => getVipTokenDisplayStatus(token).label === "فعال").length],
+      ["card", "پرداخت‌ها", vipPayments.length],
+      ["class", "کلاس‌ها", vipClasses.length],
+      ["event", "ایونت‌ها", vipEvents.length],
+    ] as const;
     return (
       <div className="inner-page">
         <button type="button" onClick={() => setActivePanel("dashboard")} style={backButtonStyle}>← بازگشت به VIP</button>
-        <SectionHeaderCard kicker="MY JOURNEY" title="مسیر من" description="خلاصه‌ای از همراهی شما با کائنات‌چی؛ از نوبت‌ها تا تجربه‌ها و مزایای VIP." icon="spark" />
+        <SectionHeaderCard kicker="MY JOURNEY" title="مسیر من" description="راهنمای کوتاه مسیر شخصی شما در کائنات‌چی." icon="spark" />
+        <div className="glass-list-card" style={{ display: "block", marginBottom: "14px" }}>
+          <div className="list-copy">
+            <strong>مسیر من چه چیزی را نشان می‌دهد؟</strong>
+            <span>اینجا می‌توانی یک نگاه کلی به همراهی‌ات با کائنات‌چی داشته باشی. برای دیدن جزئیات هر بخش، کارت مربوط به آن را در داشبورد VIP باز کن.</span>
+            <span>توکن فعال فقط توکنی است که هنوز استفاده نشده و زمان اعتبارش به پایان نرسیده باشد.</span>
+          </div>
+        </div>
         <div className="vip-journey-stats" style={{ marginBottom: "16px" }}>
-          {[
-            ["calendar", "نوبت", String(vipHistory.length)],
-            ["spark", "تجربه", String(vipHistory.length)],
-            ["class", "کلاس", String(vipClasses.length)],
-            ["event", "ایونت", String(vipEvents.length)],
-            ["card", "پرداخت", String(vipPayments.length)],
-            ["ticket", "توکن", String(vipTokens.length)],
-          ].map(([icon, label, value]) => (
+          {journeyItems.map(([icon, label, value]) => (
             <div className="vip-journey-stat" key={label}>
               <div className="vip-journey-stat-icon"><Icon name={icon as IconName} /></div>
-              <div className="vip-journey-stat-copy"><strong>{value}</strong><span>{label}</span></div>
+              <div className="vip-journey-stat-copy"><strong>{Number(value).toLocaleString("fa-IR")}</strong><span>{label}</span></div>
             </div>
           ))}
         </div>
-        <div style={{ display: "grid", gap: "10px" }}>
-          {journeyLinks.map(([panel, icon, title, description]) => (
-            <button key={panel} type="button" className="glass-list-card" onClick={() => setActivePanel(panel)} style={{ ...vipTileStyle, minHeight: "auto", display: "flex", alignItems: "center", textAlign: "right" }}>
-              <div className="list-icon"><Icon name={icon as IconName} /></div>
-              <div className="list-copy"><strong>{title}</strong><span>{description}</span></div>
-              <span aria-hidden="true" style={{ marginInlineStart: "auto", color: "#246347" }}>←</span>
-            </button>
-          ))}
+        <div className="glass-list-card" style={{ display: "block" }}>
+          <div className="list-copy">
+            <strong>قدم بعدی</strong>
+            <span>از داشبورد VIP یکی از بخش‌های نوبت‌ها، توکن‌ها، پرداخت‌ها، کلاس‌ها یا ایونت‌ها را انتخاب کن تا اطلاعات کامل همان بخش را ببینی.</span>
+          </div>
         </div>
       </div>
     );
@@ -4530,7 +4551,7 @@ function VipPage({
                     {issuedAt !== "" && (
                       <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
                         <span>تاریخ صدور</span>
-                        <strong style={{ color: "#353B32", fontWeight: 600, direction: "ltr" }}>
+                        <strong style={{ color: "#353B32", fontWeight: 600, direction: "rtl", unicodeBidi: "isolate" }}>
                           {formatVipJalaliDate(issuedAt)}
                         </strong>
                       </div>
@@ -4540,7 +4561,7 @@ function VipPage({
                         <span>تاریخ انقضا</span>
                         <strong style={{
                           color: displayStatus.label === "منقضی شده" ? "#9a5c52" : "#353B32",
-                          fontWeight: 600, direction: "ltr",
+                          fontWeight: 600, direction: "rtl", unicodeBidi: "isolate",
                         }}>{formatVipJalaliDate(expiresAt)}</strong>
                       </div>
                     )}
@@ -4818,6 +4839,36 @@ function VipPage({
           <span style={{ fontSize: "13px", lineHeight: 1.8, color: "#73786f" }}>
             اینجا اطلاعات حساب و وضعیت عضویت VIP شما نمایش داده می‌شود.
           </span>
+        </div>
+
+        <div className="vip-journey-stats" style={{ marginBottom: "14px" }}>
+          {[
+            ["calendar", "نوبت‌ها", vipHistory.length, "bookings"],
+            ["ticket", "توکن فعال", vipTokens.filter(token => getVipTokenDisplayStatus(token).label === "فعال").length, "tokens"],
+            ["card", "پرداخت‌ها", vipPayments.length, "payments"],
+          ].map(([icon, label, value, panel]) => (
+            <button type="button" key={label} className="vip-journey-stat" onClick={() => setActivePanel(panel as VipPanel)} style={{ border: "none", cursor: "pointer", fontFamily: "inherit", color: "inherit" }}>
+              <div className="vip-journey-stat-icon"><Icon name={icon as IconName} /></div>
+              <div className="vip-journey-stat-copy"><strong>{Number(value).toLocaleString("fa-IR")}</strong><span>{label}</span></div>
+            </button>
+          ))}
+        </div>
+
+        <div className="glass-list-card" style={{ display: "block", marginBottom: "14px" }}>
+          <div className="list-copy">
+            <strong>دسترسی سریع به جزئیات</strong>
+            <span>برای دیدن فهرست کامل نوبت‌ها، توکن‌ها یا پرداخت‌ها، یکی از گزینه‌ها را انتخاب کن.</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px", marginTop: "12px" }}>
+            {[
+              ["bookings", "نوبت‌های من"],
+              ["tokens", "توکن‌های من"],
+              ["payments", "پرداخت‌های من"],
+              ["journey", "راهنمای مسیر من"],
+            ].map(([panel, label]) => (
+              <button key={panel} type="button" onClick={() => setActivePanel(panel as VipPanel)} style={{ border: "1px solid rgba(36,99,71,.14)", borderRadius: "12px", padding: "10px 8px", background: "rgba(36,99,71,.05)", color: "#246347", fontFamily: "inherit", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>{label}</button>
+            ))}
+          </div>
         </div>
 
         <div className="glass-list-card">
