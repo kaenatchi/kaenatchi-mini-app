@@ -107,8 +107,7 @@ const MAIN_APP_URL =
   "https://kaenatchi.github.io/kaenatchi-mini-app/";
 
 
-const BOOKING_APP_URL =
-  "https://kaenatchi.github.io/booking/";
+// Booking is a section inside the Main Mini App; the standalone booking app is retired.
 
 const BOOKING_TRANSPORT_ENDPOINT =
   "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
@@ -2378,7 +2377,7 @@ function PathPersonalDashboard({
     void loadDailyPoem();
     return () => { active = false; };
   }, []);
-  if (vipPanel) return <VipPage initialPanel={vipPanel} onBack={() => setVipPanel(null)} />;
+  if (vipPanel) return <VipPage initialPanel={vipPanel} onBack={() => setVipPanel(null)} onOpenBooking={() => { setVipPanel(null); changeSection("booking"); }} />;
   const customer = vipData?.customer;
   const isVip = customer?.vipStatus?.trim().toLowerCase() === "active" || customer?.vipStatus?.trim() === "فعال";
   const displayName = isVip ? [customer?.firstName, customer?.lastName].filter(Boolean).join(" ") || "عضو VIP" : "کاربر مهمان";
@@ -3652,7 +3651,16 @@ function normalizeVipJalaliYear(year: number): number {
 
 function isVipTokenExpired(value: string): boolean {
   if (!value) return false;
-  const match = value.trim().match(/^(\d{3,4})[\/-](\d{1,2})[\/-](\d{1,2})(?:\s*-\s*(\d{1,2}):(\d{2}))?$/);
+  const normalizedValue = value.trim();
+
+  // Backend timestamps may arrive as ISO/Gregorian dates. Parse those first;
+  // otherwise an expired token could incorrectly remain marked active.
+  if (/^\d{4}-\d{2}-\d{2}(?:T|$)/.test(normalizedValue)) {
+    const timestamp = Date.parse(normalizedValue);
+    if (Number.isFinite(timestamp)) return timestamp <= Date.now();
+  }
+
+  const match = normalizedValue.match(/^(\d{3,4})[\/-](\d{1,2})[\/-](\d{1,2})(?:\s*-\s*(\d{1,2}):(\d{2}))?$/);
   if (!match) return false;
 
   const year = normalizeVipJalaliYear(Number(match[1]));
@@ -3801,6 +3809,7 @@ async function connectTelegramVip(
 
 type VipPanel =
   | "dashboard"
+  | "journey"
   | "bookings"
   | "payments"
   | "tokens"
@@ -3811,9 +3820,11 @@ type VipPanel =
 
 function VipPage({
   onBack,
+  onOpenBooking,
   initialPanel = "dashboard",
 }: {
   onBack: () => void;
+  onOpenBooking: () => void;
   initialPanel?: VipPanel;
 }) {
 
@@ -3931,10 +3942,6 @@ function VipPage({
 
   }, []);
 
-
-  const openBookingApp = () => {
-    window.location.href = BOOKING_APP_URL;
-  };
 
   const displayName =
     `${vipCustomer?.firstName || ""} ${vipCustomer?.lastName || ""}`.trim() ||
@@ -4269,6 +4276,47 @@ function VipPage({
   /* =====================================================
      BOOKINGS
   ===================================================== */
+
+  if (activePanel === "journey") {
+    const journeyLinks: Array<[VipPanel, string, string, string]> = [
+      ["bookings", "calendar", "نوبت‌های من", `${vipHistory.length} مورد ثبت‌شده`],
+      ["experiences", "spark", "تجربه‌های من", `${vipHistory.length} سابقه`],
+      ["classes", "class", "کلاس‌های من", `${vipClasses.length} مورد`],
+      ["events", "event", "ایونت‌های من", `${vipEvents.length} مورد`],
+      ["payments", "card", "پرداخت‌های من", `${vipPayments.length} مورد`],
+      ["tokens", "ticket", "توکن‌های من", `${vipTokens.length} توکن`],
+    ];
+    return (
+      <div className="inner-page">
+        <button type="button" onClick={() => setActivePanel("dashboard")} style={backButtonStyle}>← بازگشت به VIP</button>
+        <SectionHeaderCard kicker="MY JOURNEY" title="مسیر من" description="خلاصه‌ای از همراهی شما با کائنات‌چی؛ از نوبت‌ها تا تجربه‌ها و مزایای VIP." icon="spark" />
+        <div className="vip-journey-stats" style={{ marginBottom: "16px" }}>
+          {[
+            ["calendar", "نوبت", String(vipHistory.length)],
+            ["spark", "تجربه", String(vipHistory.length)],
+            ["class", "کلاس", String(vipClasses.length)],
+            ["event", "ایونت", String(vipEvents.length)],
+            ["card", "پرداخت", String(vipPayments.length)],
+            ["ticket", "توکن", String(vipTokens.length)],
+          ].map(([icon, label, value]) => (
+            <div className="vip-journey-stat" key={label}>
+              <div className="vip-journey-stat-icon"><Icon name={icon as IconName} /></div>
+              <div className="vip-journey-stat-copy"><strong>{value}</strong><span>{label}</span></div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "grid", gap: "10px" }}>
+          {journeyLinks.map(([panel, icon, title, description]) => (
+            <button key={panel} type="button" className="glass-list-card" onClick={() => setActivePanel(panel)} style={{ ...vipTileStyle, minHeight: "auto", display: "flex", alignItems: "center", textAlign: "right" }}>
+              <div className="list-icon"><Icon name={icon as IconName} /></div>
+              <div className="list-copy"><strong>{title}</strong><span>{description}</span></div>
+              <span aria-hidden="true" style={{ marginInlineStart: "auto", color: "#246347" }}>←</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (activePanel === "bookings") {
     const filtered = vipHistory.filter(record => {
@@ -4850,7 +4898,7 @@ function VipPage({
         status="عضویت VIP فعال است"
       />
 
-      <section className="vip-journey-summary" aria-label="خلاصه مسیر VIP">
+      <button type="button" onClick={() => setActivePanel("journey")} className="vip-journey-summary" aria-label="مشاهده مسیر من" style={{ width: "100%", textAlign: "right", fontFamily: "inherit", cursor: "pointer", color: "inherit" }}>
         <div className="vip-journey-heading">
           <strong>مشاهده مسیر من ←</strong>
           <span>آمار واقعی فعالیت‌های شما در کائنات‌چی</span>
@@ -4876,10 +4924,11 @@ function VipPage({
             </div>
           ))}
         </div>
-      </section>
+      </button>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" }}>
         {[
+          ["journey", "route", "مسیر من", "خلاصه فعالیت‌ها و سوابق VIP"],
           ["bookings", "calendar", "نوبت‌های من", "سوابق و وضعیت نوبت‌ها"],
           ["payments", "card", "پرداخت‌های من", "سوابق پرداخت‌ها"],
           ["tokens", "ticket", "توکن‌های من", "تخفیف‌های اختصاصی VIP"],
@@ -4896,7 +4945,7 @@ function VipPage({
       </div>
 
       <div style={{ marginTop: "12px" }}>
-        <button type="button" onClick={openBookingApp} style={{ width: "100%", border: "none", borderRadius: "18px", padding: "15px 18px", background: "linear-gradient(135deg, #174b38, #2c7658)", color: "#fff", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 10px 24px rgba(23,75,56,0.18)" }}>📅 دریافت نوبت</button>
+        <button type="button" onClick={onOpenBooking} style={{ width: "100%", border: "none", borderRadius: "18px", padding: "15px 18px", background: "linear-gradient(135deg, #174b38, #2c7658)", color: "#fff", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 10px 24px rgba(23,75,56,0.18)" }}>📅 دریافت نوبت</button>
       </div>
 
     </div>
@@ -6672,7 +6721,7 @@ function App() {
         {bookingThemeStyle}
       <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
-        <VipPage onBack={() => setVipOpen(false)} />
+        <VipPage onBack={() => setVipOpen(false)} onOpenBooking={() => { setVipOpen(false); setBookingService(null); changeSection("booking"); }} />
         <AppFooter />
       </div>
     );
