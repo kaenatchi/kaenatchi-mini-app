@@ -2611,7 +2611,7 @@ function SelectedPage({
           onOpenService={onOpenService}
         />
       </>}
-      {quizOnly && <button type="button" style={{ width: "100%", border: "1px solid rgba(36,99,71,.18)", borderRadius: "15px", padding: "12px 16px", marginBottom: "14px", background: "rgba(36,99,71,.06)", color: "#246347", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, cursor: "pointer" }} onClick={() => { setQuizOnly(false); setMyPathMode(false); setStage1Message(""); }}>← بازگشت به مسیر من</button>}}
+      {quizOnly && <button type="button" style={{ width: "100%", border: "1px solid rgba(36,99,71,.18)", borderRadius: "15px", padding: "12px 16px", marginBottom: "14px", background: "rgba(36,99,71,.06)", color: "#246347", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, cursor: "pointer" }} onClick={() => { setQuizOnly(false); setMyPathMode(false); setStage1Message(""); }}>← بازگشت به مسیر من</button>}
       {quizOnly && !myPathMode && <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>آزمون و مراحل من</h1><p>از مرحلهٔ فعلی‌ات ادامه بده.</p></div><div className="selected-intro-line" /></section>}
       {quizOnly && myPathMode && <section className="growth-reflect-card" style={{ textAlign: "right" }}>
         <div className="growth-reflect-symbol"><Icon name="footsteps" /></div>
