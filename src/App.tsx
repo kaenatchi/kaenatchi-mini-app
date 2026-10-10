@@ -2633,11 +2633,7 @@ function SelectedPage({
         {!myPathReadIssue && stage1Screen === "summary" && (() => {
           const title = stage1Answers.currentTopic === "آرامش و توجه به خودم" ? "شروع با توجه به خودم" : stage1Answers.currentTopic === "شناخت احساسات و نیازها" ? "شروع با شناخت الگوها" : stage1Answers.currentTopic === "انتخاب‌ها و تغییر" ? "شروع با انتخاب آگاهانه" : "شروع با کشف مسیر خودم";
           const savedCompleted = myPath?.stages[1].status === "completed" && !stage1Editing;
-          const summary = "موضوع فعلی: " + (stage1Answers.currentTopic || "—") + "
-نقطهٔ شروع: " + (stage1Answers.currentState || "—") + "
-هدف اولیه: " + (stage1Answers.initialGoal || "—") + (stage1Answers.reflection?.trim() ? "
-تأمل شخصی: " + stage1Answers.reflection.trim() : "") + "
-قدم اول: " + (stage1Answers.firstStep || "—");
+          const summary = "موضوع فعلی: " + (stage1Answers.currentTopic || "—") + "\nنقطهٔ شروع: " + (stage1Answers.currentState || "—") + "\nهدف اولیه: " + (stage1Answers.initialGoal || "—") + (stage1Answers.reflection?.trim() ? "\nتأمل شخصی: " + stage1Answers.reflection.trim() : "") + "\nقدم اول: " + (stage1Answers.firstStep || "—");
           return <><span className="growth-kicker">{savedCompleted ? "خلاصهٔ ثبت‌شدهٔ تو" : "پیش‌نمایش خلاصه"}</span><h2>{title}</h2><div style={{ whiteSpace: "pre-wrap", lineHeight: 2, padding: "14px", borderRadius: "14px", background: "rgba(36,99,71,.06)", fontSize: "13px" }}>{summary}</div><p style={{ lineHeight: 1.9, fontSize: "12px" }}>این خلاصه بر اساس پاسخ‌های خودت ساخته شده؛ هر زمان لازم بود می‌توانی برگردی و ویرایشش کنی.</p>
             {stage1Message && <p role="status" style={{ lineHeight: 1.9, fontSize: "13px" }}>{stage1Message}</p>}
             <button type="button" style={{ ...secondary, marginTop: "8px" }} onClick={() => { setStage1Editing(true); setStage1Screen("form"); setStage1Message(""); }}>بازبینی و ویرایش پاسخ‌ها</button>
