@@ -6462,13 +6462,13 @@ function App() {
       <div className="app-shell app-shell-loading">
         <div className="cms-loading-splash" role="status" aria-live="polite">
           <div className="cms-loading-orbit" aria-hidden="true">
-            <svg viewBox="0 0 160 160" focusable="false">
-              <circle className="splash-orbit-core" cx="80" cy="80" r="35" />
-              <ellipse className="splash-orbit-path splash-orbit-path-one" cx="80" cy="80" rx="65" ry="25" />
-              <ellipse className="splash-orbit-path splash-orbit-path-two" cx="80" cy="80" rx="65" ry="25" transform="rotate(-52 80 80)" />
-              <circle className="splash-orbit-dot" cx="132" cy="56" r="4" />
-              <circle className="splash-orbit-center" cx="80" cy="80" r="4" />
-            </svg>
+            <img
+              className="cms-loading-logo"
+              src="https://i.ibb.co/hRBG6R6f/IMG-3856.jpg"
+              alt=""
+              decoding="async"
+              fetchPriority="high"
+            />
           </div>
           <strong className="cms-loading-brand">کائنات‌چی</strong>
           <span className="cms-loading-subtitle">در حال آماده‌سازی دنیای تو...</span>
