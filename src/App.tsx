@@ -1853,10 +1853,12 @@ function ServiceDetail({
   service,
   onBack,
   onOpenBooking,
+  onOpenTherapyRequest,
 }: {
   service: Service;
   onBack: () => void;
   onOpenBooking: (service?: Service) => void;
+  onOpenTherapyRequest?: (service: Service) => void;
 }) {
   const icon =
     service.category === "energy"
@@ -1921,10 +1923,274 @@ function ServiceDetail({
             cursor: "pointer",
             boxShadow: "0 10px 24px rgba(23, 75, 56, 0.2)",
           }}
-          onClick={() => onOpenBooking(service)}
+          onClick={() => {
+            if ((service.category === "candle" || service.category === "psychotherapy") && onOpenTherapyRequest) {
+              onOpenTherapyRequest(service);
+            } else {
+              onOpenBooking(service);
+            }
+          }}
         >
-          📅 دریافت نوبت
+          {service.category === "candle" || service.category === "psychotherapy" ? "ثبت درخواست و هماهنگی تلفنی" : "📅 دریافت نوبت"}
         </button>
+      )}
+    </div>
+  );
+}
+
+function TherapyIntakePage({
+  service,
+  onBack,
+}: {
+  service: Service;
+  onBack: () => void;
+}) {
+  const isCandle = service.category === "candle";
+  const [step, setStep] = useState(0);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [telegramUsername, setTelegramUsername] = useState("");
+  const [reason, setReason] = useState("");
+  const [candleGoals, setCandleGoals] = useState<string[]>([]);
+  const [impact, setImpact] = useState("");
+  const [duration, setDuration] = useState("");
+  const [goal, setGoal] = useState("");
+  const [previousSupport, setPreviousSupport] = useState("");
+  const [contactPreference, setContactPreference] = useState("تماس تلفنی");
+  const [freeText, setFreeText] = useState("");
+  const [privacyConsent, setPrivacyConsent] = useState(false);
+  const [accuracyConfirmed, setAccuracyConfirmed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [trackingCode, setTrackingCode] = useState("");
+
+  const fieldStyle: React.CSSProperties = {
+    width: "100%", minHeight: "48px", padding: "12px 14px",
+    border: "1px solid rgba(36,77,59,.16)", borderRadius: "15px",
+    background: "rgba(255,255,255,.72)", color: "#26372f",
+    fontFamily: "inherit", fontSize: "14px", outlineOffset: "2px"
+  };
+  const labelStyle: React.CSSProperties = {
+    display: "grid", gap: "7px", color: "#294436", fontSize: "13px", fontWeight: 700
+  };
+
+  const submit = async () => {
+    if (!firstName.trim() || !lastName.trim() || !/^\+?[0-9۰-۹٠-٩\s()-]{10,20}$/.test(mobile.trim()) ||
+      !privacyConsent || !accuracyConfirmed) {
+      setMessage("نام، نام خانوادگی، شماره موبایل معتبر و هر دو تأیید الزامی هستند.");
+      return;
+    }
+    setSubmitting(true);
+    setMessage("");
+    let requestId = "";
+    try {
+      // Use a cryptographically secure random bearer token (192 bits).
+      // The app is served over HTTPS; do not fall back to Math.random for privacy-sensitive tracking.
+      const randomBytes = new Uint8Array(24);
+      if (!globalThis.crypto || typeof globalThis.crypto.getRandomValues !== "function") {
+        throw new Error("SECURE_RANDOM_UNAVAILABLE");
+      }
+      globalThis.crypto.getRandomValues(randomBytes);
+      requestId = "TR-" + Array.from(randomBytes, byte => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
+    } catch {
+      setMessage("برای حفظ امنیت کد پیگیری، این مرورگر امکان ساخت شناسه امن را فراهم نکرد. لطفاً مینی‌اپ را به‌روز یا در مرورگر دیگری باز کن.");
+      setSubmitting(false);
+      return;
+    }
+    const normalizeDigits = (value: string) => value.replace(/[۰-۹]/g, d => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+    const payload = {
+      action: "createTherapyRequest", requestId,
+      serviceType: isCandle ? "candle" : "psychotherapy",
+      firstName: firstName.trim(), lastName: lastName.trim(),
+      mobile: normalizeDigits(mobile).replace(/[\s()-]/g, ""),
+      telegramUsername: telegramUsername.trim().replace(/^@/, ""),
+      reason: isCandle ? candleGoals.join("، ") : reason,
+      impact, duration, goal, previousSupport, contactPreference,
+      freeText: freeText.trim(), privacyConsent, accuracyConfirmed
+    };
+    try {
+      await fetch(BOOKING_TRANSPORT_ENDPOINT, {
+        method: "POST", mode: "no-cors", credentials: "omit", cache: "no-store",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      const started = Date.now();
+      while (Date.now() - started < 30000) {
+        const status = await apiGet("therapyRequestStatus", { requestId });
+        if (status?.found && status?.requestId === requestId) {
+          setTrackingCode(requestId);
+          setStep(3);
+          return;
+        }
+        await new Promise(resolve => window.setTimeout(resolve, 800));
+      }
+      throw new Error("ثبت درخواست زمان‌بر شد. لطفاً وضعیت را بعداً با کد درخواست پیگیری کن.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "ثبت درخواست انجام نشد؛ لطفاً دوباره تلاش کن.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const title = isCandle ? "درخواست شمع‌تراپی" : "درخواست سایکوتراپی";
+  const durationLabel = isCandle ? "۲۰ دقیقه" : "۴۵ دقیقه";
+  const options = (items: string[]) => items.map(item => <option key={item} value={item}>{item}</option>);
+
+  return (
+    <div className="inner-page" style={{maxWidth:"720px",margin:"0 auto",paddingBottom:"32px"}}>
+      <button type="button" onClick={onBack} style={backButtonStyle}>← بازگشت به خدمات</button>
+      <SectionHeaderCard
+        kicker="THERAPY · ONLINE"
+        title={title}
+        description={isCandle
+          ? "درخواستت را ثبت کن؛ پس از بررسی، برای مشاوره اولیه تلفنی با تو هماهنگ می‌کنیم."
+          : "درخواستت را با آرامش تکمیل کن؛ پس از بررسی درخواست، مشاوره اولیه تلفنی انجام می‌شود و در صورت هماهنگی، نوبت را از بخش دریافت نوبت ثبت می‌کنی."}
+        icon={isCandle ? "candle" : "conversation"}
+      />
+      {isCandle && (
+        <div className="glass-list-card" style={{display:"block",marginTop:"14px",padding:"18px",lineHeight:1.9}}>
+          <strong style={{display:"block",color:"#244d3b",marginBottom:"6px"}}>شمع‌تراپی چیست؟ 🕯️</strong>
+          <span>جلسه‌ای با تمرکز بر آرامش، توجه به خود و ایجاد فضایی برای مکث و تأمل است. متناسب با هدف تو، در مشاوره اولیه درباره مسیر مناسب گفت‌وگو می‌کنیم. این روش جایگزین درمان پزشکی یا روان‌شناختی نیست و نتیجه مشخصی را تضمین نمی‌کند.</span>
+        </div>
+      )}
+      <div className="glass-list-card" style={{display:"block",marginTop:"14px"}}>
+        <div className="list-copy">
+          <strong>مدت هر جلسه: {durationLabel}</strong>
+          <span>کاملاً غیرحضوری</span>
+          <span>پس از بررسی درخواست، برای مشاوره اولیه با تو تماس می‌گیریم. در صورت هماهنگی، نوبت را از بخش «دریافت نوبت» ثبت می‌کنی.</span>
+        </div>
+      </div>
+
+      {step < 3 && (
+        <div className="glass-list-card" style={{display:"grid",gap:"18px",marginTop:"14px",padding:"20px"}}>
+          <div style={{display:"flex",gap:"8px",alignItems:"center",justifyContent:"space-between"}}>
+            <strong style={{color:"#244d3b"}}>مرحله {step + 1} از 3</strong>
+            <span style={{fontSize:"12px",color:"#718078"}}>{["شناخت درخواست","راه ارتباطی","بازبینی و تأیید"][step]}</span>
+          </div>
+          <div style={{height:"5px",borderRadius:"99px",background:"rgba(36,77,59,.10)",overflow:"hidden"}}>
+            <div style={{height:"100%",width:((step+1)/3*100)+"%",background:"linear-gradient(90deg,#66806e,#244d3b)",borderRadius:"99px"}} />
+          </div>
+
+          {step === 0 && (
+            <div style={{display:"grid",gap:"14px"}}>
+              {isCandle ? (
+                <fieldset style={{border:"1px solid rgba(36,77,59,.14)",borderRadius:"15px",padding:"14px",display:"grid",gap:"12px"}}>
+                  <legend style={{padding:"0 6px",color:"#294436",fontSize:"13px",fontWeight:700}}>هدف تو از شمع‌تراپی چیست؟</legend>
+                  <span style={{fontSize:"12px",color:"#718078"}}>می‌توانی بیش از یک گزینه را انتخاب کنی.</span>
+                  {["آرامش ذهنی و فاصله گرفتن از شلوغی روزمره","مراقبت از خود و توجه به احساساتم","ایجاد فضایی برای تمرکز و تأمل","آشنایی با فرایند شمع‌تراپی","هنوز مطمئن نیستم و به راهنمایی نیاز دارم","دلیل دیگری دارم"].map(item => (
+                    <label key={item} style={{display:"flex",gap:"9px",alignItems:"flex-start",fontSize:"13px",lineHeight:1.8,fontWeight:500}}>
+                      <input type="checkbox" checked={candleGoals.includes(item)} onChange={e=>setCandleGoals(old=>e.target.checked?[...old,item]:old.filter(value=>value!==item))} style={{marginTop:"5px"}} />
+                      <span>{item}</span>
+                    </label>
+                  ))}
+                </fieldset>
+              ) : (
+                <label style={labelStyle}>دلیل اصلی درخواست
+                  <select style={fieldStyle} value={reason} onChange={e=>setReason(e.target.value)}>
+                    <option value="">انتخاب کن</option>
+                    {options(["اضطراب و نگرانی","روابط و ارتباطات","خودشناسی و اعتمادبه‌نفس","فشارهای زندگی و فرسودگی","سوگ یا تغییر مهم زندگی","موضوع دیگر"])}
+                  </select>
+                </label>
+              )}
+              {!isCandle && <>
+                <label style={labelStyle}>این موضوع چقدر بر زندگی روزمره‌ات اثر گذاشته؟
+                  <select style={fieldStyle} value={impact} onChange={e=>setImpact(e.target.value)}>
+                    <option value="">انتخاب کن</option>{options(["کم","متوسط","زیاد","ترجیح می‌دهم در تماس توضیح بدهم"])}
+                  </select>
+                </label>
+                <label style={labelStyle}>چه مدت است با این موضوع درگیری؟
+                  <select style={fieldStyle} value={duration} onChange={e=>setDuration(e.target.value)}>
+                    <option value="">انتخاب کن</option>{options(["کمتر از یک ماه","۱ تا ۶ ماه","بیشتر از ۶ ماه","مطمئن نیستم"])}
+                  </select>
+                </label>
+                <label style={labelStyle}>از گفت‌وگو چه نتیجه‌ای می‌خواهی؟
+                  <select style={fieldStyle} value={goal} onChange={e=>setGoal(e.target.value)}>
+                    <option value="">انتخاب کن</option>{options(["شناخت بهتر خودم","یافتن راهکار برای یک مسئله","بهبود روابط","هنوز مطمئن نیستم"])}
+                  </select>
+                </label>
+                <label style={labelStyle}>قبلاً تجربه مشاوره داشته‌ای؟
+                  <select style={fieldStyle} value={previousSupport} onChange={e=>setPreviousSupport(e.target.value)}>
+                    <option value="">انتخاب کن</option>{options(["بله","خیر","ترجیح می‌دهم در تماس بگویم"])}
+                  </select>
+                </label>
+              </>}
+
+              <button type="button" onClick={()=>{if(isCandle ? candleGoals.length===0 : !reason){setMessage(isCandle?"لطفاً دست‌کم یک هدف را انتخاب کن.":"لطفاً دلیل اصلی درخواست را انتخاب کن.");return;}setMessage("");setStep(1);}} style={{width:"100%",padding:"14px",borderRadius:"16px",background:"#244d3b",color:"#fff",fontFamily:"inherit",fontWeight:700}}>ادامه</button>
+            </div>
+          )}
+
+          {step === 1 && (
+            <div style={{display:"grid",gap:"14px"}}>
+              <label style={labelStyle}>نام
+                <input style={fieldStyle} value={firstName} onChange={e=>setFirstName(e.target.value)} autoComplete="given-name" maxLength={80} />
+              </label>
+              <label style={labelStyle}>نام خانوادگی
+                <input style={fieldStyle} value={lastName} onChange={e=>setLastName(e.target.value)} autoComplete="family-name" maxLength={80} />
+              </label>
+              <label style={labelStyle}>شماره موبایل
+                <input style={fieldStyle} value={mobile} onChange={e=>setMobile(e.target.value)} inputMode="tel" autoComplete="tel" maxLength={20} placeholder="مثلاً 09xxxxxxxxx" />
+              </label>
+              <label style={labelStyle}>نام کاربری تلگرام <span style={{fontWeight:400,color:"#718078"}}>(اختیاری)</span>
+                <input style={fieldStyle} value={telegramUsername} onChange={e=>setTelegramUsername(e.target.value)} autoComplete="off" maxLength={64} placeholder="@username" />
+              </label>
+              <label style={labelStyle}>زمان مناسب برای تماس اولیه
+                <select style={fieldStyle} value={contactPreference} onChange={e=>setContactPreference(e.target.value)}>
+                  {options(["تماس تلفنی","پیام در تلگرام برای هماهنگی تماس","هرکدام مناسب باشد"])}
+                </select>
+              </label>
+              <label style={labelStyle}>اگر نکته‌ای هست که ترجیح می‌دهی پیش از تماس بدانی یا بگویی <span style={{fontWeight:400,color:"#718078"}}>(اختیاری)</span>
+                <textarea style={{...fieldStyle,minHeight:"100px",resize:"vertical"}} value={freeText} onChange={e=>setFreeText(e.target.value)} maxLength={1500} placeholder="از نوشتن اطلاعات خیلی حساس خودداری کن؛ می‌توانی در تماس توضیح بدهی." />
+              </label>
+              <div style={{display:"flex",gap:"8px"}}>
+                <button type="button" onClick={()=>{setMessage("");setStep(0);}} style={{flex:1,padding:"13px",borderRadius:"15px",background:"rgba(36,77,59,.08)",fontFamily:"inherit"}}>قبلی</button>
+                <button type="button" onClick={()=>{if(!firstName.trim()||!lastName.trim()||!/^\+?[0-9۰-۹٠-٩\s()-]{10,20}$/.test(mobile.trim())){setMessage("نام، نام خانوادگی و شماره موبایل معتبر را وارد کن.");return;}setMessage("");setStep(2);}} style={{flex:1,padding:"13px",borderRadius:"15px",background:"#244d3b",color:"#fff",fontFamily:"inherit",fontWeight:700}}>بازبینی</button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div style={{display:"grid",gap:"14px"}}>
+              <div style={{padding:"14px",borderRadius:"15px",background:"rgba(36,77,59,.06)",lineHeight:1.9,fontSize:"13px"}}>
+                <strong>خلاصه درخواست</strong><br/>
+                خدمت: {isCandle ? "شمع‌تراپی" : "سایکوتراپی"}<br/>
+                نام: {firstName} {lastName}<br/>
+                موبایل: {mobile}<br/>
+                دلیل درخواست: {isCandle ? candleGoals.join("، ") : reason}<br/>
+                {impact && <>اثر روزمره: {impact}<br/></>}
+                {duration && <>مدت درگیری: {duration}<br/></>}
+                {goal && <>هدف: {goal}<br/></>}
+                <br/>این فرم فقط درخواست اولیه است و به معنی تأیید نوبت یا شروع خدمت نیست. پس از بررسی و مشاوره اولیه، در صورت هماهنگی، نوبت را از بخش «دریافت نوبت» ثبت می‌کنی.
+              </div>
+              <label style={{display:"flex",gap:"10px",alignItems:"flex-start",fontSize:"12px",lineHeight:1.9}}>
+                <input type="checkbox" checked={privacyConsent} onChange={e=>setPrivacyConsent(e.target.checked)} style={{marginTop:"5px"}}/>
+                <span>با ثبت این درخواست و استفاده از اطلاعات تماس و پاسخ‌ها برای هماهنگی این خدمت موافقم. می‌دانم که اطلاعات برای بررسی درخواست و تماس با من استفاده می‌شود.</span>
+              </label>
+              <label style={{display:"flex",gap:"10px",alignItems:"flex-start",fontSize:"12px",lineHeight:1.9}}>
+                <input type="checkbox" checked={accuracyConfirmed} onChange={e=>setAccuracyConfirmed(e.target.checked)} style={{marginTop:"5px"}}/>
+                <span>تأیید می‌کنم اطلاعات تماس متعلق به خودم و تا حد دانسته‌هایم پاسخ‌ها درست هستند.</span>
+              </label>
+              <div style={{display:"flex",gap:"8px"}}>
+                <button type="button" onClick={()=>{setMessage("");setStep(1);}} style={{flex:1,padding:"13px",borderRadius:"15px",background:"rgba(36,77,59,.08)",fontFamily:"inherit"}}>اصلاح اطلاعات</button>
+                <button type="button" disabled={submitting} onClick={()=>void submit()} style={{flex:1,padding:"13px",borderRadius:"15px",background:"#244d3b",color:"#fff",fontFamily:"inherit",fontWeight:700,opacity: submitting ? 0.7 : 1}}>{submitting ? "در حال ثبت..." : "ثبت درخواست"}</button>
+              </div>
+            </div>
+          )}
+          {message && <div role="alert" style={{padding:"12px",borderRadius:"13px",background:"rgba(165,74,48,.10)",color:"#8b3d2c",fontSize:"12px",lineHeight:1.8}}>{message}</div>}
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="glass-list-card" style={{display:"grid",gap:"12px",marginTop:"14px",padding:"24px",textAlign:"center"}}>
+          <div style={{fontSize:"34px",color:"#426744"}}>✓</div>
+          <strong style={{fontSize:"18px",color:"#244d3b"}}>درخواستت ثبت شد</strong>
+          <span style={{fontSize:"13px",lineHeight:1.9}}>درخواست اولیه‌ات ثبت شد. پس از بررسی و مشاوره اولیه، اگر برای ادامه هماهنگ شدیم، نوبتت را از بخش «دریافت نوبت» ثبت کن. این فرم به‌تنهایی نوبت را رزرو نمی‌کند.</span>
+          <div style={{padding:"12px",borderRadius:"13px",background:"rgba(36,77,59,.07)"}}>
+            <span style={{display:"block",fontSize:"11px",color:"#718078"}}>کد پیگیری</span>
+            <strong dir="ltr">{trackingCode}</strong>
+          </div>
+          <button type="button" onClick={onBack} style={{width:"100%",padding:"14px",borderRadius:"15px",background:"#244d3b",color:"#fff",fontFamily:"inherit",fontWeight:700}}>بازگشت به خدمات</button>
+        </div>
       )}
     </div>
   );
@@ -1933,9 +2199,11 @@ function ServiceDetail({
 function ServicesPage({
   focus,
   onOpenBooking,
+  onOpenTherapyRequest,
 }: {
   focus?: "all" | "classes" | "events";
   onOpenBooking: (service?: Service) => void;
+  onOpenTherapyRequest: (service: Service) => void;
 }) {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [activeCategory, setActiveCategory] = useState<ServiceCategory | null>(null);
@@ -1975,6 +2243,7 @@ function ServicesPage({
         service={selectedService}
         onBack={() => setSelectedService(null)}
         onOpenBooking={onOpenBooking}
+        onOpenTherapyRequest={onOpenTherapyRequest}
       />
     );
   }
@@ -6523,6 +6792,7 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchService, setSearchService] = useState<Service | null>(null);
   const [bookingService, setBookingService] = useState<Service | null>(null);
+  const [therapyRequestService, setTherapyRequestService] = useState<Service | null>(null);
   const [vipOpen, setVipOpen] = useState(false);
   const [serviceFocus, setServiceFocus] = useState<"all" | "classes" | "events">("all");
   const [navDirection, setNavDirection] = useState<"forward" | "backward">("forward");
@@ -6748,6 +7018,20 @@ function App() {
     setVipOpen(true);
   };
 
+  if (therapyRequestService) {
+    return (
+      <div className="app-shell app-shell-special">
+        <div className="ambient ambient-one" />
+        <div className="ambient ambient-two" />
+        <TherapyIntakePage
+          service={therapyRequestService}
+          onBack={() => setTherapyRequestService(null)}
+        />
+        <AppFooter />
+      </div>
+    );
+  }
+
   if (vipOpen) {
     return (
       <div className="app-shell app-shell-special">
@@ -6774,6 +7058,11 @@ function App() {
               setSearchOpen(false);
               setSearchService(null);
               changeSection("booking");
+            }}
+            onOpenTherapyRequest={(service: Service) => {
+              setSearchOpen(false);
+              setSearchService(null);
+              setTherapyRequestService(service);
             }}
           />
           <AppFooter />
@@ -6823,6 +7112,7 @@ function App() {
               setBookingService(service || null);
               changeSection("booking");
             }}
+            onOpenTherapyRequest={(service: Service) => setTherapyRequestService(service)}
           />
         )}
 
