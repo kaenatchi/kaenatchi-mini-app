@@ -4796,3 +4796,77 @@ button {
   .cms-loading-orbit { filter:none; opacity:1; }
   .cms-loading-splash .loading-progress > span { transition:none!important; }
 }
+
+
+/* HAFEZ TODAY — antique Divan manuscript prototype */
+.hafez-today-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(139, 111, 59, .52);
+  border-radius: 8px;
+  background:
+    radial-gradient(ellipse at 8% 12%, rgba(171, 139, 77, .13), transparent 33%),
+    radial-gradient(ellipse at 94% 88%, rgba(36, 77, 59, .1), transparent 35%),
+    repeating-linear-gradient(0deg, rgba(92, 72, 39, .025) 0px, rgba(92, 72, 39, .025) 1px, transparent 1px, transparent 5px),
+    linear-gradient(135deg, #f7efd9 0%, #eee1c1 48%, #f8f0df 100%);
+  color: #283a2e;
+  text-align: center;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(47, 48, 31, .12), inset 0 0 0 4px rgba(255, 250, 232, .55), inset 0 0 0 5px rgba(139, 111, 59, .25);
+  isolation: isolate;
+}
+.hafez-today-card::before {
+  position: absolute;
+  inset: 8px;
+  z-index: -1;
+  border: 1px solid rgba(139, 111, 59, .48);
+  content: "";
+  pointer-events: none;
+}
+.hafez-today-card::after {
+  position: absolute;
+  inset: 13px;
+  z-index: -1;
+  border: 1px solid rgba(36, 77, 59, .13);
+  content: "";
+  pointer-events: none;
+}
+.hafez-card-inner { display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; padding: clamp(22px, 5vw, 30px) clamp(20px, 5vw, 34px); }
+.hafez-card-ornament { position: absolute; z-index: 1; color: #8a7146; font-family: Georgia, serif; font-size: 26px; line-height: 1; opacity: .9; pointer-events: none; }
+.hafez-card-ornament-top { top: 12px; right: 17px; transform: rotate(180deg); }
+.hafez-card-ornament-bottom { bottom: 12px; left: 17px; }
+.hafez-card-kicker { color: #6f5b36; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.hafez-card-title { color: #244d3b; font-family: "Amiri", "Vazirmatn", Tahoma, serif; font-size: clamp(24px, 6vw, 31px); line-height: 1.5; font-weight: 700; }
+.hafez-card-divider { display: flex; align-items: center; gap: 10px; width: min(190px, 80%); color: #967944; }
+.hafez-card-divider::before, .hafez-card-divider::after { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(139,111,59,.72)); content: ""; }
+.hafez-card-divider::after { transform: rotate(180deg); }
+.hafez-card-divider i { font-size: 11px; font-style: normal; }
+.hafez-card-verse { display: block; width: 100%; max-width: 480px; color: #302f27; font-family: "Amiri", "Vazirmatn", Tahoma, serif; font-size: clamp(14px, 3.6vw, 17px); font-weight: 700; line-height: 2.15; overflow-wrap: anywhere; text-wrap: pretty; }
+.hafez-card-open { display: inline-flex; align-items: center; gap: 7px; margin-top: 5px; color: #365b43; font-size: 11px; font-weight: 800; }
+.hafez-today-card:focus-visible, .hafez-modal-close:focus-visible, .hafez-modal-done:focus-visible { outline: 3px solid #a28b55; outline-offset: 4px; }
+.hafez-modal-backdrop { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; overflow-y: auto; padding: max(18px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom)); background: rgba(20, 30, 23, .68); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.hafez-manuscript-modal { position: relative; width: min(100%, 560px); max-height: 100%; overflow-y: auto; border-radius: 10px; background: #efe3c7; box-shadow: 0 24px 80px rgba(0,0,0,.3); }
+.hafez-modal-close { position: sticky; top: 10px; z-index: 2; float: left; display: grid; place-items: center; width: 36px; height: 36px; margin: 10px 0 -46px 10px; border: 1px solid rgba(88,70,39,.25); border-radius: 50%; background: rgba(250,244,228,.92); color: #244d3b; font: inherit; font-size: 24px; cursor: pointer; }
+.hafez-manuscript-frame { position: relative; margin: 10px; padding: clamp(34px, 7vw, 54px) clamp(22px, 6vw, 46px) 28px; border: 1px solid rgba(139,111,59,.7); outline: 1px solid rgba(139,111,59,.24); outline-offset: -7px; background: repeating-linear-gradient(0deg, rgba(92,72,39,.025) 0px, rgba(92,72,39,.025) 1px, transparent 1px, transparent 5px), linear-gradient(135deg,#f8f0dc,#eadab5 48%,#f8efd9); text-align: center; }
+.hafez-modal-kicker { color: #78633e; font-size: 11px; font-weight: 800; }
+.hafez-manuscript-frame h2 { margin: 8px 0 0; color: #244d3b; font-family: "Amiri", "Vazirmatn", Tahoma, serif; font-size: clamp(27px, 7vw, 36px); line-height: 1.6; }
+.hafez-manuscript-flourish { display: block; margin: 4px 0 16px; color: #9a7d43; font-size: 23px; }
+.hafez-full-verse { display: grid; gap: 10px; color: #302f27; font-family: "Amiri", "Vazirmatn", Tahoma, serif; font-size: clamp(17px, 4.5vw, 21px); font-weight: 700; line-height: 2.2; overflow-wrap: anywhere; }
+.hafez-full-verse p { margin: 0; }
+.hafez-preview-note { margin: 22px 0 16px; color: #6c624d; font-family: "Vazirmatn", Tahoma, sans-serif; font-size: 10px; line-height: 1.9; }
+.hafez-modal-done { width: 100%; min-height: 43px; border: 1px solid rgba(36,77,59,.28); border-radius: 5px; background: #244d3b; color: #fff8e8; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+@media (prefers-color-scheme: dark) {
+  .hafez-today-card { color: #283a2e; }
+}
+@media (max-width: 380px) {
+  .hafez-card-inner { padding: 23px 17px; }
+  .hafez-card-verse { font-size: 14px; line-height: 2.05; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hafez-today-card, .hafez-manuscript-modal { scroll-behavior: auto; }
+}
