@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "react";
 import { createPortal } from "react-dom";
+import { createInitialMyPath, loadMyPath, writeMyPath, type MyPath, type Stage1Answers } from "./myPathModel";
 
 type Section = "home" | "services" | "booking" | "selected" | "more";
 
@@ -2477,6 +2478,25 @@ function SelectedPage({
   type Progress = { answers: Answer[]; quizComplete: boolean; freeDone: boolean; vipDone: boolean };
   const KEY = "kaenatchi-selected-growth-v2";
   const [quizOnly, setQuizOnly] = useState(false);
+  const [myPathMode, setMyPathMode] = useState(false);
+  const [myPathReadIssue, setMyPathReadIssue] = useState<"invalid" | "unavailable" | null>(null);
+  const [myPath, setMyPath] = useState<MyPath | null>(() => {
+    const loaded = loadMyPath();
+    if (loaded.status === "valid") return loaded.path;
+    if (loaded.status === "missing") return createInitialMyPath();
+    return null;
+  });
+  const [stage1Answers, setStage1Answers] = useState<Stage1Answers>(() => {
+    const loaded = loadMyPath();
+    return loaded.status === "valid" ? loaded.path.stages[1].answers : {};
+  });
+  const [stage1Editing, setStage1Editing] = useState(false);
+  const [stage1Screen, setStage1Screen] = useState<"form" | "summary">(() => {
+    const loaded = loadMyPath();
+    return loaded.status === "valid" && loaded.path.stages[1].status === "completed" ? "summary" : "form";
+  });
+  const [stage1Message, setStage1Message] = useState("");
+  const [stage1Saving, setStage1Saving] = useState(false);
   const questions: Array<{ title: string; options: Array<{ label: string; profile: Profile }> }> = [
     { title: "این روزها بیشتر از همه به چه چیزی نیاز داری؟", options: [
       { label: "کمی آرامش و مکث", profile: "calm" }, { label: "روشن‌تر دیدن فکرها و انتخاب‌ها", profile: "clarity" }, { label: "ساختن یک عادت کوچک", profile: "habits" }, { label: "تجربه‌ای تازه و متفاوت", profile: "exploration" }] },
@@ -2586,13 +2606,63 @@ function SelectedPage({
         <PathPersonalDashboard
           onNavigate={onNavigate}
           onOpenVip={onOpenVip}
-          onOpenQuiz={() => setQuizOnly(true)}
+          onOpenQuiz={() => { setQuizOnly(true); setMyPathMode(true); setStage1Message(""); setStage1Editing(false); const loaded = loadMyPath(); if (loaded.status === "valid") { setMyPath(loaded.path); setStage1Answers(loaded.path.stages[1].answers); setStage1Screen(loaded.path.stages[1].status === "completed" ? "summary" : "form"); setMyPathReadIssue(null); } else if (loaded.status === "missing") { setMyPath(createInitialMyPath()); setStage1Answers({}); setStage1Screen("form"); setMyPathReadIssue(null); } else { setMyPath(null); setMyPathReadIssue(loaded.status); } }}
           onOpenService={onOpenService}
         />
       </>}
-      {quizOnly && <button type="button" style={{ width: "100%", border: "1px solid rgba(36,99,71,.18)", borderRadius: "15px", padding: "12px 16px", marginBottom: "14px", background: "rgba(36,99,71,.06)", color: "#246347", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, cursor: "pointer" }} onClick={() => setQuizOnly(false)}>← بازگشت به مسیر من</button>}
-      {quizOnly && <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>آزمون و مراحل من</h1><p>از مرحلهٔ فعلی‌ات ادامه بده.</p></div><div className="selected-intro-line" /></section>}
-      {quizOnly && <>
+      {quizOnly && <button type="button" style={{ width: "100%", border: "1px solid rgba(36,99,71,.18)", borderRadius: "15px", padding: "12px 16px", marginBottom: "14px", background: "rgba(36,99,71,.06)", color: "#246347", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, cursor: "pointer" }} onClick={() => { setQuizOnly(false); setMyPathMode(false); setStage1Message(""); }}>← بازگشت به مسیر من</button>}}
+      {quizOnly && !myPathMode && <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>آزمون و مراحل من</h1><p>از مرحلهٔ فعلی‌ات ادامه بده.</p></div><div className="selected-intro-line" /></section>}
+      {quizOnly && myPathMode && <section className="growth-reflect-card" style={{ textAlign: "right" }}>
+        <div className="growth-reflect-symbol"><Icon name="footsteps" /></div>
+        <span className="growth-kicker">مرحلهٔ اول از چهار مرحله</span><h2>نقطهٔ شروع من</h2>
+        {myPathReadIssue && <div role="alert" style={{ padding: "12px", borderRadius: "12px", background: "rgba(170,90,40,.10)", lineHeight: 1.9, fontSize: "13px" }}>اطلاعات ذخیره‌شدهٔ مسیر قابل خواندن نیست. برای محافظت از اطلاعات قبلی، فعلاً چیزی را بازنویسی نمی‌کنیم. لطفاً صفحه را نبند و این پیام را به پشتیبانی اطلاع بده.</div>}
+        {!myPathReadIssue && stage1Screen === "form" && <>
+          <p style={{ lineHeight: 2, fontSize: "13px" }}>با چند پاسخ کوتاه، نقطهٔ شروع خودت را مشخص کن. لازم نیست جواب‌ها کامل یا بی‌نقص باشند.</p>
+          <label style={{ display: "block", fontSize: "13px", fontWeight: 700, margin: "14px 0 7px" }}>این روزها دوست داری بیشتر روی چه موضوعی تمرکز کنی؟</label>
+          <select value={stage1Answers.currentTopic || ""} onChange={(e) => setStage1Answers((a) => ({ ...a, currentTopic: e.target.value }))} style={{ width: "100%", padding: "13px", borderRadius: "12px", border: "1px solid rgba(36,99,71,.2)", background: "rgba(255,255,255,.8)", fontFamily: "inherit" }}><option value="">انتخاب موضوع</option><option value="آرامش و توجه به خودم">آرامش و توجه به خودم</option><option value="شناخت احساسات و نیازها">شناخت احساسات و نیازها</option><option value="عادت‌ها و استمرار">عادت‌ها و استمرار</option><option value="روابط و ارتباط بهتر">روابط و ارتباط بهتر</option><option value="انتخاب‌ها و تغییر">انتخاب‌ها و تغییر</option><option value="موضوعی دیگر">موضوعی دیگر</option></select>
+          <label style={{ display: "block", fontSize: "13px", fontWeight: 700, margin: "14px 0 7px" }}>الان وضعیتت را چطور توصیف می‌کنی؟</label>
+          <textarea value={stage1Answers.currentState || ""} onChange={(e) => setStage1Answers((a) => ({ ...a, currentState: e.target.value }))} rows={3} maxLength={700} placeholder="هرقدر راحتی، از حال و شرایط فعلی‌ات بنویس..." style={{ width: "100%", boxSizing: "border-box", padding: "12px", borderRadius: "12px", border: "1px solid rgba(36,99,71,.2)", background: "rgba(255,255,255,.8)", fontFamily: "inherit", lineHeight: 1.9 }} />
+          <label style={{ display: "block", fontSize: "13px", fontWeight: 700, margin: "14px 0 7px" }}>دوست داری چه تغییر کوچکی را شروع کنی؟</label>
+          <textarea value={stage1Answers.initialGoal || ""} onChange={(e) => setStage1Answers((a) => ({ ...a, initialGoal: e.target.value }))} rows={2} maxLength={500} placeholder="هدفت را با زبان خودت بنویس..." style={{ width: "100%", boxSizing: "border-box", padding: "12px", borderRadius: "12px", border: "1px solid rgba(36,99,71,.2)", background: "rgba(255,255,255,.8)", fontFamily: "inherit", lineHeight: 1.9 }} />
+          <label style={{ display: "block", fontSize: "13px", fontWeight: 700, margin: "14px 0 7px" }}>چه چیزی را دوست داری دربارهٔ خودت بهتر بفهمی؟ (اختیاری)</label>
+          <textarea value={stage1Answers.reflection || ""} onChange={(e) => setStage1Answers((a) => ({ ...a, reflection: e.target.value }))} rows={2} maxLength={500} placeholder="اگر چیزی به ذهنت می‌رسد، اینجا بنویس..." style={{ width: "100%", boxSizing: "border-box", padding: "12px", borderRadius: "12px", border: "1px solid rgba(36,99,71,.2)", background: "rgba(255,255,255,.8)", fontFamily: "inherit", lineHeight: 1.9 }} />
+          <label style={{ display: "block", fontSize: "13px", fontWeight: 700, margin: "14px 0 7px" }}>اولین قدم کوچک و شدنی تو چیست؟</label>
+          <textarea value={stage1Answers.firstStep || ""} onChange={(e) => setStage1Answers((a) => ({ ...a, firstStep: e.target.value }))} rows={2} maxLength={500} placeholder="مثلاً امروز پنج دقیقه برای خودم وقت بگذارم..." style={{ width: "100%", boxSizing: "border-box", padding: "12px", borderRadius: "12px", border: "1px solid rgba(36,99,71,.2)", background: "rgba(255,255,255,.8)", fontFamily: "inherit", lineHeight: 1.9 }} />
+          <button type="button" style={{ ...primary, marginTop: "18px" }} disabled={!stage1Answers.currentTopic?.trim() || !stage1Answers.currentState?.trim() || !stage1Answers.initialGoal?.trim() || !stage1Answers.firstStep?.trim()} onClick={() => { setStage1Message(""); setStage1Screen("summary"); }}>ساختن خلاصهٔ مسیر من ←</button>
+        </>}
+        {!myPathReadIssue && stage1Screen === "summary" && (() => {
+          const title = stage1Answers.currentTopic === "آرامش و توجه به خودم" ? "شروع با توجه به خودم" : stage1Answers.currentTopic === "شناخت احساسات و نیازها" ? "شروع با شناخت الگوها" : stage1Answers.currentTopic === "انتخاب‌ها و تغییر" ? "شروع با انتخاب آگاهانه" : "شروع با کشف مسیر خودم";
+          const savedCompleted = myPath?.stages[1].status === "completed" && !stage1Editing;
+          const summary = "موضوع فعلی: " + (stage1Answers.currentTopic || "—") + "
+نقطهٔ شروع: " + (stage1Answers.currentState || "—") + "
+هدف اولیه: " + (stage1Answers.initialGoal || "—") + (stage1Answers.reflection?.trim() ? "
+تأمل شخصی: " + stage1Answers.reflection.trim() : "") + "
+قدم اول: " + (stage1Answers.firstStep || "—");
+          return <><span className="growth-kicker">{savedCompleted ? "خلاصهٔ ثبت‌شدهٔ تو" : "پیش‌نمایش خلاصه"}</span><h2>{title}</h2><div style={{ whiteSpace: "pre-wrap", lineHeight: 2, padding: "14px", borderRadius: "14px", background: "rgba(36,99,71,.06)", fontSize: "13px" }}>{summary}</div><p style={{ lineHeight: 1.9, fontSize: "12px" }}>این خلاصه بر اساس پاسخ‌های خودت ساخته شده؛ هر زمان لازم بود می‌توانی برگردی و ویرایشش کنی.</p>
+            {stage1Message && <p role="status" style={{ lineHeight: 1.9, fontSize: "13px" }}>{stage1Message}</p>}
+            <button type="button" style={{ ...secondary, marginTop: "8px" }} onClick={() => { setStage1Editing(true); setStage1Screen("form"); setStage1Message(""); }}>بازبینی و ویرایش پاسخ‌ها</button>
+            {(!savedCompleted || stage1Editing) && <button type="button" style={{ ...primary, marginTop: "10px" }} disabled={stage1Saving} onClick={() => {
+              if (!myPath || myPathReadIssue) { setStage1Message("اطلاعات مسیر در دسترس نیست؛ برای جلوگیری از بازنویسی داده‌ها، تکمیل انجام نشد."); return; }
+              setStage1Saving(true);
+              const now = new Date().toISOString();
+              const prior = myPath.stages[1];
+              const changedCompleted = prior.status === "completed" && JSON.stringify(prior.answers) !== JSON.stringify(stage1Answers);
+              const nextPath: MyPath = {
+                ...myPath, personalTitle: title, updatedAt: now,
+                stages: { ...myPath.stages, 1: { ...prior, status: "completed", answers: { ...stage1Answers }, summary, summaryConfirmed: true, startedAt: prior.startedAt || now, completedAt: now, version: changedCompleted ? prior.version + 1 : prior.version, lastReviewedAt: now } },
+                history: changedCompleted ? [...myPath.history, { stageId: 1 as const, version: prior.version, savedAt: now, status: prior.status, answers: { ...prior.answers }, summary: prior.summary, summaryConfirmed: prior.summaryConfirmed, completedAt: prior.completedAt, reason: "stage_edit" as const }] : myPath.history,
+              };
+              const saved = writeMyPath(nextPath);
+              setStage1Saving(false);
+              if (!saved) { setStage1Message("ذخیره انجام نشد؛ مرحله تکمیل نشد. دوباره تلاش کن."); return; }
+              setMyPath(nextPath); setStage1Editing(false);
+              setStage1Message("خلاصه تأیید و با موفقیت ذخیره شد.");
+            }}>{stage1Saving ? "در حال ذخیره..." : "تأیید خلاصه و ثبت مرحلهٔ اول ✓"}</button>}
+            {savedCompleted && <p role="status" style={{ lineHeight: 1.9, fontSize: "13px" }}>مرحلهٔ اول قبلاً ثبت شده است. برای اصلاح، پاسخ‌ها را ویرایش کن و خلاصهٔ تازه را دوباره تأیید کن.</p>}
+          </>;
+        })()}
+      </section>}
+      {quizOnly && !myPathMode && <>
       <section className="growth-welcome">
         <div className="growth-welcome-orbit growth-orbit-one" /><div className="growth-welcome-orbit growth-orbit-two" />
         <span className="growth-kicker">مسیر من · مسیر رشد</span>
