@@ -2028,16 +2028,16 @@ function TherapyIntakePage({
         kicker="THERAPY · ONLINE"
         title={title}
         description={isCandle
-          ? "درخواستت را ثبت کن؛ مشاوره اولیه تلفنی انجام می‌شود و ادامه فرایند از راه دور هماهنگ خواهد شد."
-          : "درخواستت را با آرامش تکمیل کن؛ پس از تماس اولیه، زمان جلسه تلفنی ۴۵ دقیقه‌ای با هماهنگی و تأیید تو نهایی می‌شود."}
+          ? "درخواستت را ثبت کن؛ پس از بررسی، برای مشاوره اولیه تلفنی با تو هماهنگ می‌کنیم."
+          : "درخواستت را با آرامش تکمیل کن؛ پس از بررسی درخواست، مشاوره اولیه تلفنی انجام می‌شود و در صورت هماهنگی، نوبت را از بخش دریافت نوبت ثبت می‌کنی."}
         icon={isCandle ? "candle" : "conversation"}
       />
       <div className="glass-list-card" style={{display:"block",marginTop:"14px"}}>
         <div className="list-copy">
           <strong>مدت هر جلسه: {durationLabel}</strong>
-          <span>کاملاً غیرحضوری · پنجشنبه‌ها</span>
-          <span>بازه‌های کلی هماهنگی: ۱۱:۰۰ تا ۱۳:۳۰ و ۱۶:۰۰ تا ۱۸:۳۰</span>
-          <span>ساعت دقیق در مشاوره اولیه هماهنگ می‌شود و فقط پس از تأیید تو نهایی خواهد شد.</span>
+          <span>کاملاً غیرحضوری</span>
+          <span>مدت هر جلسه: {durationLabel}</span>
+          <span>پس از بررسی درخواست، برای مشاوره اولیه با تو تماس می‌گیریم. در صورت هماهنگی، نوبت را از بخش «دریافت نوبت» ثبت می‌کنی.</span>
         </div>
       </div>
 
@@ -2132,7 +2132,7 @@ function TherapyIntakePage({
                 {impact && <>اثر روزمره: {impact}<br/></>}
                 {duration && <>مدت درگیری: {duration}<br/></>}
                 {goal && <>هدف: {goal}<br/></>}
-                <br/>ثبت این فرم به معنی تأیید نوبت یا شروع درمان نیست؛ زمان و جزئیات پس از تماس اولیه هماهنگ می‌شود.
+                <br/>این فرم فقط درخواست اولیه است و به معنی تأیید نوبت یا شروع خدمت نیست. پس از بررسی و مشاوره اولیه، در صورت هماهنگی، نوبت را از بخش «دریافت نوبت» ثبت می‌کنی.
               </div>
               <label style={{display:"flex",gap:"10px",alignItems:"flex-start",fontSize:"12px",lineHeight:1.9}}>
                 <input type="checkbox" checked={privacyConsent} onChange={e=>setPrivacyConsent(e.target.checked)} style={{marginTop:"5px"}}/>
@@ -2156,7 +2156,7 @@ function TherapyIntakePage({
         <div className="glass-list-card" style={{display:"grid",gap:"12px",marginTop:"14px",padding:"24px",textAlign:"center"}}>
           <div style={{fontSize:"34px",color:"#426744"}}>✓</div>
           <strong style={{fontSize:"18px",color:"#244d3b"}}>درخواستت ثبت شد</strong>
-          <span style={{fontSize:"13px",lineHeight:1.9}}>این ثبت به معنی تأیید نوبت نیست. زمان دقیق در مشاوره اولیه هماهنگ می‌شود.</span>
+          <span style={{fontSize:"13px",lineHeight:1.9}}>درخواست اولیه‌ات ثبت شد. پس از بررسی و مشاوره اولیه، اگر برای ادامه هماهنگ شدیم، نوبتت را از بخش «دریافت نوبت» ثبت کن. این فرم به‌تنهایی نوبت را رزرو نمی‌کند.</span>
           <div style={{padding:"12px",borderRadius:"13px",background:"rgba(36,77,59,.07)"}}>
             <span style={{display:"block",fontSize:"11px",color:"#718078"}}>کد پیگیری</span>
             <strong dir="ltr">{trackingCode}</strong>
