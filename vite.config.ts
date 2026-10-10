@@ -3,5 +3,6 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/kaenatchi-mini-app/",
+  // GitHub Pages serves the app from its repository subpath; browser previews run at the domain root.
+  base: process.env.GITHUB_ACTIONS === "true" ? "/kaenatchi-mini-app/" : "/",
 });
