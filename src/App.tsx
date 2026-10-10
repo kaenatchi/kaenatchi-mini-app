@@ -2500,7 +2500,7 @@ function SelectedPage({
   const [screen, setScreen] = useState<"intro" | "quiz" | "result" | "exercise" | "gate" | "vip">(() => {
     try {
       const p = JSON.parse(window.localStorage.getItem(KEY) || "null");
-      if (p?.vipDone) return "gate";
+      if (p?.vipDone && Array.isArray(p?.stageTwoAnswers) && p.stageTwoAnswers.length === 3 && p.stageTwoAnswers.every((answer: unknown) => typeof answer === "string" && answer.trim().length > 0)) return "gate";
       if (p?.freeDone) return "gate";
       if (p?.quizComplete) return "result";
       if (Array.isArray(p?.answers) && p.answers.length) return "quiz";
@@ -2520,7 +2520,22 @@ function SelectedPage({
   const [checkingVip, setCheckingVip] = useState(false);
   const [vipMessage, setVipMessage] = useState("");
   const [vipActive, setVipActive] = useState(false);
-  useEffect(() => { try { window.localStorage.setItem(KEY, JSON.stringify(progress)); } catch {} }, [progress]);
+  const [stageTwoAnswers, setStageTwoAnswers] = useState<string[]>(() => {
+    try {
+      const p = JSON.parse(window.localStorage.getItem(KEY) || "null");
+      return Array.isArray(p?.stageTwoAnswers) ? p.stageTwoAnswers.slice(0, 3).map((v: unknown) => typeof v === "string" ? v : "") : ["", "", ""];
+    } catch { return ["", "", ""]; }
+  });
+  const stageTwoQuestions = [
+    "در این مرحله دوست داری روی چه چیزی بیشتر تمرکز کنی؟",
+    "چه قدم کوچکی واقعاً می‌توانی در هفتهٔ پیش رو انجام بدهی؟",
+    "چطور می‌خواهی تجربه‌ات را ثبت کنی و از آن یاد بگیری؟",
+  ];
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify({ ...progress, stageTwoAnswers, vipDone: progress.vipDone && stageTwoAnswers.length === 3 && stageTwoAnswers.every((answer) => answer.trim().length > 0) }));
+    } catch {}
+  }, [progress, stageTwoAnswers]);
 
   // A saved VIP step is progress, not proof of membership. Re-check membership
   // before restoring the VIP exercise after a reload; never reset quiz answers.
@@ -2574,7 +2589,7 @@ function SelectedPage({
     } catch { setVipMessage("فعلاً امکان بررسی عضویت نیست. دوباره تلاش کن یا از بخش VIP وضعیت عضویت را بررسی کن."); }
     finally { setCheckingVip(false); }
   };
-  const reset = () => { setProgress(empty); setQIndex(0); setVipActive(false); setVipMessage(""); setScreen("intro"); };
+  const reset = () => { setProgress(empty); setStageTwoAnswers(["", "", ""]); setQIndex(0); setVipActive(false); setVipMessage(""); setScreen("intro"); };
   const primary: React.CSSProperties = { width: "100%", border: 0, borderRadius: "16px", padding: "14px 16px", background: "linear-gradient(135deg,#174b38,#2c7658)", color: "#fff", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, boxShadow: "0 9px 22px rgba(23,75,56,.18)", cursor: "pointer" };
   const secondary: React.CSSProperties = { width: "100%", border: "1px solid rgba(36,99,71,.2)", borderRadius: "16px", padding: "13px 16px", background: "rgba(36,99,71,.05)", color: "#246347", fontFamily: "inherit", fontSize: "13px", fontWeight: 600, cursor: "pointer" };
   const optionStyle: React.CSSProperties = { display: "block", width: "100%", textAlign: "right", padding: "15px", borderRadius: "16px", border: "1px solid rgba(36,99,71,.16)", background: "rgba(255,255,255,.72)", color: "inherit", fontFamily: "inherit", cursor: "pointer", lineHeight: 1.8 };
@@ -2621,7 +2636,7 @@ function SelectedPage({
 
       {screen === "gate" && <section className="growth-reflect-card"><div className="growth-reflect-symbol"><Icon name="crown" /></div><span className="growth-kicker">سطح ۱ تکمیل شد</span><h2>آماده‌ای مسیرت را ادامه بدهی؟</h2><p>قدم اولت ثبت شد. در مرحلهٔ بعد تمرین‌های پیوسته‌تر و ثبت روند شخصی در انتظارت است. ادامهٔ مسیر برای اعضای VIP فعال می‌شود.</p><div style={{ borderRadius: "16px", padding: "14px", background: "rgba(36,99,71,.06)", margin: "14px 0", textAlign: "right" }}><strong>پیش‌نمایش سطح ۲ · ادامه و تثبیت</strong><p style={{ lineHeight: 2, fontSize: "13px" }}>{info.vip}</p></div>{vipMessage && <p role="status" style={{ fontSize: "12px", lineHeight: 1.9 }}>{vipMessage}</p>}<button type="button" style={primary} disabled={checkingVip} onClick={() => void continueWithVipCheck()}>{checkingVip ? "در حال بررسی عضویت..." : "بررسی عضویت و ادامه ←"}</button><button type="button" style={{ ...secondary, marginTop: "10px" }} onClick={onOpenVip}>رفتن به بخش VIP</button><button type="button" style={{ ...secondary, marginTop: "10px" }} onClick={() => setScreen("result")}>مرور نتیجه و تمرین رایگان</button></section>}
 
-      {screen === "vip" && <section className="growth-reflect-card"><div className="growth-reflect-symbol"><Icon name="crown" /></div><span className="growth-kicker">سطح ۲ از ۴ · ویژهٔ VIP</span><h2>ادامهٔ مسیر: ساختن تجربه</h2><p style={{ lineHeight: 2 }}>{info.vip}</p><div style={{ borderRadius: "15px", padding: "13px", background: "rgba(36,99,71,.06)", fontSize: "12px", lineHeight: 1.9 }}>این مرحله به ثبت تجربه و پیگیری شخصی کمک می‌کند؛ نتیجه‌ها ارزیابی علمی یا درمان نیستند.</div><button type="button" style={primary} onClick={() => setProgress((p) => ({ ...p, vipDone: true }))}>{progress.vipDone ? "تمرین مرحلهٔ دوم ثبت شد ✓" : "تمرین مرحلهٔ دوم را انجام دادم ✓"}</button>{progress.vipDone && <p role="status" style={{ fontSize: "13px", lineHeight: 1.9 }}>قدم سطح ۲ ثبت شد. سابقهٔ مسیر روی همین دستگاه نگهداری می‌شود.</p>}<button type="button" style={{ ...secondary, marginTop: "10px" }} onClick={() => setScreen("gate")}>بازگشت به مسیر</button></section>}
+      {screen === "vip" && <section className="growth-reflect-card"><div className="growth-reflect-symbol"><Icon name="crown" /></div><span className="growth-kicker">سطح ۲ از ۴ · ویژهٔ VIP</span><h2>ادامهٔ مسیر: ساختن تجربه</h2><p style={{ lineHeight: 2 }}>{info.vip}</p><p style={{ lineHeight: 1.9, fontSize: "13px" }}>برای ثبت این مرحله، به سه پرسش کوتاه پاسخ بده. پاسخ‌ها فقط روی همین دستگاه ذخیره می‌شوند.</p><div style={{ display: "grid", gap: "14px", marginTop: "16px" }}>{stageTwoQuestions.map((question, index) => <label key={question} style={{ display: "grid", gap: "7px", textAlign: "right", lineHeight: 1.8, fontSize: "13px", fontWeight: 650 }}><span>{index + 1}. {question}</span><textarea value={stageTwoAnswers[index] || ""} onChange={(event) => setStageTwoAnswers((answers) => answers.map((answer, answerIndex) => answerIndex === index ? event.target.value : answer))} rows={3} maxLength={500} placeholder="پاسخت را اینجا بنویس..." style={{ width: "100%", boxSizing: "border-box", border: "1px solid rgba(36,99,71,.22)", borderRadius: "14px", padding: "12px", fontFamily: "inherit", fontSize: "13px", lineHeight: 1.8, resize: "vertical", background: "var(--surface, rgba(255,255,255,.7))", color: "inherit" }} /></label>)}</div><button type="button" style={{ ...primary, marginTop: "16px", opacity: stageTwoAnswers.every((answer) => answer.trim().length > 0) ? 1 : .55 }} disabled={!stageTwoAnswers.every((answer) => answer.trim().length > 0)} onClick={() => { setProgress((p) => ({ ...p, vipDone: true })); setScreen("gate"); }}>{progress.vipDone ? "پاسخ‌ها ذخیره شده‌اند ✓" : "ثبت پاسخ‌ها و تکمیل مرحلهٔ دوم"}</button>{progress.vipDone && <p role="status" style={{ fontSize: "13px", lineHeight: 1.9 }}>پاسخ‌های مرحلهٔ دوم ثبت شد. سابقه روی همین دستگاه نگهداری می‌شود.</p>}<button type="button" style={{ ...secondary, marginTop: "10px" }} onClick={() => setScreen("gate")}>بازگشت به مسیر</button></section>}
 
       <section className="growth-history"><div className="growth-history-heading"><span>پیشرفت تو</span><strong>{progress.vipDone ? "۲ قدم ثبت‌شده" : progress.freeDone ? "۱ قدم ثبت‌شده" : "در آغاز مسیر"}</strong></div><div className="growth-progress-track"><span style={{ width: (progress.vipDone ? 50 : progress.freeDone ? 25 : progress.quizComplete ? 12 : 0) + "%" }} /></div>
         <div className="growth-history-item"><span><Icon name={progress.quizComplete ? "check" : "spark"} /></span><div><small>سطح ۱</small><strong>شناخت خود</strong></div><span className="growth-history-done">{progress.quizComplete ? "تکمیل شد" : "در انتظار"}</span></div>
