@@ -5124,3 +5124,63 @@ button {
   .hafez-full-verse { font-size: 16px; }
   .hafez-couplet { padding-block: 10px 12px; }
 }
+
+
+/* My Path carousel and dedicated quiz view */
+.path-featured-service {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(36, 99, 71, .14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .62);
+  box-shadow: 0 8px 22px rgba(53, 59, 50, .06);
+  text-align: right;
+}
+.path-featured-service strong { color: #174b38; font-size: 15px; line-height: 1.8; }
+.path-featured-service span { color: #59665d; font-size: 12px; line-height: 1.9; }
+.path-featured-service small { color: #174b38; font-size: 12px; font-weight: 700; }
+.path-featured-service button {
+  justify-self: start;
+  border: 0;
+  padding: 8px 0;
+  background: transparent;
+  color: #246347;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.selected-quiz-subpage { animation: section-page-enter .24s ease both; }
+.selected-quiz-back {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(36,99,71,.16);
+  border-radius: 14px;
+  background: rgba(255,255,255,.62);
+  color: #246347;
+  font: inherit;
+  font-size: 13px;
+  box-shadow: 0 6px 18px rgba(53,59,50,.05);
+  cursor: pointer;
+}
+.selected-quiz-page-heading {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 18px;
+  padding: 22px 20px;
+  border: 1px solid rgba(36,99,71,.12);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(244,241,230,.92), rgba(226,236,225,.8));
+  box-shadow: 0 12px 30px rgba(53,59,50,.07);
+  text-align: right;
+}
+.selected-quiz-page-heading > span { color: #739078; font-size: 10px; letter-spacing: .12em; }
+.selected-quiz-page-heading h1 { margin: 7px 0; color: #174b38; font-size: clamp(21px, 5vw, 27px); line-height: 1.7; }
+.selected-quiz-page-heading p { margin: 0; color: #526957; font-size: 13px; line-height: 1.9; }
+@media (prefers-reduced-motion: reduce) {
+  .selected-quiz-subpage { animation: none; }
+}

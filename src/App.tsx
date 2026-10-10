@@ -2246,9 +2246,13 @@ function ServicesPage({
 function PathPersonalDashboard({
   onNavigate,
   onOpenVip,
+  onOpenQuiz,
+  onOpenService,
 }: {
   onNavigate: (section: Section) => void;
   onOpenVip: () => void;
+  onOpenQuiz: () => void;
+  onOpenService: (service: Service) => void;
 }) {
   const [vipData, setVipData] = useState<VipApiResponse | null>(null);
   const [vipPanel, setVipPanel] = useState<VipPanel | null>(null);
@@ -2258,11 +2262,22 @@ function PathPersonalDashboard({
   const [hafezLoading, setHafezLoading] = useState(true);
   const [hafezError, setHafezError] = useState(false);
   const touchStartX = useRef<number | null>(null);
+  const todayEnergyServices = energyServices.length
+    ? energyServices
+    : mainServices.filter((service) => service.category === "energy");
+  const tehranDayKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+  let featuredHash = 0;
+  for (const char of tehranDayKey) featuredHash = Math.imul(featuredHash ^ char.charCodeAt(0), 16777619);
+  const featuredService = todayEnergyServices.length
+    ? todayEnergyServices[(featuredHash >>> 0) % todayEnergyServices.length]
+    : null;
   const slides = [
-    { eyebrow: "قدم بعدی تو", title: "مسیرت را با یک قدم کوچک ادامه بده.", body: "خدمات و تجربه‌هایی را پیدا کن که با حال‌وهوای امروزت هماهنگ‌اند.", action: "دیدن خدمات", run: () => onNavigate("services") },
-    { eyebrow: "پیشنهاد برای تو", title: "گاهی یک مکث کوتاه، شروع خوبی است.", body: "با آرامش گزینه‌ها را ببین و هر وقت آماده بودی انتخاب کن.", action: "کشف تجربه‌ها", run: () => onNavigate("services") },
     { eyebrow: "دنیای کائنات‌چی", title: "تجربه‌ای تازه در انتظارت است.", body: "انرژی‌خوانی، تراپی و تجربه‌های دیگر را در یک جا مرور کن.", action: "مرور خدمات", run: () => onNavigate("services") },
-    { eyebrow: "باشگاه کائنات‌چی", title: "مزایای عضویتت را بشناس.", body: "وضعیت و امکانات VIP را از مسیر رسمی عضویت بررسی کن.", action: "مشاهدهٔ VIP", run: onOpenVip },
+    { eyebrow: "مسیر من", title: "از همین‌جا ادامه بده.", body: "آزمون، مرحلهٔ فعلی و قدم بعدی‌ات را در مسیر شخصی خودت ببین.", action: "ادامهٔ مسیر", run: onOpenQuiz },
+    { eyebrow: "باشگاه کائنات‌چی", title: "مزایای عضویتت را بشناس.", body: "وضعیت و امکانات VIP را از مسیر رسمی عضویت بررسی کن.", action: "VIP", run: onOpenVip },
+    { eyebrow: "پیشنهاد برای تو", title: "یک تجربه برای امروز.", body: featuredService ? "پیشنهاد منتخب امروز: " + featuredService.title : "پیشنهاد منتخب انرژی‌خوانی امروز به‌زودی در دسترس قرار می‌گیرد.", action: "کشف تجربه", run: () => { if (featuredService) onOpenService(featuredService); else onNavigate("services"); } },
   ];
   useEffect(() => {
     let active = true;
@@ -2412,7 +2427,7 @@ function PathPersonalDashboard({
       </button>
       <section className="path-live-carousel" aria-roledescription="carousel" aria-label="پیشنهادهای مسیر من" onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={(event) => { const start = touchStartX.current; touchStartX.current = null; if (start === null) return; const end = event.changedTouches[0]?.clientX; if (end === undefined) return; const delta = end - start; if (Math.abs(delta) > 40) moveSlide(delta < 0 ? 1 : -1); }}>
         <div className="path-live-topline"><span>{activeSlide.eyebrow}</span><span className="path-live-index">{(slide + 1).toLocaleString("fa-IR")} / {slides.length.toLocaleString("fa-IR")}</span></div>
-        <div className="path-live-copy" key={slide} aria-live="polite"><h2>{activeSlide.title}</h2><p>{activeSlide.body}</p><button type="button" onClick={activeSlide.run}>{activeSlide.action} <Icon name="arrow" /></button></div>
+        <div className="path-live-copy" key={slide} aria-live="polite"><h2>{activeSlide.title}</h2><p>{activeSlide.body}</p>{slide === 3 && featuredService && <div className="path-featured-service"><strong>{featuredService.title}</strong>{featuredService.description && <span>{featuredService.description}</span>}{featuredService.price && <small>{featuredService.price}</small>}<button type="button" onClick={() => onOpenService(featuredService)}>مشاهدهٔ توضیحات ←</button></div>}<button type="button" onClick={activeSlide.run}>{activeSlide.action} <Icon name="arrow" /></button></div>
         <div className="path-live-controls"><button type="button" onClick={() => moveSlide(-1)} aria-label="اسلاید قبلی"><Icon name="arrow" /></button><div className="path-live-dots">{slides.map((item, index) => <button key={item.eyebrow} type="button" className={index === slide ? "active" : ""} onClick={() => setSlide(index)} aria-label={"رفتن به اسلاید " + (index + 1)} aria-current={index === slide ? "true" : undefined} />)}</div><button type="button" onClick={() => moveSlide(1)} aria-label="اسلاید بعدی"><Icon name="arrow" /></button></div>
       </section>
       {hafezOpen && createPortal((
@@ -2493,6 +2508,7 @@ function SelectedPage({
   const [checkingVip, setCheckingVip] = useState(false);
   const [vipMessage, setVipMessage] = useState("");
   const [vipActive, setVipActive] = useState(false);
+  const [quizPageOpen, setQuizPageOpen] = useState(false);
   useEffect(() => { try { window.localStorage.setItem(KEY, JSON.stringify(progress)); } catch {} }, [progress]);
 
   const totals: Record<Profile, number> = { calm: 0, clarity: 0, habits: 0, exploration: 0 };
@@ -2540,9 +2556,14 @@ function SelectedPage({
 
   return (
     <div className="inner-page selected-page selected-growth-page">
-      <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>مسیر من</h1><p>قدم‌به‌قدم، متناسب با خودت.</p></div><div className="selected-intro-line" /></section>
-      <PathPersonalDashboard onNavigate={onNavigate} onOpenVip={onOpenVip} />
-      <section className="growth-welcome">
+      {!quizPageOpen && <>
+        <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>مسیر من</h1><p>قدم‌به‌قدم، متناسب با خودت.</p></div><div className="selected-intro-line" /></section>
+        <PathPersonalDashboard onNavigate={onNavigate} onOpenVip={onOpenVip} onOpenQuiz={() => setQuizPageOpen(true)} onOpenService={onOpenService} />
+      </>}
+      {quizPageOpen && <div className="selected-quiz-subpage">
+        <button type="button" className="selected-quiz-back" onClick={() => setQuizPageOpen(false)}>← بازگشت به مسیر من</button>
+        <section className="selected-quiz-page-heading"><span>YOUR PERSONAL PATH</span><h1>آزمون و مراحل مسیر من</h1><p>آزمون اولیه، نتیجه و قدم بعدی‌ات را اینجا دنبال کن.</p></section>
+      <section id="growth-quiz-start" className="growth-welcome">
         <div className="growth-welcome-orbit growth-orbit-one" /><div className="growth-welcome-orbit growth-orbit-two" />
         <span className="growth-kicker">مسیر من · مسیر رشد</span>
         <h2>{screen === "intro" || screen === "quiz" ? "مسیرت را از شناخت خودت شروع کن." : "هر قدم کوچک، بخشی از مسیر توست."}</h2>
@@ -2579,6 +2600,7 @@ function SelectedPage({
       </section>
       <section className="growth-footer"><div><span>مسیر تو، انتخاب توست</span><strong>هر وقت خواستی، از نو شروع کن.</strong></div><button type="button" onClick={reset}>شروع دوباره</button></section>
       <p className="growth-storage-note">پیشرفت این نسخه روی همین دستگاه ذخیره می‌شود و بین دستگاه‌ها همگام نیست. دسترسی VIP هنگام ادامه از سامانهٔ عضویت بررسی می‌شود.</p>
+      </div>}
     </div>
   );
 }
