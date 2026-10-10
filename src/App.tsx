@@ -1990,21 +1990,25 @@ function ServicesPage({
       icon: "energy",
     },
     {
-      id: "therapy",
-      title: "تراپی",
-      description: "شمع‌تراپی و سایکو‌تراپی در یک فضای منظم و قابل گسترش.",
+      id: "candle",
+      title: "شمع‌تراپی",
+      description: "خدمات شمع‌تراپی؛ جزئیات و قیمت از CMS خوانده می‌شود.",
       icon: "candle",
+    },
+    {
+      id: "psychotherapy",
+      title: "سایکو‌تراپی",
+      description: "خدمات گفت‌وگو و سایکو‌تراپی؛ جزئیات از CMS خوانده می‌شود.",
+      icon: "conversation",
     },
   ];
 
   const categoryServices =
     activeCategory === "energy"
       ? energyServices
-      : activeCategory === "therapy"
-        ? mainServices.filter((service) => service.category === "candle" || service.category === "psychotherapy" || service.category === "therapy")
-        : activeCategory
-          ? mainServices.filter((service) => service.category === activeCategory)
-          : [];
+      : activeCategory
+        ? mainServices.filter((service) => service.category === activeCategory)
+        : [];
 
   const filteredEnergyServices =
     energyFilter === "all"
@@ -2022,11 +2026,7 @@ function ServicesPage({
   const visibleServices =
     activeCategory === "energy"
       ? filteredEnergyServices
-      : activeCategory === "therapy" && therapyFilter
-        ? categoryServices.filter((service) => service.category === therapyFilter || service.category === "therapy")
-        : activeCategory === "therapy"
-          ? []
-          : categoryServices;
+      : categoryServices;
 
   const openCategory = (category: ServiceCategory) => {
     setEnergyFilter("all");
@@ -2128,25 +2128,6 @@ function ServicesPage({
             </div>
           </div>
 
-          {activeCategory === "therapy" && (
-            <div className="services-filter-row therapy-filter-row" aria-label="دسته‌بندی تراپی">
-              {([
-                ["candle", "شمع‌تراپی"],
-                ["psychotherapy", "سایکو‌تراپی"],
-              ] as const).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={"services-filter-chip " + (therapyFilter === id ? "active" : "")}
-                  aria-pressed={therapyFilter === id}
-                  onClick={() => setTherapyFilter((current) => current === id ? null : id)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-
           {activeCategory === "energy" && (
             <div className="services-filter-row" aria-label="فیلتر انرژی‌خوانی">
               {[
@@ -2166,13 +2147,6 @@ function ServicesPage({
                   {label}
                 </button>
               ))}
-            </div>
-          )}
-
-          {activeCategory === "therapy" && !therapyFilter && (
-            <div className="services-section-intro therapy-empty-prompt">
-              <span>یک مسیر را انتخاب کن</span>
-              <strong>شمع‌تراپی یا سایکو‌تراپی</strong>
             </div>
           )}
 
