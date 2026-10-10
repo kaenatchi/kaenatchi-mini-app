@@ -2306,8 +2306,30 @@ function PathPersonalDashboard({
         }).formatToParts(new Date());
         const part = (type: string) => dateParts.find((item) => item.type === type)?.value || "";
         const dayKey = part("year") + "-" + part("month") + "-" + part("day");
+
+        // Personalize the daily selection per Telegram account, but keep it stable
+        // for that account throughout the Tehran calendar day.
+        let telegramUserId = "";
+        try {
+          await loadTelegramWebAppScript();
+          const webApp = window.Telegram?.WebApp as (TelegramWebApp & {
+            initDataUnsafe?: { user?: { id?: number | string } };
+          }) | undefined;
+          webApp?.ready?.();
+          webApp?.expand?.();
+          const userId = webApp?.initDataUnsafe?.user?.id;
+          if (userId !== undefined && userId !== null && String(userId).trim()) {
+            telegramUserId = String(userId).trim();
+          }
+        } catch (identityError) {
+          console.warn("[KaenatChi Hafez] Telegram identity unavailable; using daily fallback", identityError);
+        }
+
+        const selectionKey = telegramUserId
+          ? dayKey + "|telegram:" + telegramUserId
+          : dayKey + "|shared-fallback";
         let hash = 2166136261;
-        for (const char of dayKey) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
+        for (const char of selectionKey) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
         const chosen = allPoems[(hash >>> 0) % allPoems.length];
         const poemPath = chosen.FullUrl.replace(/\/$/, "") + ".json";
         const poem = await readJson("/poets" + poemPath);
