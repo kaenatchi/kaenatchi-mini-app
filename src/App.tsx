@@ -705,7 +705,9 @@ function rebuildCmsContent(data: Partial<typeof cmsRows>) {
   ];
 }
 
-async function loadCmsData(): Promise<boolean> {
+async function loadCmsData(
+  onProgress?: (progress: number | null) => void
+): Promise<boolean> {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 12000);
   try {
@@ -713,16 +715,25 @@ async function loadCmsData(): Promise<boolean> {
       `${CMS_API_URL}?action=getMiniAppData&_=${Date.now()}`,
       { method: "GET", cache: "no-store", signal: controller.signal }
     );
-
-    if (!response.ok) return false;
-
-    const data = (await response.json()) as Partial<typeof cmsRows> & {
-      success?: boolean;
-    };
-
+    if (!response.ok || !response.body) return false;
+    const contentLength = Number(response.headers.get("content-length") || 0);
+    onProgress?.(contentLength > 0 ? 0 : null);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let received = 0;
+    let body = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.byteLength;
+      body += decoder.decode(value, { stream: true });
+      if (contentLength > 0) onProgress?.(Math.min(95, Math.floor((received / contentLength) * 95)));
+    }
+    body += decoder.decode();
+    const data = JSON.parse(body) as Partial<typeof cmsRows> & { success?: boolean };
     if (data.success === false) return false;
-
     rebuildCmsContent(data);
+    onProgress?.(100);
     return true;
   } catch {
     return false;
@@ -6300,9 +6311,12 @@ function App() {
   const touchStart = useRef<{ x: number; y: number; identifier: number } | null>(null);
   const [cmsReady, setCmsReady] = useState(false);
   const [cmsLoading, setCmsLoading] = useState(true);
+  const [cmsLoadProgress, setCmsLoadProgress] = useState<number | null>(0);
   useEffect(() => {
     let mounted = true;
-    loadCmsData().then((ready) => {
+    loadCmsData((progress) => {
+      if (mounted) setCmsLoadProgress(progress);
+    }).then((ready) => {
       if (!mounted) return;
       setCmsReady(ready);
       setCmsLoading(false);
@@ -6456,10 +6470,22 @@ function App() {
   if (cmsLoading) {
     return (
       <div className="app-shell app-shell-loading">
-        <div className="cms-loading-card" role="status" aria-live="polite">
-          <div className="cms-loading-mark" aria-hidden="true"><span className="loading-path-orbit loading-path-one" /><span className="loading-path-orbit loading-path-two" /><span className="loading-path-signature">ک</span></div>
-          <strong>در حال آماده‌سازی کائنات‌چی</strong>
-          <span>مسیر تو، آرام‌آرام آماده می‌شود...</span>
+        <div className="cms-loading-splash" role="status" aria-live="polite">
+          <div className="cms-loading-orbit" aria-hidden="true">
+            <svg viewBox="0 0 160 160" focusable="false">
+              <circle className="splash-orbit-core" cx="80" cy="80" r="35" />
+              <ellipse className="splash-orbit-path splash-orbit-path-one" cx="80" cy="80" rx="65" ry="25" />
+              <ellipse className="splash-orbit-path splash-orbit-path-two" cx="80" cy="80" rx="65" ry="25" transform="rotate(-52 80 80)" />
+              <circle className="splash-orbit-dot" cx="132" cy="56" r="4" />
+              <circle className="splash-orbit-center" cx="80" cy="80" r="4" />
+            </svg>
+          </div>
+          <strong className="cms-loading-brand">کائنات‌چی</strong>
+          <span className="cms-loading-subtitle">در حال آماده‌سازی دنیای تو...</span>
+          <div className={`loading-progress ${cmsLoadProgress === null ? "is-indeterminate" : ""}`} role="progressbar" aria-label="پیشرفت بارگذاری" aria-valuemin={0} aria-valuemax={100} aria-valuenow={cmsLoadProgress === null ? undefined : cmsLoadProgress}>
+            <span style={cmsLoadProgress === null ? undefined : { width: `${cmsLoadProgress}%` }} />
+          </div>
+          {cmsLoadProgress !== null && <span className="loading-percent">{cmsLoadProgress}٪</span>}
         </div>
       </div>
     );
