@@ -2254,6 +2254,9 @@ function PathPersonalDashboard({
   const [vipPanel, setVipPanel] = useState<VipPanel | null>(null);
   const [slide, setSlide] = useState(0);
   const [hafezOpen, setHafezOpen] = useState(false);
+  const [hafezPoem, setHafezPoem] = useState<{ title: string; lines: string[]; sourceUrl: string } | null>(null);
+  const [hafezLoading, setHafezLoading] = useState(true);
+  const [hafezError, setHafezError] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const slides = [
     { eyebrow: "قدم بعدی تو", title: "مسیرت را با یک قدم کوچک ادامه بده.", body: "خدمات و تجربه‌هایی را پیدا کن که با حال‌وهوای امروزت هماهنگ‌اند.", action: "دیدن خدمات", run: () => onNavigate("services") },
@@ -2269,6 +2272,71 @@ function PathPersonalDashboard({
   useEffect(() => {
     const timer = window.setInterval(() => setSlide((current) => (current + 1) % 4), 20000);
     return () => window.clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    let active = true;
+    const dataRoot = "https://raw.githubusercontent.com/ganjoor/ganjoor-data/main";
+    const readJson = async (path: string) => {
+      const response = await fetch(dataRoot + path, { cache: "force-cache" });
+      if (!response.ok) throw new Error("HAFEZ_SOURCE_HTTP_" + response.status);
+      return response.json();
+    };
+    const loadDailyPoem = async () => {
+      try {
+        const root = await readJson("/poets/hafez/_cat.json");
+        const categories = (root.ChildCats || []).filter((category: any) =>
+          category && category.FullUrl && !String(category.Title || "").includes("منتسب")
+        );
+        const catalogs = await Promise.all(categories.map(async (category: any) => {
+          try { return await readJson("/poets" + category.FullUrl + "/_cat.json"); }
+          catch { return { Poems: [] }; }
+        }));
+        const allPoems = [
+          ...(root.Poems || []).map((poem: any) => ({ ...poem, categoryTitle: root.Title || "دیوان حافظ" })),
+          ...catalogs.flatMap((catalog: any, index: number) =>
+            (catalog.Poems || []).map((poem: any) => ({
+              ...poem,
+              categoryTitle: categories[index]?.Title || "دیوان حافظ",
+            }))
+          ),
+        ].filter((poem: any) => poem.FullUrl && poem.Id);
+        if (!allPoems.length) throw new Error("HAFEZ_CATALOG_EMPTY");
+        const dateParts = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit",
+        }).formatToParts(new Date());
+        const part = (type: string) => dateParts.find((item) => item.type === type)?.value || "";
+        const dayKey = part("year") + "-" + part("month") + "-" + part("day");
+        let hash = 2166136261;
+        for (const char of dayKey) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
+        const chosen = allPoems[(hash >>> 0) % allPoems.length];
+        const poemPath = chosen.FullUrl.replace(/\/$/, "") + ".json";
+        const poem = await readJson("/poets" + poemPath);
+        const sectionLines = (poem.Sections || [])
+          .filter((section: any) => section.SectionType === "WholePoem" || !section.SectionType)
+          .flatMap((section: any) => String(section.PlainText || "").split(/\r?\n/))
+          .map((line: string) => line.trim())
+          .filter(Boolean);
+        const lines = sectionLines.length
+          ? sectionLines
+          : (poem.Verses || []).map((verse: any) => String(verse.Text || "").trim()).filter(Boolean);
+        if (!lines.length) throw new Error("HAFEZ_POEM_EMPTY");
+        if (active) {
+          setHafezPoem({
+            title: chosen.Title || poem.Title || "شعری از دیوان حافظ",
+            lines,
+            sourceUrl: "https://ganjoor.net" + chosen.FullUrl,
+          });
+          setHafezError(false);
+        }
+      } catch (error) {
+        console.warn("[KaenatChi Hafez] poem source could not be loaded", error);
+        if (active) setHafezError(true);
+      } finally {
+        if (active) setHafezLoading(false);
+      }
+    };
+    void loadDailyPoem();
+    return () => { active = false; };
   }, []);
   if (vipPanel) return <VipPage initialPanel={vipPanel} onBack={() => setVipPanel(null)} />;
   const customer = vipData?.customer;
@@ -2305,12 +2373,18 @@ function PathPersonalDashboard({
       <button type="button" className="hafez-today-card" onClick={() => setHafezOpen(true)} aria-haspopup="dialog" aria-label="باز کردن حافظ امروز">
         <span className="hafez-card-ornament hafez-card-ornament-top" aria-hidden="true">❧</span>
         <span className="hafez-card-inner">
-          <span className="hafez-card-kicker">از دیوان حافظ</span>
+          <span className="hafez-card-kicker">از دیوان حافظ · گزیدهٔ امروز</span>
           <strong className="hafez-card-title">حافظِ امروز</strong>
           <span className="hafez-card-divider" aria-hidden="true"><i>✦</i></span>
-          <span className="hafez-card-verse" lang="fa" dir="rtl">الا یا ایها الساقی ادر کأساً و ناولها</span>
-          <span className="hafez-card-verse" lang="fa" dir="rtl">که عشق آسان نمود اول ولی افتاد مشکل‌ها</span>
-          <span className="hafez-card-open">خواندن غزل <span aria-hidden="true">←</span></span>
+          {hafezPoem ? (
+            <>
+              <span className="hafez-card-verse" lang="fa" dir="rtl">{hafezPoem.lines[0]}</span>
+              {hafezPoem.lines[1] && <span className="hafez-card-verse" lang="fa" dir="rtl">{hafezPoem.lines[1]}</span>}
+            </>
+          ) : (
+            <span className="hafez-card-verse">{hafezLoading ? "در حال گشودن دیوان…" : "برای دریافت شعر امروز لمس کن"}</span>
+          )}
+          <span className="hafez-card-open">خواندن شعر کامل <span aria-hidden="true">←</span></span>
         </span>
         <span className="hafez-card-ornament hafez-card-ornament-bottom" aria-hidden="true">❧</span>
       </button>
@@ -2324,14 +2398,24 @@ function PathPersonalDashboard({
           <section className="hafez-manuscript-modal" role="dialog" aria-modal="true" aria-labelledby="hafez-modal-title" onClick={(event) => event.stopPropagation()}>
             <button type="button" className="hafez-modal-close" onClick={() => setHafezOpen(false)} aria-label="بستن غزل">×</button>
             <div className="hafez-manuscript-frame">
-              <span className="hafez-modal-kicker">برگی از دیوان</span>
-              <h2 id="hafez-modal-title">حافظِ امروز</h2>
+              <span className="hafez-modal-kicker">برگی از دیوان حافظ · متن کامل</span>
+              <h2 id="hafez-modal-title">{hafezPoem?.title || "حافظِ امروز"}</h2>
               <span className="hafez-manuscript-flourish" aria-hidden="true">۞</span>
-              <div className="hafez-full-verse" lang="fa" dir="rtl">
-                <p>الا یا ایها الساقی ادر کأساً و ناولها</p>
-                <p>که عشق آسان نمود اول ولی افتاد مشکل‌ها</p>
-              </div>
-              <button type="button" className="hafez-modal-done" onClick={() => setHafezOpen(false)}>بازگشت به مسیر من</button>
+              {hafezLoading ? (
+                <p className="hafez-loading-message" role="status">در حال گشودن دیوان حافظ…</p>
+              ) : hafezPoem ? (
+                <div className="hafez-full-verse" lang="fa" dir="rtl">
+                  {Array.from({ length: Math.ceil(hafezPoem.lines.length / 2) }, (_, index) => hafezPoem.lines.slice(index * 2, index * 2 + 2)).map((couplet, index) => (
+                    <div className="hafez-couplet" key={index}>
+                      {couplet.map((line, lineIndex) => <p key={lineIndex}>{line}</p>)}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="hafez-loading-message" role="alert">دریافت شعر امروز ممکن نشد. لطفاً اتصال اینترنت را بررسی کن و دوباره تلاش کن.</p>
+              )}
+              {hafezPoem && <a className="hafez-source-link" href={hafezPoem.sourceUrl} target="_blank" rel="noreferrer">مشاهدهٔ متن و مشخصات در گنجور</a>}
+              <button type="button" className="hafez-modal-done" onClick={() => setHafezOpen(false)}>بستن دیوان</button>
             </div>
           </section>
         </div>
