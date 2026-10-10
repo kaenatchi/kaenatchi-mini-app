@@ -285,9 +285,9 @@ export default function MyPathExperience({ onBack, entry = "main" }: { onBack: (
     const ranked = scoreAxes(answers, data.followupAnswers);
     const next: PathData = { ...data, initialAnswers: answers, primaryAxis: ranked[0]?.id || null, secondaryAxis: ranked[1]?.id || null, stage: data.stage, completedStages: data.completedStages.filter(n => n !== 1) };
     persist(next, "پاسخت روی همین دستگاه ذخیره شد.");
-    const nextUnanswered = INITIAL.findIndex((_, i) => !Number.isInteger(answers[i]) && i > index);
     const firstUnanswered = INITIAL.findIndex((_, i) => !Number.isInteger(answers[i]));
-    setExpandedInitialIndex(nextUnanswered >= 0 ? nextUnanswered : firstUnanswered >= 0 ? firstUnanswered : null);
+    const nextIndex = index < INITIAL.length - 1 ? index + 1 : firstUnanswered;
+    setExpandedInitialIndex(nextIndex >= 0 ? nextIndex : null);
   };
   const startFollowups = () => {
     if (!data || !completedInitial) return;
