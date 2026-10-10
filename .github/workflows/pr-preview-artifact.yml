@@ -1,0 +1,43 @@
+name: PR Preview Artifact
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build preview
+        run: npm run build
+
+      - name: Upload preview artifact (does not deploy to GitHub Pages)
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaenatchi-pr30-preview-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_number }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
