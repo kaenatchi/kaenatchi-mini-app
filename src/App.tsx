@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "react";
 import { createPortal } from "react-dom";
 import { createInitialMyPath, loadMyPath, writeMyPath, type MyPath, type Stage1Answers } from "./myPathModel";
+import MyPathExperience from "./MyPathExperience";
 
 type Section = "home" | "services" | "booking" | "selected" | "more";
 
@@ -2599,6 +2600,8 @@ function SelectedPage({
   const secondary: React.CSSProperties = { width: "100%", border: "1px solid rgba(36,99,71,.2)", borderRadius: "16px", padding: "13px 16px", background: "rgba(36,99,71,.05)", color: "#246347", fontFamily: "inherit", fontSize: "13px", fontWeight: 600, cursor: "pointer" };
   const optionStyle: React.CSSProperties = { display: "block", width: "100%", textAlign: "right", padding: "15px", borderRadius: "16px", border: "1px solid rgba(36,99,71,.16)", background: "rgba(255,255,255,.72)", color: "inherit", fontFamily: "inherit", cursor: "pointer", lineHeight: 1.8 };
 
+  if (quizOnly && myPathMode) return <MyPathExperience entry="main" onBack={() => { setQuizOnly(false); setMyPathMode(false); setStage1Message(""); }} />;
+
   return (
     <div className="inner-page selected-page selected-growth-page">
       {!quizOnly && <>
@@ -2606,7 +2609,7 @@ function SelectedPage({
         <PathPersonalDashboard
           onNavigate={onNavigate}
           onOpenVip={onOpenVip}
-          onOpenQuiz={async () => { setQuizOnly(true); setMyPathMode(true); setStage1Message(""); setStage1Editing(false); setStage1Access("checking"); try { const identity = await loadTelegramIdentity(); const status = identity?.customer?.vipStatus; const active = Boolean(identity?.success && identity?.customer && (status === "فعال" || status === "active")); if (!active) { setStage1Access("denied"); return; } const loaded = loadMyPath(); if (loaded.status === "valid") { setMyPath(loaded.path); setStage1Answers(loaded.path.stages[1].answers); setStage1Screen(loaded.path.stages[1].status === "completed" ? "summary" : "form"); setMyPathReadIssue(null); } else if (loaded.status === "missing") { setMyPath(createInitialMyPath()); setStage1Answers({}); setStage1Screen("form"); setMyPathReadIssue(null); } else { setMyPath(null); setMyPathReadIssue(loaded.status); } setStage1Access("allowed"); } catch { setStage1Access("error"); } }}
+          onOpenQuiz={() => { setQuizOnly(true); setMyPathMode(true); setStage1Message(""); setStage1Editing(false); }}
           onOpenService={onOpenService}
         />
       </>}
@@ -4310,39 +4313,11 @@ function VipPage({
   ===================================================== */
 
   if (activePanel === "journey") {
-    const journeyItems = [
-      ["calendar", "نوبت‌ها", vipHistory.length],
-      ["ticket", "توکن‌ها", vipTokens.filter(token => getVipTokenDisplayStatus(token).label === "فعال").length],
-      ["card", "پرداخت‌ها", vipPayments.length],
-      ["class", "کلاس‌ها", vipClasses.length],
-      ["event", "ایونت‌ها", vipEvents.length],
-    ] as const;
     return (
-      <div className="inner-page">
-        <button type="button" onClick={() => setActivePanel("dashboard")} style={backButtonStyle}>← بازگشت به VIP</button>
-        <SectionHeaderCard kicker="MY JOURNEY" title="مسیر من" description="راهنمای کوتاه مسیر شخصی شما در کائنات‌چی." icon="spark" />
-        <div className="glass-list-card" style={{ display: "block", marginBottom: "14px" }}>
-          <div className="list-copy">
-            <strong>مسیر من چه چیزی را نشان می‌دهد؟</strong>
-            <span>اینجا می‌توانی یک نگاه کلی به همراهی‌ات با کائنات‌چی داشته باشی. برای دیدن جزئیات هر بخش، کارت مربوط به آن را در داشبورد VIP باز کن.</span>
-            <span>توکن فعال فقط توکنی است که هنوز استفاده نشده و زمان اعتبارش به پایان نرسیده باشد.</span>
-          </div>
-        </div>
-        <div className="vip-journey-stats" style={{ marginBottom: "16px" }}>
-          {journeyItems.map(([icon, label, value]) => (
-            <div className="vip-journey-stat" key={label}>
-              <div className="vip-journey-stat-icon"><Icon name={icon as IconName} /></div>
-              <div className="vip-journey-stat-copy"><strong>{Number(value).toLocaleString("fa-IR")}</strong><span>{label}</span></div>
-            </div>
-          ))}
-        </div>
-        <div className="glass-list-card" style={{ display: "block" }}>
-          <div className="list-copy">
-            <strong>قدم بعدی</strong>
-            <span>از داشبورد VIP یکی از بخش‌های نوبت‌ها، توکن‌ها، پرداخت‌ها، کلاس‌ها یا ایونت‌ها را انتخاب کن تا اطلاعات کامل همان بخش را ببینی.</span>
-          </div>
-        </div>
-      </div>
+      <MyPathExperience
+        entry="vip"
+        onBack={() => setActivePanel("dashboard")}
+      />
     );
   }
 
