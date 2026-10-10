@@ -3681,9 +3681,15 @@ function isVipTokenExpired(value: string): boolean {
     .replace(/[،٬]/g, "")
     .trim();
 
-  // Backend timestamps may arrive as ISO/Gregorian dates.
-  if (/^\d{4}-\d{2}-\d{2}(?:T|$)/.test(normalizedValue)) {
-    const timestamp = Date.parse(normalizedValue);
+  // Treat ISO dates as Gregorian only when the year is outside the Jalali
+  // range. Otherwise a Jalali date like 1405-07-09 would be parsed as Gregorian.
+  const isoGregorian = normalizedValue.match(/^(\d{4})-(\d{2})-(\d{2})(T.*)?$/);
+  if (isoGregorian && Number(isoGregorian[1]) > 1600) {
+    // A date-only expiry remains valid through the end of that day in Tehran.
+    const isoValue = isoGregorian[4]
+      ? normalizedValue
+      : `${normalizedValue}T23:59:59.999+03:30`;
+    const timestamp = Date.parse(isoValue);
     if (Number.isFinite(timestamp)) return timestamp <= Date.now();
   }
 
