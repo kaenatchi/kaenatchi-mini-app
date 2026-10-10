@@ -1975,7 +1975,7 @@ function TherapyIntakePage({
   };
 
   const submit = async () => {
-    if (!firstName.trim() || !lastName.trim() || !/^\\+?[0-9۰-۹٠-٩\\s()\\-]{10,20}$/.test(mobile.trim()) ||
+    if (!firstName.trim() || !lastName.trim() || !/^\+?[0-9۰-۹٠-٩\s()-]{10,20}$/.test(mobile.trim()) ||
       !privacyConsent || !accuracyConfirmed) {
       setMessage("نام، نام خانوادگی، شماره موبایل معتبر و هر دو تأیید الزامی هستند.");
       return;
@@ -1988,7 +1988,7 @@ function TherapyIntakePage({
       action: "createTherapyRequest", requestId,
       serviceType: isCandle ? "candle" : "psychotherapy",
       firstName: firstName.trim(), lastName: lastName.trim(),
-      mobile: normalizeDigits(mobile).replace(/[\\s()\\-]/g, ""),
+      mobile: normalizeDigits(mobile).replace(/[\s()-]/g, ""),
       telegramUsername: telegramUsername.trim().replace(/^@/, ""),
       reason, impact, duration, goal, previousSupport, contactPreference,
       freeText: freeText.trim(), privacyConsent, accuracyConfirmed
@@ -2116,7 +2116,7 @@ function TherapyIntakePage({
               </label>
               <div style={{display:"flex",gap:"8px"}}>
                 <button type="button" onClick={()=>{setMessage("");setStep(0);}} style={{flex:1,padding:"13px",borderRadius:"15px",background:"rgba(36,77,59,.08)",fontFamily:"inherit"}}>قبلی</button>
-                <button type="button" onClick={()=>{if(!firstName.trim()||!lastName.trim()||!/^\\+?[0-9۰-۹٠-٩\\s()\\-]{10,20}$/.test(mobile.trim())){setMessage("نام، نام خانوادگی و شماره موبایل معتبر را وارد کن.");return;}setMessage("");setStep(2);}} style={{flex:1,padding:"13px",borderRadius:"15px",background:"#244d3b",color:"#fff",fontFamily:"inherit",fontWeight:700}}>بازبینی</button>
+                <button type="button" onClick={()=>{if(!firstName.trim()||!lastName.trim()||!/^\+?[0-9۰-۹٠-٩\s()-]{10,20}$/.test(mobile.trim())){setMessage("نام، نام خانوادگی و شماره موبایل معتبر را وارد کن.");return;}setMessage("");setStep(2);}} style={{flex:1,padding:"13px",borderRadius:"15px",background:"#244d3b",color:"#fff",fontFamily:"inherit",fontWeight:700}}>بازبینی</button>
               </div>
             </div>
           )}
@@ -2144,7 +2144,7 @@ function TherapyIntakePage({
               </label>
               <div style={{display:"flex",gap:"8px"}}>
                 <button type="button" onClick={()=>{setMessage("");setStep(1);}} style={{flex:1,padding:"13px",borderRadius:"15px",background:"rgba(36,77,59,.08)",fontFamily:"inherit"}}>اصلاح اطلاعات</button>
-                <button type="button" disabled={submitting} onClick={()=>void submit()} style={{flex:1,padding:"13px",borderRadius:"15px",background:"#244d3b",color:"#fff",fontFamily:"inherit",fontWeight:700,opacity:submitting?.7:1}}>{submitting ? "در حال ثبت..." : "ثبت درخواست"}</button>
+                <button type="button" disabled={submitting} onClick={()=>void submit()} style={{flex:1,padding:"13px",borderRadius:"15px",background:"#244d3b",color:"#fff",fontFamily:"inherit",fontWeight:700,opacity: submitting ? 0.7 : 1}}>{submitting ? "در حال ثبت..." : "ثبت درخواست"}</button>
               </div>
             </div>
           )}
