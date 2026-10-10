@@ -5124,3 +5124,51 @@ button {
   .hafez-full-verse { font-size: 16px; }
   .hafez-couplet { padding-block: 10px 12px; }
 }
+
+
+/* MY PATH — cohesive quiz cards, touch feedback and accessible dark mode */
+.selected-growth-page .growth-quiz-card,
+.selected-growth-page .growth-quiz-card button {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms ease,
+    border-color 180ms ease, background-color 180ms ease;
+}
+.selected-growth-page .growth-quiz-card button:active {
+  transform: scale(.975);
+  box-shadow: 0 7px 18px rgba(23,56,43,.12);
+}
+.selected-growth-page .growth-quiz-card button[aria-pressed="true"] {
+  border-color: rgba(36,99,71,.68) !important;
+  background: rgba(36,99,71,.11) !important;
+}
+.selected-growth-page .growth-quiz-card:not(.growth-quiz-intro) {
+  border-radius: 22px;
+}
+.selected-growth-page .growth-welcome {
+  background: linear-gradient(145deg, #244d3b 0%, #1b4432 58%, #17382b 100%);
+  border: 1px solid rgba(218,232,220,.12);
+}
+@media (prefers-color-scheme: dark) {
+  .selected-growth-page .growth-quiz-card button:not([style*="background: linear-gradient"]) {
+    color: #e4eee6 !important;
+    border-color: rgba(205,224,209,.2) !important;
+    background: rgba(218,232,220,.07) !important;
+  }
+  .selected-growth-page .growth-quiz-card button[aria-pressed="true"] {
+    color: #f0f6f1 !important;
+    border-color: rgba(164,205,177,.72) !important;
+    background: rgba(93,147,108,.25) !important;
+    box-shadow: inset 0 0 0 1px rgba(164,205,177,.12);
+  }
+  .selected-growth-page .growth-quiz-card h2,
+  .selected-growth-page .growth-quiz-card h3,
+  .selected-growth-page .growth-quiz-card strong { color: #edf4ee !important; }
+  .selected-growth-page .growth-quiz-card p,
+  .selected-growth-page .growth-quiz-card label,
+  .selected-growth-page .growth-quiz-card small { color: #c5d2c8 !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .selected-growth-page .growth-quiz-card,
+  .selected-growth-page .growth-quiz-card button { transition: none !important; }
+  .selected-growth-page .growth-quiz-card button:active { transform: none !important; }
+}
