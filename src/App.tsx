@@ -2508,6 +2508,7 @@ function SelectedPage({
   const [checkingVip, setCheckingVip] = useState(false);
   const [vipMessage, setVipMessage] = useState("");
   const [vipActive, setVipActive] = useState(false);
+  const [quizPageOpen, setQuizPageOpen] = useState(false);
   useEffect(() => { try { window.localStorage.setItem(KEY, JSON.stringify(progress)); } catch {} }, [progress]);
 
   const totals: Record<Profile, number> = { calm: 0, clarity: 0, habits: 0, exploration: 0 };
@@ -2555,8 +2556,13 @@ function SelectedPage({
 
   return (
     <div className="inner-page selected-page selected-growth-page">
-      <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>مسیر من</h1><p>قدم‌به‌قدم، متناسب با خودت.</p></div><div className="selected-intro-line" /></section>
-      <PathPersonalDashboard onNavigate={onNavigate} onOpenVip={onOpenVip} onOpenQuiz={() => { document.getElementById("growth-quiz-start")?.scrollIntoView({ behavior: "smooth", block: "start" }); }} onOpenService={onOpenService} />
+      {!quizPageOpen && <>
+        <section className="selected-intro"><div className="selected-intro-mark"><Icon name="footsteps" /></div><div className="selected-intro-copy"><span>YOUR PERSONAL PATH</span><h1>مسیر من</h1><p>قدم‌به‌قدم، متناسب با خودت.</p></div><div className="selected-intro-line" /></section>
+        <PathPersonalDashboard onNavigate={onNavigate} onOpenVip={onOpenVip} onOpenQuiz={() => setQuizPageOpen(true)} onOpenService={onOpenService} />
+      </>}
+      {quizPageOpen && <div className="selected-quiz-subpage">
+        <button type="button" className="selected-quiz-back" onClick={() => setQuizPageOpen(false)}>← بازگشت به مسیر من</button>
+        <section className="selected-quiz-page-heading"><span>YOUR PERSONAL PATH</span><h1>آزمون و مراحل مسیر من</h1><p>آزمون اولیه، نتیجه و قدم بعدی‌ات را اینجا دنبال کن.</p></section>
       <section id="growth-quiz-start" className="growth-welcome">
         <div className="growth-welcome-orbit growth-orbit-one" /><div className="growth-welcome-orbit growth-orbit-two" />
         <span className="growth-kicker">مسیر من · مسیر رشد</span>
@@ -2594,6 +2600,7 @@ function SelectedPage({
       </section>
       <section className="growth-footer"><div><span>مسیر تو، انتخاب توست</span><strong>هر وقت خواستی، از نو شروع کن.</strong></div><button type="button" onClick={reset}>شروع دوباره</button></section>
       <p className="growth-storage-note">پیشرفت این نسخه روی همین دستگاه ذخیره می‌شود و بین دستگاه‌ها همگام نیست. دسترسی VIP هنگام ادامه از سامانهٔ عضویت بررسی می‌شود.</p>
+      </div>}
     </div>
   );
 }
