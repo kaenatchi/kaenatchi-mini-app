@@ -1986,29 +1986,29 @@ function ServicesPage({
     {
       id: "energy",
       title: "انرژی‌خوانی",
-      description: "خوانش‌های احساسی، شغلی، مالی و عمومی؛ محتوای خدمات از CMS خوانده می‌شود.",
+      description: "هر ۱۰ خدمت انرژی‌خوانی، با فیلترهای احساسی، شغلی و عمومی.",
       icon: "energy",
     },
     {
-      id: "candle",
-      title: "شمع‌تراپی",
-      description: "خدمات شمع‌تراپی؛ جزئیات و قیمت از CMS خوانده می‌شود.",
+      id: "therapy",
+      title: "تراپی",
+      description: "دو مسیر برای انتخاب: شمع‌تراپی و سایکو‌تراپی.",
       icon: "candle",
-    },
-    {
-      id: "psychotherapy",
-      title: "سایکو‌تراپی",
-      description: "خدمات گفت‌وگو و سایکو‌تراپی؛ جزئیات از CMS خوانده می‌شود.",
-      icon: "conversation",
     },
   ];
 
   const categoryServices =
     activeCategory === "energy"
       ? energyServices
-      : activeCategory
-        ? mainServices.filter((service) => service.category === activeCategory)
-        : [];
+      : activeCategory === "therapy"
+        ? mainServices.filter((service) =>
+            service.category === "candle" ||
+            service.category === "psychotherapy" ||
+            service.category === "therapy"
+          )
+        : activeCategory
+          ? mainServices.filter((service) => service.category === activeCategory)
+          : [];
 
   const filteredEnergyServices =
     energyFilter === "all"
@@ -2026,7 +2026,15 @@ function ServicesPage({
   const visibleServices =
     activeCategory === "energy"
       ? filteredEnergyServices
-      : categoryServices;
+      : activeCategory === "therapy"
+        ? therapyFilter
+          ? categoryServices.filter((service) =>
+              therapyFilter === "candle"
+                ? service.category === "candle" || (service.category === "therapy" && /شمع/.test(service.title))
+                : service.category === "psychotherapy" || (service.category === "therapy" && /سایکو|مشاوره|گفت.?وگو/.test(service.title))
+            )
+          : []
+        : categoryServices;
 
   const openCategory = (category: ServiceCategory) => {
     setEnergyFilter("all");
@@ -2127,6 +2135,25 @@ function ServicesPage({
               </strong>
             </div>
           </div>
+
+          {activeCategory === "therapy" && (
+            <div className="services-filter-row therapy-filter-row" aria-label="زیرگروه‌های تراپی">
+              {([
+                ["candle", "شمع‌تراپی"],
+                ["psychotherapy", "سایکو‌تراپی"],
+              ] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={"services-filter-chip " + (therapyFilter === id ? "active" : "")}
+                  aria-pressed={therapyFilter === id}
+                  onClick={() => setTherapyFilter((current) => current === id ? null : id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {activeCategory === "energy" && (
             <div className="services-filter-row" aria-label="فیلتر انرژی‌خوانی">
