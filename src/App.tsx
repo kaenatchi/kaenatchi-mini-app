@@ -2319,7 +2319,7 @@ function PathPersonalDashboard({
         <div className="path-live-copy" key={slide} aria-live="polite"><h2>{activeSlide.title}</h2><p>{activeSlide.body}</p><button type="button" onClick={activeSlide.run}>{activeSlide.action} <Icon name="arrow" /></button></div>
         <div className="path-live-controls"><button type="button" onClick={() => moveSlide(-1)} aria-label="اسلاید قبلی"><Icon name="arrow" /></button><div className="path-live-dots">{slides.map((item, index) => <button key={item.eyebrow} type="button" className={index === slide ? "active" : ""} onClick={() => setSlide(index)} aria-label={"رفتن به اسلاید " + (index + 1)} aria-current={index === slide ? "true" : undefined} />)}</div><button type="button" onClick={() => moveSlide(1)} aria-label="اسلاید بعدی"><Icon name="arrow" /></button></div>
       </section>
-      {hafezOpen && (
+      {hafezOpen && createPortal((
         <div className="hafez-modal-backdrop" role="presentation" onClick={() => setHafezOpen(false)}>
           <section className="hafez-manuscript-modal" role="dialog" aria-modal="true" aria-labelledby="hafez-modal-title" onClick={(event) => event.stopPropagation()}>
             <button type="button" className="hafez-modal-close" onClick={() => setHafezOpen(false)} aria-label="بستن غزل">×</button>
@@ -2331,12 +2331,11 @@ function PathPersonalDashboard({
                 <p>الا یا ایها الساقی ادر کأساً و ناولها</p>
                 <p>که عشق آسان نمود اول ولی افتاد مشکل‌ها</p>
               </div>
-              <p className="hafez-preview-note">پیش‌نمایش طراحی · متن کامل غزل و انتخاب روزانه در مرحلهٔ بعد تکمیل می‌شود.</p>
               <button type="button" className="hafez-modal-done" onClick={() => setHafezOpen(false)}>بازگشت به مسیر من</button>
             </div>
           </section>
         </div>
-      )}
+      ), document.body)}
     </section>
   );
 }
