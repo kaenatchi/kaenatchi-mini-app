@@ -148,6 +148,8 @@ export default function MyPathExperience({ onBack, entry = "main" }: { onBack: (
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [showEditInitial, setShowEditInitial] = useState(false);
+  // Keep the stage selector close action available in the PR merge preview.
+  const [, setShowStagePicker] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
