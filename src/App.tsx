@@ -2253,6 +2253,7 @@ function PathPersonalDashboard({
   const [vipData, setVipData] = useState<VipApiResponse | null>(null);
   const [vipPanel, setVipPanel] = useState<VipPanel | null>(null);
   const [slide, setSlide] = useState(0);
+  const [hafezOpen, setHafezOpen] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const slides = [
     { eyebrow: "قدم بعدی تو", title: "مسیرت را با یک قدم کوچک ادامه بده.", body: "خدمات و تجربه‌هایی را پیدا کن که با حال‌وهوای امروزت هماهنگ‌اند.", action: "دیدن خدمات", run: () => onNavigate("services") },
@@ -2301,11 +2302,41 @@ function PathPersonalDashboard({
           <button type="button" className="path-vip-invite-button" onClick={requestVip}>آشنایی با باشگاه VIP <Icon name="arrow" /></button>
         )}
       </section>
+      <button type="button" className="hafez-today-card" onClick={() => setHafezOpen(true)} aria-haspopup="dialog" aria-label="باز کردن حافظ امروز">
+        <span className="hafez-card-ornament hafez-card-ornament-top" aria-hidden="true">❧</span>
+        <span className="hafez-card-inner">
+          <span className="hafez-card-kicker">از دیوان حافظ</span>
+          <strong className="hafez-card-title">حافظِ امروز</strong>
+          <span className="hafez-card-divider" aria-hidden="true"><i>✦</i></span>
+          <span className="hafez-card-verse" lang="fa" dir="rtl">الا یا ایها الساقی ادر کأساً و ناولها</span>
+          <span className="hafez-card-verse" lang="fa" dir="rtl">که عشق آسان نمود اول ولی افتاد مشکل‌ها</span>
+          <span className="hafez-card-open">خواندن غزل <span aria-hidden="true">←</span></span>
+        </span>
+        <span className="hafez-card-ornament hafez-card-ornament-bottom" aria-hidden="true">❧</span>
+      </button>
       <section className="path-live-carousel" aria-roledescription="carousel" aria-label="پیشنهادهای مسیر من" onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={(event) => { const start = touchStartX.current; touchStartX.current = null; if (start === null) return; const end = event.changedTouches[0]?.clientX; if (end === undefined) return; const delta = end - start; if (Math.abs(delta) > 40) moveSlide(delta < 0 ? 1 : -1); }}>
         <div className="path-live-topline"><span>{activeSlide.eyebrow}</span><span className="path-live-index">{(slide + 1).toLocaleString("fa-IR")} / {slides.length.toLocaleString("fa-IR")}</span></div>
         <div className="path-live-copy" key={slide} aria-live="polite"><h2>{activeSlide.title}</h2><p>{activeSlide.body}</p><button type="button" onClick={activeSlide.run}>{activeSlide.action} <Icon name="arrow" /></button></div>
         <div className="path-live-controls"><button type="button" onClick={() => moveSlide(-1)} aria-label="اسلاید قبلی"><Icon name="arrow" /></button><div className="path-live-dots">{slides.map((item, index) => <button key={item.eyebrow} type="button" className={index === slide ? "active" : ""} onClick={() => setSlide(index)} aria-label={"رفتن به اسلاید " + (index + 1)} aria-current={index === slide ? "true" : undefined} />)}</div><button type="button" onClick={() => moveSlide(1)} aria-label="اسلاید بعدی"><Icon name="arrow" /></button></div>
       </section>
+      {hafezOpen && (
+        <div className="hafez-modal-backdrop" role="presentation" onClick={() => setHafezOpen(false)}>
+          <section className="hafez-manuscript-modal" role="dialog" aria-modal="true" aria-labelledby="hafez-modal-title" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="hafez-modal-close" onClick={() => setHafezOpen(false)} aria-label="بستن غزل">×</button>
+            <div className="hafez-manuscript-frame">
+              <span className="hafez-modal-kicker">برگی از دیوان</span>
+              <h2 id="hafez-modal-title">حافظِ امروز</h2>
+              <span className="hafez-manuscript-flourish" aria-hidden="true">۞</span>
+              <div className="hafez-full-verse" lang="fa" dir="rtl">
+                <p>الا یا ایها الساقی ادر کأساً و ناولها</p>
+                <p>که عشق آسان نمود اول ولی افتاد مشکل‌ها</p>
+              </div>
+              <p className="hafez-preview-note">پیش‌نمایش طراحی · متن کامل غزل و انتخاب روزانه در مرحلهٔ بعد تکمیل می‌شود.</p>
+              <button type="button" className="hafez-modal-done" onClick={() => setHafezOpen(false)}>بازگشت به مسیر من</button>
+            </div>
+          </section>
+        </div>
+      )}
     </section>
   );
 }
