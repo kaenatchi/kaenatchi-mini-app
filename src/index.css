@@ -4739,3 +4739,38 @@ button {
   }
   .app-shell .nav-fab-actions .nav-fab-action :is(span,strong,small) { color:#edf3ed!important; }
 }
+
+
+/* KaenatChi splash: open orbital mark, no white logo tile/card. */
+.app-shell-loading { min-height:var(--tg-viewport-height,100dvh); min-height:100vh; min-height:100svh; display:grid; place-items:center; padding:max(24px,env(safe-area-inset-top)) 28px max(28px,env(safe-area-inset-bottom)); background:radial-gradient(circle at 50% 43%,rgba(102,128,110,.12),transparent 31%),linear-gradient(145deg,#f7f2e9 0%,#f1ecdf 52%,#e9eee8 100%); }
+.cms-loading-splash { width:min(100%,340px); display:flex; flex-direction:column; align-items:center; text-align:center; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.cms-loading-orbit { width:clamp(168px,46vw,188px); height:clamp(168px,46vw,188px); margin:0 auto 23px; color:#244d3b; overflow:visible; filter:drop-shadow(0 0 12px rgba(102,128,110,.16)); animation:splashLogoBreath 4s ease-in-out infinite; }
+.cms-loading-orbit svg { display:block; width:100%; height:100%; overflow:visible; }
+.splash-orbit-core { fill:none; stroke:rgba(36,77,59,.58); stroke-width:1.5; }
+.splash-orbit-path { fill:none; stroke:#66806e; stroke-width:1.6; transform-origin:80px 80px; }
+.splash-orbit-path-one { animation:splashOrbitSpin 14s linear infinite; }
+.splash-orbit-path-two { stroke:rgba(164,139,93,.86); stroke-width:1.35; animation:splashOrbitSpinReverse 19s linear infinite; }
+.splash-orbit-dot { fill:#a48b5d; transform-origin:80px 80px; animation:splashOrbitPulse 2.5s ease-in-out infinite; }
+.splash-orbit-center { fill:#244d3b; }
+.cms-loading-brand { display:block; color:#17382b; font-size:25px; line-height:1.6; font-weight:800; letter-spacing:-.4px; }
+.cms-loading-subtitle { display:block; margin-top:5px; color:#718078; font-size:12px; line-height:1.9; }
+.cms-loading-splash .loading-progress { width:min(100%,270px); height:5px; margin-top:32px; overflow:hidden; border-radius:999px; background:rgba(36,77,59,.13); }
+.cms-loading-splash .loading-progress > span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#b7c7ad,#246347,#a48b5d); transition:width .22s ease; }
+.cms-loading-splash .loading-progress.is-indeterminate > span { width:36%; animation:splashProgressIndeterminate 1.25s ease-in-out infinite; }
+.cms-loading-splash .loading-percent { margin-top:9px; color:#536b52; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; }
+@keyframes splashLogoBreath { 0%,100% { filter:drop-shadow(0 0 8px rgba(102,128,110,.12)); } 50% { filter:drop-shadow(0 0 23px rgba(102,128,110,.34)); } }
+@keyframes splashOrbitSpin { to { transform:rotate(360deg); } }
+@keyframes splashOrbitSpinReverse { to { transform:rotate(-360deg); } }
+@keyframes splashOrbitPulse { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+@keyframes splashProgressIndeterminate { 0% { transform:translateX(280%); } 100% { transform:translateX(-280%); } }
+@media (prefers-color-scheme:dark) {
+  .app-shell-loading { background:radial-gradient(circle at 50% 43%,rgba(102,128,110,.13),transparent 32%),linear-gradient(145deg,#151b18 0%,#1a211d 52%,#202923 100%); }
+  .cms-loading-brand { color:#edf4ef; }
+  .cms-loading-subtitle { color:#b2c0b7; }
+  .cms-loading-splash .loading-progress { background:rgba(218,232,220,.14); }
+  .cms-loading-splash .loading-percent { color:#d5e1d7; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .cms-loading-orbit,.splash-orbit-path-one,.splash-orbit-path-two,.splash-orbit-dot,.cms-loading-splash .loading-progress.is-indeterminate > span { animation:none!important; }
+  .cms-loading-splash .loading-progress > span { transition:none!important; }
+}
