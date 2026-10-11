@@ -6355,10 +6355,10 @@ function BookingPage({
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
           <strong>۲. انتخاب زمان</strong>
-          <span>فقط نزدیک‌ترین روز کاری آینده نمایش داده می‌شود؛ پنجشنبه و جمعه معمولاً نوبت بعدی شنبه است.</span>
+          <span>تقویم به‌صورت خودکار روی فردا قرار می‌گیرد؛ امروز و روزهای بعد از فردا قابل انتخاب نیستند.</span>
         </div>
 
-        <div style={{marginTop:"12px",padding:"14px",borderRadius:"20px",border:"1px solid rgba(36,99,71,.16)",background:"linear-gradient(135deg,rgba(255,255,255,.88),rgba(232,239,229,.78))",boxShadow:"0 8px 22px rgba(53,59,50,.06)"}}>
+        <button type="button" onClick={()=>{setDate(tomorrowInfo.date);setTime("");}} style={{width:"100%",textAlign:"right",fontFamily:"inherit",cursor:"pointer",marginTop:"12px",padding:"14px",borderRadius:"20px",border:"1px solid rgba(36,99,71,.16)",background:"linear-gradient(135deg,rgba(255,255,255,.88),rgba(232,239,229,.78))",boxShadow:"0 8px 22px rgba(53,59,50,.06)"}}>
           <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
             <div style={{width:"58px",minWidth:"58px",borderRadius:"15px",overflow:"hidden",textAlign:"center",border:"1px solid rgba(36,99,71,.16)",background:"rgba(255,255,255,.72)"}}>
               <div style={{padding:"5px",fontSize:"10px",fontWeight:700,color:"#fff",background:isTomorrowClosed?"#9a5141":"#496b53"}}>فردا</div>
@@ -6371,7 +6371,7 @@ function BookingPage({
             </div>
             <span style={{fontSize:"12px",fontWeight:800,color:isTomorrowClosed?"#9a5141":"#496b53"}}>{isTomorrowClosed?"⛔️":"✓"}</span>
           </div>
-        </div>
+        </button>
 
         {isTomorrowClosed && (
           <div role="status" style={{marginTop:"10px",padding:"11px 13px",borderRadius:"15px",background:"rgba(180,80,45,.08)",border:"1px solid rgba(180,80,45,.16)",fontSize:"12px",lineHeight:1.9,color:"#824b35"}}>
