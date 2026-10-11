@@ -6004,7 +6004,10 @@ function BookingPage({
       const reason = String(explicitClosure.reason || "").trim();
       return "⛔️ تعطیل" + (reason ? " — " + reason : "") + " · " + String(slot.time);
     }
-    return "❌ رزرو شده · " + String(slot.time);
+    if (status === "HELD" || status === "CONFIRMED") {
+      return "❌ رزرو شده · " + String(slot.time);
+    }
+    return "⛔️ در دسترس نیست · " + String(slot.time);
   };
 
   const categoryGroups: Array<{
