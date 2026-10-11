@@ -6380,34 +6380,34 @@ function BookingPage({
             <div>برای روز دیگری امکان ثبت نوبت وجود ندارد.</div>
           </div>
         )}
-        <div style={{marginTop:"10px",fontSize:"12px",fontWeight:700,color:"#526256"}}>☀️ نوبت‌های صبح</div>
-        <select
-          value={morningSlots.some((slot) => String(slot.time) === time) ? time : ""}
-          onChange={(e)=>setTime(e.target.value)}
-          disabled={!date}
-          style={{...inputBaseStyle,appearance:"none",WebkitAppearance:"none",marginTop:"6px",opacity:date ? 1 : .6}}
-        >
-          <option value="">{date ? (morningSlots.length ? "انتخاب ساعت صبح" : "نوبت صبح ندارد") : "ابتدا تاریخ را انتخاب کن"}</option>
-          {morningSlots.map((item) => {
-            const status = String(item.status || "").toUpperCase();
-            const selectable = (item.available === true || String(item.available).toLowerCase() === "true") && (!status || status === "FREE");
-            return <option key={String(item.time)} value={selectable ? String(item.time) : ""} disabled={!selectable}>{slotDisplay(item)}</option>;
-          })}
-        </select>
-        <div style={{marginTop:"12px",fontSize:"12px",fontWeight:700,color:"#526256"}}>🌇 نوبت‌های عصر</div>
-        <select
-          value={eveningSlots.some((slot) => String(slot.time) === time) ? time : ""}
-          onChange={(e)=>setTime(e.target.value)}
-          disabled={!date}
-          style={{...inputBaseStyle,appearance:"none",WebkitAppearance:"none",marginTop:"6px",opacity:date ? 1 : .6}}
-        >
-          <option value="">{date ? (eveningSlots.length ? "انتخاب ساعت عصر" : "نوبت عصر ندارد") : "ابتدا تاریخ را انتخاب کن"}</option>
-          {eveningSlots.map((item) => {
-            const status = String(item.status || "").toUpperCase();
-            const selectable = (item.available === true || String(item.available).toLowerCase() === "true") && (!status || status === "FREE");
-            return <option key={String(item.time)} value={selectable ? String(item.time) : ""} disabled={!selectable}>{slotDisplay(item)}</option>;
-          })}
-        </select>
+        <div style={{display:"grid",gap:"10px",marginTop:"12px"}}>
+          <details open style={{border:"1px solid rgba(36,99,71,.14)",borderRadius:"16px",background:"rgba(255,255,255,.62)",overflow:"hidden"}}>
+            <summary style={{cursor:"pointer",listStyle:"none",padding:"13px 14px",fontSize:"13px",fontWeight:800,color:"#244b37",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span>☀️ نوبت‌های صبح</span><span style={{fontSize:"11px",fontWeight:600,color:"#667268"}}>{morningSlots.length ? String(morningSlots.length) + " زمان" : "نوبتی تعریف نشده"}</span>
+            </summary>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:"8px",padding:"0 12px 12px"}}>
+              {morningSlots.length ? morningSlots.map((item) => {
+                const status = String(item.status || "").toUpperCase();
+                const selectable = (item.available === true || String(item.available).toLowerCase() === "true") && (!status || status === "FREE");
+                const selected = time === String(item.time);
+                return <button key={String(item.time)} type="button" disabled={!selectable} onClick={()=>setTime(String(item.time))} style={{padding:"12px 8px",borderRadius:"12px",border:selected?"1px solid #477657":"1px solid rgba(36,99,71,.14)",background:selected?"rgba(36,99,71,.12)":"rgba(255,255,255,.8)",color:selectable?"#244b37":"#8a8e88",fontSize:"12px",fontWeight:700,boxShadow:selected?"0 4px 12px rgba(36,99,71,.12)":"0 2px 7px rgba(30,40,30,.04)",opacity:selectable?1:.78,cursor:selectable?"pointer":"not-allowed"}}>{slotDisplay(item)}</button>;
+              }) : <div style={{gridColumn:"1 / -1",padding:"5px 2px",fontSize:"12px",color:"#777f77"}}>{date ? "برای این روز نوبت صبح تعریف نشده است." : "ابتدا تاریخ را انتخاب کن."}</div>}
+            </div>
+          </details>
+          <details style={{border:"1px solid rgba(36,99,71,.14)",borderRadius:"16px",background:"rgba(255,255,255,.62)",overflow:"hidden"}}>
+            <summary style={{cursor:"pointer",listStyle:"none",padding:"13px 14px",fontSize:"13px",fontWeight:800,color:"#244b37",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span>🌇 نوبت‌های عصر</span><span style={{fontSize:"11px",fontWeight:600,color:"#667268"}}>{eveningSlots.length ? String(eveningSlots.length) + " زمان" : "نوبتی تعریف نشده"}</span>
+            </summary>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:"8px",padding:"0 12px 12px"}}>
+              {eveningSlots.length ? eveningSlots.map((item) => {
+                const status = String(item.status || "").toUpperCase();
+                const selectable = (item.available === true || String(item.available).toLowerCase() === "true") && (!status || status === "FREE");
+                const selected = time === String(item.time);
+                return <button key={String(item.time)} type="button" disabled={!selectable} onClick={()=>setTime(String(item.time))} style={{padding:"12px 8px",borderRadius:"12px",border:selected?"1px solid #477657":"1px solid rgba(36,99,71,.14)",background:selected?"rgba(36,99,71,.12)":"rgba(255,255,255,.8)",color:selectable?"#244b37":"#8a8e88",fontSize:"12px",fontWeight:700,boxShadow:selected?"0 4px 12px rgba(36,99,71,.12)":"0 2px 7px rgba(30,40,30,.04)",opacity:selectable?1:.78,cursor:selectable?"pointer":"not-allowed"}}>{slotDisplay(item)}</button>;
+              }) : <div style={{gridColumn:"1 / -1",padding:"5px 2px",fontSize:"12px",color:"#777f77"}}>{date ? "برای این روز نوبت عصر تعریف نشده است." : "ابتدا تاریخ را انتخاب کن."}</div>}
+            </div>
+          </details>
+        </div>
         {renderBookingContent(["booking_guide", "date_time_guide"])}
       </div>
 
