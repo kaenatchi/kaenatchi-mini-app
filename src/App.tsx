@@ -5411,8 +5411,22 @@ function BookingPage({
     ["energy", "candle", "psychotherapy"].includes(service.category)
   );
 
+  const normalizeBookingServiceName = (value: unknown) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/[\\u200c\\u200f\\u200e\\s_-]+/g, "")
+      .toLocaleLowerCase("fa");
+
+  // CMS service IDs and booking-backend IDs are not guaranteed to match.
+  // Resolve by normalized Persian name before falling back to the CMS card,
+  // so price and duration come from the authoritative booking service record.
   const selectedService =
     bookingServices.find((item) => item.id === serviceId) ||
+    bookingServices.find(
+      (item) =>
+        normalizeBookingServiceName(item.title) ===
+        normalizeBookingServiceName(initialService?.title)
+    ) ||
     initialService ||
     null;
   const basePrice =
