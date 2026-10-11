@@ -6376,7 +6376,7 @@ function BookingPage({
         {isTomorrowClosed && (
           <div role="status" style={{marginTop:"10px",padding:"11px 13px",borderRadius:"15px",background:"rgba(180,80,45,.08)",border:"1px solid rgba(180,80,45,.16)",fontSize:"12px",lineHeight:1.9,color:"#824b35"}}>
             <strong>⛔️ تعطیل — {tomorrowInfo.date}</strong>
-            {String(tomorrowClosure?.reason || upcomingClosure.reason || "").trim() ? <span> · {String(tomorrowClosure?.reason || upcomingClosure.reason)}</span> : null}
+            {String(tomorrowClosure?.reason || upcomingClosure?.reason || "").trim() ? <span> · {String(tomorrowClosure?.reason || upcomingClosure?.reason)}</span> : null}
             <div>برای روز دیگری امکان ثبت نوبت وجود ندارد.</div>
           </div>
         )}
