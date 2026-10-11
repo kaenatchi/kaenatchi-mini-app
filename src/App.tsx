@@ -5376,6 +5376,7 @@ function BookingPage({
     workHours: Array<Record<string, unknown>>;
     blockedSlots: Array<Record<string, unknown>>;
     bookedSlots: Array<Record<string, unknown>>;
+    closures: Array<Record<string, unknown>>;
     settings: Record<string, unknown>;
   };
 
@@ -6234,7 +6235,7 @@ function BookingPage({
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
           <strong>۲. انتخاب زمان</strong>
-          <span>نزدیک‌ترین روز کاری بعد از امروز نمایش داده می‌شود؛ پنجشنبه و جمعه، نوبت بعدی شنبه است.</span>
+          <span>فقط نزدیک‌ترین روز کاری آینده نمایش داده می‌شود؛ پنجشنبه و جمعه معمولاً نوبت بعدی شنبه است.</span>
         </div>
 
         <select
