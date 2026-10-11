@@ -1348,6 +1348,81 @@ function getTodayJalaliKey() {
   }
 }
 
+function getTomorrowJalaliInfo() {
+  try {
+    const gregorianParts = new Intl.DateTimeFormat("en-CA", {
+      year: "numeric", month: "2-digit", day: "2-digit",
+      timeZone: "Asia/Tehran",
+    }).formatToParts(new Date());
+    const part = (type: string) => Number(gregorianParts.find((item) => item.type === type)?.value || 0);
+    const tomorrow = new Date(Date.UTC(part("year"), part("month") - 1, part("day") + 1, 12));
+    const jalaliParts = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+      year: "numeric", month: "2-digit", day: "2-digit",
+      timeZone: "Asia/Tehran",
+    }).formatToParts(tomorrow);
+    const jalaliPart = (type: string) => jalaliParts.find((item) => item.type === type)?.value || "";
+    const year = jalaliPart("year");
+    const month = jalaliPart("month");
+    const day = jalaliPart("day");
+    const dayOfWeek = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+      weekday: "long", timeZone: "Asia/Tehran",
+    }).format(tomorrow);
+    return {
+      date: year && month && day ? year + "/" + month.padStart(2, "0") + "/" + day.padStart(2, "0") : "",
+      dayOfWeek,
+    };
+  } catch {
+    return { date: "", dayOfWeek: "" };
+  }
+}
+
+function getTomorrowJalaliCalendar() {
+  const tomorrowInfo = getTomorrowJalaliInfo();
+  const tomorrowKey = normalizeJalaliKey(tomorrowInfo.date);
+  if (!tomorrowKey) return { monthLabel: "", days: [] as Array<{ day: number; date: string; weekdayIndex: number }> };
+
+  try {
+    const gregorianParts = new Intl.DateTimeFormat("en-CA", {
+      year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Tehran",
+    }).formatToParts(new Date());
+    const part = (type: string) => Number(gregorianParts.find((item) => item.type === type)?.value || 0);
+    const center = new Date(Date.UTC(part("year"), part("month") - 1, part("day") + 1, 12));
+    const jalaliFormatter = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+      year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Tehran",
+    });
+    const weekdayFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+      weekday: "long", timeZone: "Asia/Tehran",
+    });
+    const weekdayIndexes: Record<string, number> = {
+      "شنبه": 0, "یکشنبه": 1, "دوشنبه": 2, "سهشنبه": 3,
+      "چهارشنبه": 4, "پنجشنبه": 5, "جمعه": 6,
+    };
+    const days: Array<{ day: number; date: string; weekdayIndex: number }> = [];
+    let monthLabel = "";
+    for (let offset = -40; offset <= 40; offset++) {
+      const current = new Date(center.getTime() + offset * 86400000);
+      const parts = jalaliFormatter.formatToParts(current);
+      const get = (type: string) => parts.find((item) => item.type === type)?.value || "";
+      const date = [get("year"), get("month").padStart(2, "0"), get("day").padStart(2, "0")].join("/");
+      const key = normalizeJalaliKey(date);
+      if (key.split("/")[0] !== tomorrowKey.split("/")[0] || key.split("/")[1] !== tomorrowKey.split("/")[1]) continue;
+      const day = Number(get("day"));
+      const weekday = weekdayFormatter.format(current).replace(/[\u200c\u200d\s]/g, "");
+      const weekdayIndex = weekdayIndexes[weekday] ?? 0;
+      if (!days.some((item) => item.day === day)) days.push({ day, date, weekdayIndex });
+      if (day === 1) {
+        monthLabel = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+          month: "long", year: "numeric", timeZone: "Asia/Tehran",
+        }).format(current);
+      }
+    }
+    days.sort((a, b) => a.day - b.day);
+    return { monthLabel, days };
+  } catch {
+    return { monthLabel: "", days: [] as Array<{ day: number; date: string; weekdayIndex: number }> };
+  }
+}
+
 function normalizeJalaliKey(value: unknown) {
   return String(value ?? "")
     .trim()
@@ -5386,6 +5461,9 @@ function BookingPage({
 
   const [config, setConfig] = useState<BookingConfig | null>(null);
   const [serviceId, setServiceId] = useState(initialService?.id || "");
+  const [selectedEnergyServiceIds, setSelectedEnergyServiceIds] = useState<string[]>(
+    initialService?.category === "energy" && initialService?.id ? [initialService.id] : []
+  );
   const [date, setDate] = useState("");
   const [bookingCategory, setBookingCategory] = useState<ServiceCategory | null>(
     initialService?.category || null
@@ -5449,7 +5527,12 @@ function BookingPage({
   // CMS service IDs and booking-backend IDs are not guaranteed to match.
   // Resolve by normalized Persian name before falling back to the CMS card,
   // so price and duration come from the authoritative booking service record.
+  const selectedEnergyServices = selectedEnergyServiceIds
+    .map((id) => bookingServices.find((item) => item.id === id))
+    .filter((item): item is Service => Boolean(item && item.category === "energy"));
+  const isEnergyMultiSelection = bookingCategory === "energy" && selectedEnergyServices.length > 0;
   const selectedService =
+    (isEnergyMultiSelection ? selectedEnergyServices[0] : null) ||
     bookingServices.find((item) => item.id === serviceId) ||
     bookingServices.find(
       (item) =>
@@ -5458,9 +5541,28 @@ function BookingPage({
     ) ||
     initialService ||
     null;
-  const basePrice =
-    Number(String(selectedService?.price || "").replace(/[,٬،\s]/g, "")) || 0;
+  const priceOf = (service: Service) =>
+    Number(String(service.price || "").replace(/[,٬،\s]/g, "")) || 0;
+  const basePrice = isEnergyMultiSelection
+    ? selectedEnergyServices.reduce((sum, service) => sum + priceOf(service), 0)
+    : priceOf(selectedService || ({ price: "" } as Service));
   const finalPrice = Math.max(0, basePrice - discount.amount);
+  const tomorrowInfo = getTomorrowJalaliInfo();
+  const tomorrowDateKey = normalizeJalaliKey(tomorrowInfo.date);
+  const tomorrowClosure = (config?.closures || []).find((item) => {
+    const active = item.active === true ||
+      ["true", "1", "بله", "فعال", "yes"].includes(String(item.active || "").trim().toLowerCase());
+    return active && normalizeJalaliKey(item.date) === tomorrowDateKey;
+  });
+  const normalizeScheduleDay = (value: unknown) =>
+    String(value || "").replace(/[\u200c\u200d\s]/g, "").replace(/(صبح|عصر)$/u, "");
+  const tomorrowHasActiveSchedule = (config?.workHours || []).some((row) => {
+    const active = row.active === true ||
+      ["true", "1", "بله", "فعال", "yes"].includes(String(row.active || "").trim().toLowerCase());
+    return active && normalizeScheduleDay(row.day) === normalizeScheduleDay(tomorrowInfo.dayOfWeek);
+  });
+  const isTomorrowClosed = Boolean(tomorrowClosure) ||
+    Boolean(config && config.workHours.length > 0 && !tomorrowHasActiveSchedule);
 
   const getTelegramProfile = async () => {
     try {
@@ -5636,9 +5738,18 @@ function BookingPage({
 
       setConfig(next);
       if (initialService) {
-        setServiceId(initialService.id);
+        const resolvedInitialService = backendServices.find((item) =>
+          normalizeBookingServiceName(item.title) === normalizeBookingServiceName(initialService.title)
+        );
+        const resolvedId = resolvedInitialService?.id || initialService.id;
+        setServiceId(resolvedId);
         setBookingCategory(initialService.category);
+        if (initialService.category === "energy" && resolvedId) {
+          setSelectedEnergyServiceIds([resolvedId]);
+        }
       }
+      const tomorrow = getTomorrowJalaliInfo();
+      if (tomorrow.date) setDate(tomorrow.date);
       setState("idle");
     } catch (error) {
       setState("error");
@@ -5667,6 +5778,13 @@ function BookingPage({
 
     let active = true;
     setTime("");
+    const normalizedDate = normalizeJalaliKey(date);
+    const closed = normalizedDate === tomorrowDateKey && isTomorrowClosed;
+    if (closed) {
+      setSlots([]);
+      setMessage("⛔️ این روز تعطیل است و امکان ثبت نوبت ندارد.");
+      return () => { active = false; };
+    }
 
     // BookingPage must use the authoritative slot response for the selected
     // date. Do not render locally reconstructed/cached slots first, because
@@ -5674,7 +5792,18 @@ function BookingPage({
     setSlots([]);
     setMessage("");
 
-    void apiGet("getAvailableSlots", { date, serviceId, serviceName: String(selectedService?.title || "") })
+    void apiGet("getAvailableSlots", {
+      date,
+      serviceId: isEnergyMultiSelection ? selectedEnergyServices[0]?.id || serviceId : serviceId,
+      serviceName: isEnergyMultiSelection ? selectedEnergyServices.map((service) => service.title).join("، ") : String(selectedService?.title || ""),
+      ...(isEnergyMultiSelection
+        ? {
+            serviceIds: JSON.stringify(selectedEnergyServices.map((service) => service.id)),
+            serviceNames: JSON.stringify(selectedEnergyServices.map((service) => service.title)),
+            duration: "60",
+          }
+        : {}),
+    })
       .then((data) => {
         if (!active) return;
 
@@ -5714,7 +5843,7 @@ function BookingPage({
         const selectedDuration = Number(
           String(selectedService?.duration || "").replace(/[,٬،\s]/g, "")
         ) || 30;
-        if (selectedDuration !== 30) {
+        if (isEnergyMultiSelection || selectedDuration !== 30) {
           setSlots([]);
           setTime("");
           setMessage("بررسی ساعت‌ها موقتاً در دسترس نیست. لطفاً دوباره تلاش کن.");
@@ -5747,7 +5876,7 @@ function BookingPage({
     return () => {
       active = false;
     };
-  }, [date, config, serviceId, selectedService?.title]);
+  }, [date, config, serviceId, selectedService?.title, isEnergyMultiSelection, selectedEnergyServiceIds.join("|"), isTomorrowClosed, tomorrowDateKey]);
 
   const checkDiscount = async () => {
     const code = discountCode.trim();
@@ -5794,8 +5923,14 @@ function BookingPage({
 
   const submit = async () => {
     setMessage("");
-    if (!selectedService || !serviceId) return setMessage("لطفاً خدمت موردنظر را انتخاب کن.");
+    if (isEnergyMultiSelection ? selectedEnergyServices.length === 0 : (!selectedService || !serviceId)) {
+      return setMessage("لطفاً خدمت موردنظر را انتخاب کن.");
+    }
     if (!date || !time) return setMessage("لطفاً تاریخ و ساعت نوبت را انتخاب کن.");
+    const tomorrowKey = normalizeJalaliKey(getTomorrowJalaliInfo().date);
+    if (!tomorrowKey || normalizeJalaliKey(date) !== tomorrowKey) {
+      return setMessage("فقط امکان درخواست نوبت برای فردا وجود دارد.");
+    }
     if (!firstName.trim() || !lastName.trim() || !mobile.trim()) return setMessage("لطفاً نام، نام خانوادگی و شماره موبایل را کامل وارد کن.");
     if (!receiptFile && !transactionNumber.trim()) return setMessage("تصویر فیش یا کد پیگیری پرداخت الزامی است.");
     if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
@@ -5803,7 +5938,9 @@ function BookingPage({
     setState("submitting");
     try {
       const requestId = "REQ-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8).toUpperCase();
-      const serviceName = String(selectedService.title || "");
+      const servicesForBooking = isEnergyMultiSelection ? selectedEnergyServices : [selectedService as Service];
+      const serviceName = servicesForBooking.map((service) => String(service.title || "")).join("، ");
+      const serviceIds = servicesForBooking.map((service) => String(service.id || ""));
       const telegramProfile = await getTelegramProfile();
       const telegramId = telegramProfile.telegramId;
 
@@ -5830,8 +5967,11 @@ function BookingPage({
           firstName:firstName.trim(),
           lastName:lastName.trim(),
           mobile:mobile.trim(),
-          serviceId,
+          serviceId: serviceIds[0] || serviceId,
+          serviceIds,
+          serviceNames: servicesForBooking.map((service) => String(service.title || "")),
           serviceName,
+          duration: isEnergyMultiSelection ? 60 : undefined,
           date,
           time,
           discountCode:discountCode.trim(),
@@ -6187,10 +6327,20 @@ function BookingPage({
                         type="button"
                         className="booking-service-option"
                         onClick={() => {
-                          setServiceId(service.id);
+                          if (group.id === "energy") {
+                            const next = selectedEnergyServiceIds.includes(service.id)
+                              ? selectedEnergyServiceIds.filter((id) => id !== service.id)
+                              : [...selectedEnergyServiceIds, service.id];
+                            setSelectedEnergyServiceIds(next);
+                            setServiceId(next[0] || "");
+                          } else {
+                            setSelectedEnergyServiceIds([]);
+                            setServiceId(service.id);
+                          }
                           setBookingCategory(group.id);
                           setDiscount({valid:false,percent:0,amount:0});
                           setMessage("");
+                          setTime("");
                         }}
                         style={{
                           width:"100%",
@@ -6198,7 +6348,9 @@ function BookingPage({
                           padding:"13px 14px",
                           border:"1px solid rgba(53,59,50,.09)",
                           borderRadius:"17px",
-                          background: serviceId === service.id
+                          background: (group.id === "energy"
+                            ? selectedEnergyServiceIds.includes(service.id)
+                            : serviceId === service.id)
                             ? "rgba(36,99,71,.12)"
                             : "rgba(255,255,255,.70)",
                           color:"#26342b",
@@ -6209,6 +6361,9 @@ function BookingPage({
                         }}
                       >
                         <strong style={{display:"block"}}>{service.title}</strong>
+                        {group.id === "energy" && selectedEnergyServiceIds.includes(service.id) && (
+                          <span style={{display:"inline-block",marginTop:"5px",fontSize:"11px",fontWeight:700,color:"#246347"}}>✓ انتخاب شد</span>
+                        )}
                         {service.price && (
                           <span style={{display:"block",marginTop:"4px",fontSize:"12px",opacity:.76}}>
                             {service.price} تومان
@@ -6227,76 +6382,98 @@ function BookingPage({
           </div>
         )}
 
-        {selectedService && (
+        {isEnergyMultiSelection ? (
+          <div style={{marginTop:"12px",padding:"14px",borderRadius:"18px",background:"rgba(36,99,71,.07)",border:"1px solid rgba(36,99,71,.14)"}}>
+            <strong style={{display:"block",fontSize:"13px",color:"#244b37"}}>خلاصه خدمات انتخاب‌شده</strong>
+            {selectedEnergyServices.map((service) => (
+              <div key={service.id} style={{display:"flex",justifyContent:"space-between",gap:"12px",paddingTop:"8px",fontSize:"12px",color:"#46564a"}}>
+                <span>{service.title}</span><span style={{whiteSpace:"nowrap"}}>{priceOf(service).toLocaleString("fa-IR")} تومان</span>
+              </div>
+            ))}
+            <div style={{display:"flex",justifyContent:"space-between",gap:"12px",marginTop:"10px",paddingTop:"10px",borderTop:"1px solid rgba(36,99,71,.16)",fontWeight:800,color:"#244b37"}}>
+              <span>جمع کل</span><span>{basePrice.toLocaleString("fa-IR")} تومان</span>
+            </div>
+            <div style={{marginTop:"7px",fontSize:"11px",color:"#59655d"}}>مدت نوبت مشترک: ۱ ساعت</div>
+          </div>
+        ) : selectedService ? (
           <div style={{marginTop:"12px",fontSize:"12px",lineHeight:1.9,color:"#59655d"}}>
             {selectedService.description}
           </div>
-        )}
+        ) : null}
         {renderBookingContent(["booking_intro", "service_guide"])}
       </div>
 
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
           <strong>۲. انتخاب زمان</strong>
-          <span>فقط نزدیک‌ترین روز کاری آینده نمایش داده می‌شود؛ پنجشنبه و جمعه معمولاً نوبت بعدی شنبه است.</span>
+          <span>تقویم به‌صورت خودکار روی فردا قرار می‌گیرد؛ امروز و روزهای بعد از فردا قابل انتخاب نیستند.</span>
         </div>
 
-        <select
-          value={date}
-          onChange={(e)=>{
-            setDate(e.target.value);
-            setTime("");
-          }}
-          style={{
-            ...inputBaseStyle,
-            appearance:"none",
-            WebkitAppearance:"none",
-            marginTop:"12px",
-          }}
-        >
-          <option value="">انتخاب تاریخ</option>
-          {availableDates.map((item) => {
-            const value=String(item.date||"");
-            const label=String(item.dayOfWeek||"") + (item.dayOfWeek ? " — " : "") + value;
-            return <option key={value} value={value}>{label}</option>;
-          })}
-        </select>
+        <div style={{marginTop:"12px",padding:"14px",borderRadius:"22px",border:"1px solid rgba(36,99,71,.15)",background:"linear-gradient(145deg,rgba(255,255,255,.88),rgba(232,239,229,.70))",boxShadow:"0 8px 22px rgba(53,59,50,.06)"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"10px",marginBottom:"12px"}}>
+            <div>
+              <strong style={{display:"block",fontSize:"14px",color:"#244b37"}}>{getTomorrowJalaliCalendar().monthLabel || "تقویم شمسی"}</strong>
+              <span style={{display:"block",fontSize:"11px",marginTop:"4px",color:"#657268"}}>فقط فردا قابل انتخاب است</span>
+            </div>
+            <span style={{padding:"6px 10px",borderRadius:"12px",fontSize:"11px",fontWeight:800,color:isTomorrowClosed?"#9a5141":"#244b37",background:isTomorrowClosed?"rgba(180,80,45,.10)":"rgba(36,99,71,.09)"}}>{isTomorrowClosed ? "⛔️ تعطیل" : "✓ انتخاب فردا"}</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))",gap:"5px",textAlign:"center",direction:"rtl"}}>
+            {["ش","ی","د","س","چ","پ","ج"].map((label,index)=><div key={"weekday-"+index} style={{padding:"5px 0",fontSize:"10px",fontWeight:800,color:"#718075"}}>{label}</div>)}
+            {(() => {
+              const calendar = getTomorrowJalaliCalendar();
+              const tomorrowKey = normalizeJalaliKey(tomorrowInfo.date);
+              const firstOffset = calendar.days[0]?.weekdayIndex ?? 0;
+              return [
+                ...Array.from({length:firstOffset},(_,index)=><div key={"blank-"+index} />),
+                ...calendar.days.map((item) => {
+                  const isTomorrow = normalizeJalaliKey(item.date) === tomorrowKey;
+                  const disabled = !isTomorrow;
+                  return <button key={item.date} type="button" disabled={disabled} aria-label={isTomorrow ? "انتخاب فردا "+item.date : item.date+" غیرقابل انتخاب"} onClick={()=>{setDate(tomorrowInfo.date);setTime("");}} style={{minWidth:0,aspectRatio:"1 / 1",padding:"0",borderRadius:"12px",border:isTomorrow?"2px solid #496b53":"1px solid rgba(36,99,71,.05)",background:isTomorrow?(isTomorrowClosed?"rgba(180,80,45,.12)":"linear-gradient(145deg,#496b53,#244b37)"):"rgba(255,255,255,.38)",color:isTomorrow?(isTomorrowClosed?"#9a5141":"#fff"):"#a7afa8",fontFamily:"inherit",fontSize:"12px",fontWeight:isTomorrow?900:500,opacity:disabled ? 0.66 : 1,cursor:disabled?"not-allowed":"pointer",boxShadow:isTomorrow?"0 4px 10px rgba(36,75,55,.18)":"none"}}>{item.day}{isTomorrow?<span style={{display:"block",fontSize:"8px",lineHeight:1.1}}>فردا</span>:null}</button>;
+                })
+              ];
+            })()}
+          </div>
+          <div style={{marginTop:"12px",padding:"10px 11px",borderRadius:"14px",background:"rgba(255,255,255,.58)",fontSize:"12px",lineHeight:1.8,color:isTomorrowClosed?"#9a5141":"#244b37"}}>
+            <strong>{tomorrowInfo.dayOfWeek || "فردا"} · {tomorrowInfo.date || "—"}</strong>
+            <span style={{display:"block",marginTop:"3px",color:"#657268"}}>{isTomorrowClosed ? "این روز طبق برنامه یا تعطیلی ثبت‌شده قابل رزرو نیست." : "روزهای دیگر غیرفعال‌اند؛ برای رزرو فقط همین تاریخ بررسی می‌شود."}</span>
+          </div>
+        </div>
 
-        {upcomingClosure && (
+        {isTomorrowClosed && (
           <div role="status" style={{marginTop:"10px",padding:"11px 13px",borderRadius:"15px",background:"rgba(180,80,45,.08)",border:"1px solid rgba(180,80,45,.16)",fontSize:"12px",lineHeight:1.9,color:"#824b35"}}>
-            <strong>⛔️ تعطیل — {String(upcomingClosure.date || "")}</strong>
-            {String(upcomingClosure.reason || "").trim() ? <span> · {String(upcomingClosure.reason)}</span> : null}
-            {availableDates[0]?.date ? <div>نوبت بعدی: {String(availableDates[0].dayOfWeek || "")} {String(availableDates[0].date)}</div> : null}
+            <strong>⛔️ تعطیل — {tomorrowInfo.date}</strong>
+            {String(tomorrowClosure?.reason || upcomingClosure?.reason || "").trim() ? <span> · {String(tomorrowClosure?.reason || upcomingClosure?.reason)}</span> : null}
+            <div>برای روز دیگری امکان ثبت نوبت وجود ندارد.</div>
           </div>
         )}
-        <div style={{marginTop:"10px",fontSize:"12px",fontWeight:700,color:"#526256"}}>☀️ نوبت‌های صبح</div>
-        <select
-          value={morningSlots.some((slot) => String(slot.time) === time) ? time : ""}
-          onChange={(e)=>setTime(e.target.value)}
-          disabled={!date}
-          style={{...inputBaseStyle,appearance:"none",WebkitAppearance:"none",marginTop:"6px",opacity:date ? 1 : .6}}
-        >
-          <option value="">{date ? (morningSlots.length ? "انتخاب ساعت صبح" : "نوبت صبح ندارد") : "ابتدا تاریخ را انتخاب کن"}</option>
-          {morningSlots.map((item) => {
-            const status = String(item.status || "").toUpperCase();
-            const selectable = (item.available === true || String(item.available).toLowerCase() === "true") && (!status || status === "FREE");
-            return <option key={String(item.time)} value={selectable ? String(item.time) : ""} disabled={!selectable}>{slotDisplay(item)}</option>;
-          })}
-        </select>
-        <div style={{marginTop:"12px",fontSize:"12px",fontWeight:700,color:"#526256"}}>🌇 نوبت‌های عصر</div>
-        <select
-          value={eveningSlots.some((slot) => String(slot.time) === time) ? time : ""}
-          onChange={(e)=>setTime(e.target.value)}
-          disabled={!date}
-          style={{...inputBaseStyle,appearance:"none",WebkitAppearance:"none",marginTop:"6px",opacity:date ? 1 : .6}}
-        >
-          <option value="">{date ? (eveningSlots.length ? "انتخاب ساعت عصر" : "نوبت عصر ندارد") : "ابتدا تاریخ را انتخاب کن"}</option>
-          {eveningSlots.map((item) => {
-            const status = String(item.status || "").toUpperCase();
-            const selectable = (item.available === true || String(item.available).toLowerCase() === "true") && (!status || status === "FREE");
-            return <option key={String(item.time)} value={selectable ? String(item.time) : ""} disabled={!selectable}>{slotDisplay(item)}</option>;
-          })}
-        </select>
+        <div style={{display:"grid",gap:"10px",marginTop:"12px"}}>
+          <details open style={{border:"1px solid rgba(36,99,71,.14)",borderRadius:"16px",background:"rgba(255,255,255,.62)",overflow:"hidden"}}>
+            <summary style={{cursor:"pointer",listStyle:"none",padding:"13px 14px",fontSize:"13px",fontWeight:800,color:"#244b37",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span>☀️ نوبت‌های صبح</span><span style={{fontSize:"11px",fontWeight:600,color:"#667268"}}>{morningSlots.length ? String(morningSlots.length) + " زمان" : "نوبتی تعریف نشده"}</span>
+            </summary>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:"8px",padding:"0 12px 12px"}}>
+              {morningSlots.length ? morningSlots.map((item) => {
+                const status = String(item.status || "").toUpperCase();
+                const selectable = (item.available === true || String(item.available).toLowerCase() === "true") && (!status || status === "FREE");
+                const selected = time === String(item.time);
+                return <button key={String(item.time)} type="button" disabled={!selectable} onClick={()=>setTime(String(item.time))} style={{padding:"12px 8px",borderRadius:"12px",border:selected?"1px solid #477657":"1px solid rgba(36,99,71,.14)",background:selected?"rgba(36,99,71,.12)":"rgba(255,255,255,.8)",color:selectable?"#244b37":"#8a8e88",fontSize:"12px",fontWeight:700,boxShadow:selected?"0 4px 12px rgba(36,99,71,.12)":"0 2px 7px rgba(30,40,30,.04)",opacity:selectable?1:.78,cursor:selectable?"pointer":"not-allowed"}}>{slotDisplay(item)}</button>;
+              }) : <div style={{gridColumn:"1 / -1",padding:"5px 2px",fontSize:"12px",color:"#777f77"}}>{date ? "برای این روز نوبت صبح تعریف نشده است." : "ابتدا تاریخ را انتخاب کن."}</div>}
+            </div>
+          </details>
+          <details style={{border:"1px solid rgba(36,99,71,.14)",borderRadius:"16px",background:"rgba(255,255,255,.62)",overflow:"hidden"}}>
+            <summary style={{cursor:"pointer",listStyle:"none",padding:"13px 14px",fontSize:"13px",fontWeight:800,color:"#244b37",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span>🌇 نوبت‌های عصر</span><span style={{fontSize:"11px",fontWeight:600,color:"#667268"}}>{eveningSlots.length ? String(eveningSlots.length) + " زمان" : "نوبتی تعریف نشده"}</span>
+            </summary>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:"8px",padding:"0 12px 12px"}}>
+              {eveningSlots.length ? eveningSlots.map((item) => {
+                const status = String(item.status || "").toUpperCase();
+                const selectable = (item.available === true || String(item.available).toLowerCase() === "true") && (!status || status === "FREE");
+                const selected = time === String(item.time);
+                return <button key={String(item.time)} type="button" disabled={!selectable} onClick={()=>setTime(String(item.time))} style={{padding:"12px 8px",borderRadius:"12px",border:selected?"1px solid #477657":"1px solid rgba(36,99,71,.14)",background:selected?"rgba(36,99,71,.12)":"rgba(255,255,255,.8)",color:selectable?"#244b37":"#8a8e88",fontSize:"12px",fontWeight:700,boxShadow:selected?"0 4px 12px rgba(36,99,71,.12)":"0 2px 7px rgba(30,40,30,.04)",opacity:selectable?1:.78,cursor:selectable?"pointer":"not-allowed"}}>{slotDisplay(item)}</button>;
+              }) : <div style={{gridColumn:"1 / -1",padding:"5px 2px",fontSize:"12px",color:"#777f77"}}>{date ? "برای این روز نوبت عصر تعریف نشده است." : "ابتدا تاریخ را انتخاب کن."}</div>}
+            </div>
+          </details>
+        </div>
         {renderBookingContent(["booking_guide", "date_time_guide"])}
       </div>
 

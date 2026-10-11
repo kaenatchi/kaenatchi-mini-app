@@ -1,0 +1,42 @@
+name: Preview Build (No Deployment)
+
+on:
+  pull_request:
+    branches:
+      - fix/booking-date-slot-availability-display
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "main.tsx"
+      - "package.json"
+      - "vite.config.ts"
+      - "tsconfig*.json"
+      - ".github/workflows/preview-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-only:
+    name: TypeScript and production build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout pull request code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Build application
+        run: npm run build
+      - name: Save build artifact for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaenatchi-mini-app-preview-build
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
