@@ -1334,7 +1334,6 @@ function getTodayJalaliKey() {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
-      timeZone: "Asia/Tehran",
     }).formatToParts(new Date());
 
     const year = parts.find((part) => part.type === "year")?.value ?? "";
@@ -5501,6 +5500,22 @@ function BookingPage({
     ? selectedEnergyServices.reduce((sum, service) => sum + priceOf(service), 0)
     : priceOf(selectedService || ({ price: "" } as Service));
   const finalPrice = Math.max(0, basePrice - discount.amount);
+  const tomorrowInfo = getTomorrowJalaliInfo();
+  const tomorrowDateKey = normalizeJalaliKey(tomorrowInfo.date);
+  const tomorrowClosure = (config?.closures || []).find((item) => {
+    const active = item.active === true ||
+      ["true", "1", "بله", "فعال", "yes"].includes(String(item.active || "").trim().toLowerCase());
+    return active && normalizeJalaliKey(item.date) === tomorrowDateKey;
+  });
+  const normalizeScheduleDay = (value: unknown) =>
+    String(value || "").replace(/[\u200c\u200d\s]/g, "").replace(/(صبح|عصر)$/u, "");
+  const tomorrowHasActiveSchedule = (config?.workHours || []).some((row) => {
+    const active = row.active === true ||
+      ["true", "1", "بله", "فعال", "yes"].includes(String(row.active || "").trim().toLowerCase());
+    return active && normalizeScheduleDay(row.day) === normalizeScheduleDay(tomorrowInfo.dayOfWeek);
+  });
+  const isTomorrowClosed = Boolean(tomorrowClosure) ||
+    Boolean(config && config.workHours.length > 0 && !tomorrowHasActiveSchedule);
 
   const getTelegramProfile = async () => {
     try {
@@ -5713,11 +5728,7 @@ function BookingPage({
     let active = true;
     setTime("");
     const normalizedDate = normalizeJalaliKey(date);
-    const closed = (config?.closures || []).some((item) => {
-      const activeFlag = item.active === true ||
-        ["true", "1", "بله", "فعال", "yes"].includes(String(item.active || "").trim().toLowerCase());
-      return activeFlag && normalizeJalaliKey(item.date) === normalizedDate;
-    });
+    const closed = normalizedDate === tomorrowDateKey && isTomorrowClosed;
     if (closed) {
       setSlots([]);
       setMessage("⛔️ این روز تعطیل است و امکان ثبت نوبت ندارد.");
@@ -5777,7 +5788,7 @@ function BookingPage({
         const selectedDuration = Number(
           String(selectedService?.duration || "").replace(/[,٬،\s]/g, "")
         ) || 30;
-        if (selectedDuration !== 30) {
+        if (isEnergyMultiSelection || selectedDuration !== 30) {
           setSlots([]);
           setTime("");
           setMessage("بررسی ساعت‌ها موقتاً در دسترس نیست. لطفاً دوباره تلاش کن.");
@@ -5810,7 +5821,7 @@ function BookingPage({
     return () => {
       active = false;
     };
-  }, [date, config, serviceId, selectedService?.title, isEnergyMultiSelection, selectedEnergyServiceIds.join("|")]);
+  }, [date, config, serviceId, selectedService?.title, isEnergyMultiSelection, selectedEnergyServiceIds.join("|"), isTomorrowClosed, tomorrowDateKey]);
 
   const checkDiscount = async () => {
     const code = discountCode.trim();
@@ -6346,21 +6357,22 @@ function BookingPage({
         <div style={{marginTop:"12px",padding:"14px",borderRadius:"20px",border:"1px solid rgba(36,99,71,.16)",background:"linear-gradient(135deg,rgba(255,255,255,.88),rgba(232,239,229,.78))",boxShadow:"0 8px 22px rgba(53,59,50,.06)"}}>
           <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
             <div style={{width:"58px",minWidth:"58px",borderRadius:"15px",overflow:"hidden",textAlign:"center",border:"1px solid rgba(36,99,71,.16)",background:"rgba(255,255,255,.72)"}}>
-              <div style={{padding:"5px",fontSize:"10px",fontWeight:700,color:"#fff",background:"#496b53"}}>فردا</div>
-              <div style={{padding:"8px 3px",fontSize:"19px",fontWeight:800,color:"#244b37"}}>{getTomorrowJalaliInfo().date.split("/")[2] || "—"}</div>
+              <div style={{padding:"5px",fontSize:"10px",fontWeight:700,color:"#fff",background:isTomorrowClosed?"#9a5141":"#496b53"}}>فردا</div>
+              <div style={{padding:"8px 3px",fontSize:"19px",fontWeight:800,color:isTomorrowClosed?"#9a5141":"#244b37"}}>{tomorrowInfo.date.split("/")[2] || "—"}</div>
             </div>
             <div style={{flex:1}}>
-              <strong style={{display:"block",fontSize:"14px",color:"#244b37"}}>{getTomorrowJalaliInfo().dayOfWeek || "تاریخ فردا"}</strong>
-              <span style={{display:"block",marginTop:"4px",fontSize:"12px",color:"#59655d"}}>{getTomorrowJalaliInfo().date || "تاریخ فردا"} · فقط نوبت فردا قابل درخواست است</span>
+              <strong style={{display:"block",fontSize:"14px",color:isTomorrowClosed?"#9a5141":"#244b37"}}>{tomorrowInfo.dayOfWeek || "تاریخ فردا"}</strong>
+              <span style={{display:"block",marginTop:"4px",fontSize:"12px",color:"#59655d"}}>{tomorrowInfo.date || "تاریخ فردا"} · فقط نوبت فردا قابل درخواست است</span>
+              {isTomorrowClosed && <span style={{display:"block",marginTop:"5px",fontSize:"12px",fontWeight:800,color:"#9a5141"}}>⛔️ تعطیل</span>}
             </div>
-            <span style={{fontSize:"12px",fontWeight:800,color:"#496b53"}}>✓</span>
+            <span style={{fontSize:"12px",fontWeight:800,color:isTomorrowClosed?"#9a5141":"#496b53"}}>{isTomorrowClosed?"⛔️":"✓"}</span>
           </div>
         </div>
 
         {upcomingClosure && (
           <div role="status" style={{marginTop:"10px",padding:"11px 13px",borderRadius:"15px",background:"rgba(180,80,45,.08)",border:"1px solid rgba(180,80,45,.16)",fontSize:"12px",lineHeight:1.9,color:"#824b35"}}>
-            <strong>⛔️ تعطیل — {String(upcomingClosure.date || "")}</strong>
-            {String(upcomingClosure.reason || "").trim() ? <span> · {String(upcomingClosure.reason)}</span> : null}
+            <strong>⛔️ تعطیل — {tomorrowInfo.date}</strong>
+            {String(tomorrowClosure?.reason || upcomingClosure.reason || "").trim() ? <span> · {String(tomorrowClosure?.reason || upcomingClosure.reason)}</span> : null}
             <div>برای روز دیگری امکان ثبت نوبت وجود ندارد.</div>
           </div>
         )}
