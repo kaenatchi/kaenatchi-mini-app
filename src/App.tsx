@@ -179,18 +179,33 @@ const apiGetJsonpOnce = (
     let settled = false;
     let timeoutId = 0;
 
-    const cleanup = () => {
+    const cleanup = (keepLateCallbackSafe = false) => {
       window.clearTimeout(timeoutId);
       script.remove();
+
+      if (keepLateCallbackSafe) {
+        /*
+         * Apps Script may finish after the timeout. Keep a harmless callback
+         * briefly so a late JSONP response cannot throw "callback is not defined".
+         */
+        (window as any)[callbackName] = () => {};
+        window.setTimeout(() => {
+          try {
+            delete (window as any)[callbackName];
+          } catch {}
+        }, 5 * 60 * 1000);
+        return;
+      }
+
       try {
         delete (window as any)[callbackName];
       } catch {}
     };
 
-    const finish = (fn: () => void) => {
+    const finish = (fn: () => void, keepLateCallbackSafe = false) => {
       if (settled) return;
       settled = true;
-      cleanup();
+      cleanup(keepLateCallbackSafe);
       fn();
     };
 
@@ -214,7 +229,11 @@ const apiGetJsonpOnce = (
       finish(() => reject(new Error("JSONP_TRANSPORT_FAILED")));
 
     timeoutId = window.setTimeout(
-      () => finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT"))),
+      () =>
+        finish(
+          () => reject(new Error("JSONP_TRANSPORT_TIMEOUT")),
+          true
+        ),
       12000
     );
 
@@ -540,6 +559,20 @@ function cmsCategory(value: string, title: string): ServiceCategory {
   return "energy";
 }
 
+function displayServicePrice(value: string): string {
+  const raw = String(value || "").trim();
+  const normalized = raw.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/[,٬،\s]/g, "");
+  if (/^\d+$/.test(normalized)) return Number(normalized).toLocaleString("fa-IR") + " تومان";
+  return raw;
+}
+
+function displayServiceDuration(value: string): string {
+  const raw = String(value || "").trim();
+  const normalized = raw.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).trim();
+  if (/^\d+$/.test(normalized)) return Number(normalized).toLocaleString("fa-IR") + " دقیقه";
+  return raw;
+}
+
 function mapCmsServices(rows: CmsRow[]): Service[] {
   return rows
     .filter(cmsActive)
@@ -561,12 +594,26 @@ function mapCmsServices(rows: CmsRow[]): Service[] {
           "text",
         ]);
 
+      const normalizedServiceTitle = title
+        .normalize("NFKC")
+        .replace(/[\u200c\u200f\u200e\s_-]+/g, "")
+        .toLocaleLowerCase("fa");
+      const cmsPrice = cmsText(row, ["قیمت", "هزینه", "price"]);
+      const cmsDuration = cmsText(row, ["مدت", "مدت زمان", "duration"]);
+      const isCandleTherapy =
+        normalizedServiceTitle.startsWith("شمع") &&
+        normalizedServiceTitle.includes("تراپی");
+      const isPsychotherapy =
+        normalizedServiceTitle.startsWith("سایکو") &&
+        normalizedServiceTitle.includes("تراپی");
+
       return {
         id,
         title,
         category: cmsCategory(categoryRaw, title),
-        price: cmsText(row, ["قیمت", "هزینه", "price"]),
-        duration: cmsText(row, ["مدت", "مدت زمان", "duration"]),
+        // Fallback only for the two agreed therapy services when CMS fields are blank.
+        price: cmsPrice || (isCandleTherapy ? "500000" : isPsychotherapy ? "700000" : ""),
+        duration: cmsDuration || (isCandleTherapy ? "20" : isPsychotherapy ? "45" : ""),
         description,
       };
     });
@@ -1830,14 +1877,14 @@ function ServiceCard({
               fontSize: "12px",
             }}
           >
-            {service.duration}
+            {displayServiceDuration(service.duration)}
 
             {service.duration &&
               service.price
               ? "  •  "
               : ""}
 
-            {service.price}
+            {displayServicePrice(service.price)}
           </small>
         )}
       </div>
@@ -1892,13 +1939,13 @@ function ServiceDetail({
             {service.duration && (
               <div style={{ marginBottom: "10px" }}>
                 <strong>مدت زمان</strong>
-                <span>{service.duration}</span>
+                <span>{displayServiceDuration(service.duration)}</span>
               </div>
             )}
             {service.price && (
               <div>
                 <strong>هزینه</strong>
-                <span>{service.price}</span>
+                <span>{displayServicePrice(service.price)}</span>
               </div>
             )}
           </div>
@@ -5392,8 +5439,22 @@ function BookingPage({
     ["energy", "candle", "psychotherapy"].includes(service.category)
   );
 
+  const normalizeBookingServiceName = (value: unknown) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/[\u200c\u200f\u200e\s_-]+/g, "")
+      .toLocaleLowerCase("fa");
+
+  // CMS service IDs and booking-backend IDs are not guaranteed to match.
+  // Resolve by normalized Persian name before falling back to the CMS card,
+  // so price and duration come from the authoritative booking service record.
   const selectedService =
     bookingServices.find((item) => item.id === serviceId) ||
+    bookingServices.find(
+      (item) =>
+        normalizeBookingServiceName(item.title) ===
+        normalizeBookingServiceName(initialService?.title)
+    ) ||
     initialService ||
     null;
   const basePrice =
@@ -5611,7 +5672,7 @@ function BookingPage({
     setSlots([]);
     setMessage("");
 
-    void apiGet("getAvailableSlots", { date })
+    void apiGet("getAvailableSlots", { date, serviceId, serviceName: String(selectedService?.title || "") })
       .then((data) => {
         if (!active) return;
 
@@ -5647,6 +5708,19 @@ function BookingPage({
          * buildLocalBookingSlots_ uses bookedSlots/blockedSlots, so a slot
          * already held or confirmed is still excluded from the fallback.
          */
+        // Local fallback does not know the duration of every active booking.
+        // For non-default service durations, fail closed rather than risk showing
+        // a slot that overlaps another service or exceeds the work range.
+        const selectedDuration = Number(
+          String(selectedService?.duration || "").replace(/[,٬،\s]/g, "")
+        ) || 30;
+        if (selectedDuration !== 30) {
+          setSlots([]);
+          setTime("");
+          setMessage("بررسی ساعت‌ها موقتاً در دسترس نیست. لطفاً دوباره تلاش کن.");
+          return;
+        }
+
         const fallbackSlots = buildLocalBookingSlots_(date, config).filter(
           (slot: Record<string, unknown>) => {
             const status = String(slot.status || "").toUpperCase();
@@ -5674,7 +5748,7 @@ function BookingPage({
     return () => {
       active = false;
     };
-  }, [date, config]);
+  }, [date, config, serviceId, selectedService?.title]);
 
   const checkDiscount = async () => {
     const code = discountCode.trim();
