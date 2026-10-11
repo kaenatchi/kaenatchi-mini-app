@@ -561,15 +561,15 @@ function cmsCategory(value: string, title: string): ServiceCategory {
 
 function displayServicePrice(value: string): string {
   const raw = String(value || "").trim();
-  const normalized = raw.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/[,٬،\\s]/g, "");
-  if (/^\\d+$/.test(normalized)) return Number(normalized).toLocaleString("fa-IR") + " تومان";
+  const normalized = raw.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/[,٬،\s]/g, "");
+  if (/^\d+$/.test(normalized)) return Number(normalized).toLocaleString("fa-IR") + " تومان";
   return raw;
 }
 
 function displayServiceDuration(value: string): string {
   const raw = String(value || "").trim();
   const normalized = raw.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).trim();
-  if (/^\\d+$/.test(normalized)) return Number(normalized).toLocaleString("fa-IR") + " دقیقه";
+  if (/^\d+$/.test(normalized)) return Number(normalized).toLocaleString("fa-IR") + " دقیقه";
   return raw;
 }
 
@@ -596,7 +596,7 @@ function mapCmsServices(rows: CmsRow[]): Service[] {
 
       const normalizedServiceTitle = title
         .normalize("NFKC")
-        .replace(/[\\u200c\\u200f\\u200e\\s_-]+/g, "")
+        .replace(/[\u200c\u200f\u200e\s_-]+/g, "")
         .toLocaleLowerCase("fa");
       const cmsPrice = cmsText(row, ["قیمت", "هزینه", "price"]);
       const cmsDuration = cmsText(row, ["مدت", "مدت زمان", "duration"]);
@@ -5442,7 +5442,7 @@ function BookingPage({
   const normalizeBookingServiceName = (value: unknown) =>
     String(value || "")
       .normalize("NFKC")
-      .replace(/[\\u200c\\u200f\\u200e\\s_-]+/g, "")
+      .replace(/[\u200c\u200f\u200e\s_-]+/g, "")
       .toLocaleLowerCase("fa");
 
   // CMS service IDs and booking-backend IDs are not guaranteed to match.
