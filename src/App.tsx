@@ -5666,6 +5666,19 @@ function BookingPage({
          * buildLocalBookingSlots_ uses bookedSlots/blockedSlots, so a slot
          * already held or confirmed is still excluded from the fallback.
          */
+        // Local fallback does not know the duration of every active booking.
+        // For non-default service durations, fail closed rather than risk showing
+        // a slot that overlaps another service or exceeds the work range.
+        const selectedDuration = Number(
+          String(selectedService?.duration || "").replace(/[,٬،\\s]/g, "")
+        ) || 30;
+        if (selectedDuration !== 30) {
+          setSlots([]);
+          setTime("");
+          setMessage("بررسی ساعت‌ها موقتاً در دسترس نیست. لطفاً دوباره تلاش کن.");
+          return;
+        }
+
         const fallbackSlots = buildLocalBookingSlots_(date, config).filter(
           (slot: Record<string, unknown>) => {
             const status = String(slot.status || "").toUpperCase();
