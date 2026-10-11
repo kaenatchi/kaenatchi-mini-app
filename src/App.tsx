@@ -1376,6 +1376,53 @@ function getTomorrowJalaliInfo() {
   }
 }
 
+function getTomorrowJalaliCalendar() {
+  const tomorrowInfo = getTomorrowJalaliInfo();
+  const tomorrowKey = normalizeJalaliKey(tomorrowInfo.date);
+  if (!tomorrowKey) return { monthLabel: "", days: [] as Array<{ day: number; date: string; weekdayIndex: number }> };
+
+  try {
+    const gregorianParts = new Intl.DateTimeFormat("en-CA", {
+      year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Tehran",
+    }).formatToParts(new Date());
+    const part = (type: string) => Number(gregorianParts.find((item) => item.type === type)?.value || 0);
+    const center = new Date(Date.UTC(part("year"), part("month") - 1, part("day") + 1, 12));
+    const jalaliFormatter = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+      year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Tehran",
+    });
+    const weekdayFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+      weekday: "long", timeZone: "Asia/Tehran",
+    });
+    const weekdayIndexes: Record<string, number> = {
+      "شنبه": 0, "یکشنبه": 1, "دوشنبه": 2, "سهشنبه": 3,
+      "چهارشنبه": 4, "پنجشنبه": 5, "جمعه": 6,
+    };
+    const days: Array<{ day: number; date: string; weekdayIndex: number }> = [];
+    let monthLabel = "";
+    for (let offset = -40; offset <= 40; offset++) {
+      const current = new Date(center.getTime() + offset * 86400000);
+      const parts = jalaliFormatter.formatToParts(current);
+      const get = (type: string) => parts.find((item) => item.type === type)?.value || "";
+      const date = [get("year"), get("month").padStart(2, "0"), get("day").padStart(2, "0")].join("/");
+      const key = normalizeJalaliKey(date);
+      if (key.split("/")[0] !== tomorrowKey.split("/")[0] || key.split("/")[1] !== tomorrowKey.split("/")[1]) continue;
+      const day = Number(get("day"));
+      const weekday = weekdayFormatter.format(current).replace(/[\u200c\u200d\s]/g, "");
+      const weekdayIndex = weekdayIndexes[weekday] ?? 0;
+      if (!days.some((item) => item.day === day)) days.push({ day, date, weekdayIndex });
+      if (day === 1) {
+        monthLabel = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+          month: "long", year: "numeric", timeZone: "Asia/Tehran",
+        }).format(current);
+      }
+    }
+    days.sort((a, b) => a.day - b.day);
+    return { monthLabel, days };
+  } catch {
+    return { monthLabel: "", days: [] as Array<{ day: number; date: string; weekdayIndex: number }> };
+  }
+}
+
 function normalizeJalaliKey(value: unknown) {
   return String(value ?? "")
     .trim()
@@ -6358,20 +6405,35 @@ function BookingPage({
           <span>تقویم به‌صورت خودکار روی فردا قرار می‌گیرد؛ امروز و روزهای بعد از فردا قابل انتخاب نیستند.</span>
         </div>
 
-        <button type="button" onClick={()=>{setDate(tomorrowInfo.date);setTime("");}} style={{width:"100%",textAlign:"right",fontFamily:"inherit",cursor:"pointer",marginTop:"12px",padding:"14px",borderRadius:"20px",border:"1px solid rgba(36,99,71,.16)",background:"linear-gradient(135deg,rgba(255,255,255,.88),rgba(232,239,229,.78))",boxShadow:"0 8px 22px rgba(53,59,50,.06)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-            <div style={{width:"58px",minWidth:"58px",borderRadius:"15px",overflow:"hidden",textAlign:"center",border:"1px solid rgba(36,99,71,.16)",background:"rgba(255,255,255,.72)"}}>
-              <div style={{padding:"5px",fontSize:"10px",fontWeight:700,color:"#fff",background:isTomorrowClosed?"#9a5141":"#496b53"}}>فردا</div>
-              <div style={{padding:"8px 3px",fontSize:"19px",fontWeight:800,color:isTomorrowClosed?"#9a5141":"#244b37"}}>{tomorrowInfo.date.split("/")[2] || "—"}</div>
+        <div style={{marginTop:"12px",padding:"14px",borderRadius:"22px",border:"1px solid rgba(36,99,71,.15)",background:"linear-gradient(145deg,rgba(255,255,255,.88),rgba(232,239,229,.70))",boxShadow:"0 8px 22px rgba(53,59,50,.06)"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"10px",marginBottom:"12px"}}>
+            <div>
+              <strong style={{display:"block",fontSize:"14px",color:"#244b37"}}>{getTomorrowJalaliCalendar().monthLabel || "تقویم شمسی"}</strong>
+              <span style={{display:"block",fontSize:"11px",marginTop:"4px",color:"#657268"}}>فقط فردا قابل انتخاب است</span>
             </div>
-            <div style={{flex:1}}>
-              <strong style={{display:"block",fontSize:"14px",color:isTomorrowClosed?"#9a5141":"#244b37"}}>{tomorrowInfo.dayOfWeek || "تاریخ فردا"}</strong>
-              <span style={{display:"block",marginTop:"4px",fontSize:"12px",color:"#59655d"}}>{tomorrowInfo.date || "تاریخ فردا"} · فقط نوبت فردا قابل درخواست است</span>
-              {isTomorrowClosed && <span style={{display:"block",marginTop:"5px",fontSize:"12px",fontWeight:800,color:"#9a5141"}}>⛔️ تعطیل</span>}
-            </div>
-            <span style={{fontSize:"12px",fontWeight:800,color:isTomorrowClosed?"#9a5141":"#496b53"}}>{isTomorrowClosed?"⛔️":"✓"}</span>
+            <span style={{padding:"6px 10px",borderRadius:"12px",fontSize:"11px",fontWeight:800,color:isTomorrowClosed?"#9a5141":"#244b37",background:isTomorrowClosed?"rgba(180,80,45,.10)":"rgba(36,99,71,.09)"}}>{isTomorrowClosed ? "⛔️ تعطیل" : "✓ انتخاب فردا"}</span>
           </div>
-        </button>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))",gap:"5px",textAlign:"center",direction:"rtl"}}>
+            {["ش","ی","د","س","چ","پ","ج"].map((label,index)=><div key={"weekday-"+index} style={{padding:"5px 0",fontSize:"10px",fontWeight:800,color:"#718075"}}>{label}</div>)}
+            {(() => {
+              const calendar = getTomorrowJalaliCalendar();
+              const tomorrowKey = normalizeJalaliKey(tomorrowInfo.date);
+              const firstOffset = calendar.days[0]?.weekdayIndex ?? 0;
+              return [
+                ...Array.from({length:firstOffset},(_,index)=><div key={"blank-"+index} />),
+                ...calendar.days.map((item) => {
+                  const isTomorrow = normalizeJalaliKey(item.date) === tomorrowKey;
+                  const disabled = !isTomorrow;
+                  return <button key={item.date} type="button" disabled={disabled} aria-label={isTomorrow ? "انتخاب فردا "+item.date : item.date+" غیرقابل انتخاب"} onClick={()=>{setDate(tomorrowInfo.date);setTime("");}} style={{minWidth:0,aspectRatio:"1 / 1",padding:"0",borderRadius:"12px",border:isTomorrow?"2px solid #496b53":"1px solid rgba(36,99,71,.05)",background:isTomorrow?(isTomorrowClosed?"rgba(180,80,45,.12)":"linear-gradient(145deg,#496b53,#244b37)"):"rgba(255,255,255,.38)",color:isTomorrow?(isTomorrowClosed?"#9a5141":"#fff"):"#a7afa8",fontFamily:"inherit",fontSize:"12px",fontWeight:isTomorrow?900:500,opacity:disabled?.66:1,cursor:disabled?"not-allowed":"pointer",boxShadow:isTomorrow?"0 4px 10px rgba(36,75,55,.18)":"none"}}>{item.day}{isTomorrow?<span style={{display:"block",fontSize:"8px",lineHeight:1.1}}>فردا</span>:null}</button>;
+                })
+              ];
+            })()}
+          </div>
+          <div style={{marginTop:"12px",padding:"10px 11px",borderRadius:"14px",background:"rgba(255,255,255,.58)",fontSize:"12px",lineHeight:1.8,color:isTomorrowClosed?"#9a5141":"#244b37"}}>
+            <strong>{tomorrowInfo.dayOfWeek || "فردا"} · {tomorrowInfo.date || "—"}</strong>
+            <span style={{display:"block",marginTop:"3px",color:"#657268"}}>{isTomorrowClosed ? "این روز طبق برنامه یا تعطیلی ثبت‌شده قابل رزرو نیست." : "روزهای دیگر غیرفعال‌اند؛ برای رزرو فقط همین تاریخ بررسی می‌شود."}</span>
+          </div>
+        </div>
 
         {isTomorrowClosed && (
           <div role="status" style={{marginTop:"10px",padding:"11px 13px",borderRadius:"15px",background:"rgba(180,80,45,.08)",border:"1px solid rgba(180,80,45,.16)",fontSize:"12px",lineHeight:1.9,color:"#824b35"}}>
