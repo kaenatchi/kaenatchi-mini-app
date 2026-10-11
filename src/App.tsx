@@ -179,18 +179,33 @@ const apiGetJsonpOnce = (
     let settled = false;
     let timeoutId = 0;
 
-    const cleanup = () => {
+    const cleanup = (keepLateCallbackSafe = false) => {
       window.clearTimeout(timeoutId);
       script.remove();
+
+      if (keepLateCallbackSafe) {
+        /*
+         * Apps Script may finish after the timeout. Keep a harmless callback
+         * briefly so a late JSONP response cannot throw "callback is not defined".
+         */
+        (window as any)[callbackName] = () => {};
+        window.setTimeout(() => {
+          try {
+            delete (window as any)[callbackName];
+          } catch {}
+        }, 5 * 60 * 1000);
+        return;
+      }
+
       try {
         delete (window as any)[callbackName];
       } catch {}
     };
 
-    const finish = (fn: () => void) => {
+    const finish = (fn: () => void, keepLateCallbackSafe = false) => {
       if (settled) return;
       settled = true;
-      cleanup();
+      cleanup(keepLateCallbackSafe);
       fn();
     };
 
@@ -214,7 +229,11 @@ const apiGetJsonpOnce = (
       finish(() => reject(new Error("JSONP_TRANSPORT_FAILED")));
 
     timeoutId = window.setTimeout(
-      () => finish(() => reject(new Error("JSONP_TRANSPORT_TIMEOUT"))),
+      () =>
+        finish(
+          () => reject(new Error("JSONP_TRANSPORT_TIMEOUT")),
+          true
+        ),
       12000
     );
 
