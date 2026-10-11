@@ -5670,7 +5670,7 @@ function BookingPage({
         // For non-default service durations, fail closed rather than risk showing
         // a slot that overlaps another service or exceeds the work range.
         const selectedDuration = Number(
-          String(selectedService?.duration || "").replace(/[,٬،\\s]/g, "")
+          String(selectedService?.duration || "").replace(/[,٬،\s]/g, "")
         ) || 30;
         if (selectedDuration !== 30) {
           setSlots([]);
