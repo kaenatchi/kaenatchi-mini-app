@@ -5691,10 +5691,14 @@ function BookingPage({
 
       setConfig(next);
       if (initialService) {
-        setServiceId(initialService.id);
+        const resolvedInitialService = backendServices.find((item) =>
+          normalizeBookingServiceName(item.title) === normalizeBookingServiceName(initialService.title)
+        );
+        const resolvedId = resolvedInitialService?.id || initialService.id;
+        setServiceId(resolvedId);
         setBookingCategory(initialService.category);
-        if (initialService.category === "energy" && initialService.id) {
-          setSelectedEnergyServiceIds([initialService.id]);
+        if (initialService.category === "energy" && resolvedId) {
+          setSelectedEnergyServiceIds([resolvedId]);
         }
       }
       const tomorrow = getTomorrowJalaliInfo();
@@ -6369,7 +6373,7 @@ function BookingPage({
           </div>
         </div>
 
-        {upcomingClosure && (
+        {isTomorrowClosed && (
           <div role="status" style={{marginTop:"10px",padding:"11px 13px",borderRadius:"15px",background:"rgba(180,80,45,.08)",border:"1px solid rgba(180,80,45,.16)",fontSize:"12px",lineHeight:1.9,color:"#824b35"}}>
             <strong>⛔️ تعطیل — {tomorrowInfo.date}</strong>
             {String(tomorrowClosure?.reason || upcomingClosure.reason || "").trim() ? <span> · {String(tomorrowClosure?.reason || upcomingClosure.reason)}</span> : null}
