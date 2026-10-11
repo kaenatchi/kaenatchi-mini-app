@@ -5796,9 +5796,13 @@ function BookingPage({
       date,
       serviceId: isEnergyMultiSelection ? selectedEnergyServices[0]?.id || serviceId : serviceId,
       serviceName: isEnergyMultiSelection ? selectedEnergyServices.map((service) => service.title).join("، ") : String(selectedService?.title || ""),
-      serviceIds: isEnergyMultiSelection ? JSON.stringify(selectedEnergyServices.map((service) => service.id)) : undefined,
-      serviceNames: isEnergyMultiSelection ? JSON.stringify(selectedEnergyServices.map((service) => service.title)) : undefined,
-      duration: isEnergyMultiSelection ? "60" : undefined,
+      ...(isEnergyMultiSelection
+        ? {
+            serviceIds: JSON.stringify(selectedEnergyServices.map((service) => service.id)),
+            serviceNames: JSON.stringify(selectedEnergyServices.map((service) => service.title)),
+            duration: "60",
+          }
+        : {}),
     })
       .then((data) => {
         if (!active) return;
