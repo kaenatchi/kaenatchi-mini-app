@@ -5629,6 +5629,7 @@ function BookingPage({
         workHours: Array.isArray(data.workHours) ? data.workHours : [],
         blockedSlots: Array.isArray(data.blockedSlots) ? data.blockedSlots : [],
         bookedSlots: Array.isArray(data.bookedSlots) ? data.bookedSlots : [],
+        closures: Array.isArray(data.closures) ? data.closures : [],
         settings: data.settings || {},
       };
 
@@ -5678,21 +5679,19 @@ function BookingPage({
 
         if (Array.isArray(data.slots)) {
           const authoritativeSlots = data.slots.filter(
-            (slot: Record<string, unknown>) => {
-              const status = String(slot.status || "").toUpperCase();
-              const isFree =
-                slot.available === true ||
-                String(slot.available).toLowerCase() === "true";
-
-              return isFree && (!status || status === "FREE");
-            }
+            (slot: Record<string, unknown>) =>
+              Boolean(String(slot.time || "").trim())
           );
 
           setSlots(authoritativeSlots);
+          setTime("");
           setMessage(
-            authoritativeSlots.length
+            authoritativeSlots.some((slot: Record<string, unknown>) =>
+              slot.available === true ||
+              String(slot.available).toLowerCase() === "true"
+            )
               ? ""
-              : "برای این تاریخ ساعت آزادی وجود ندارد."
+              : "ساعت‌های این تاریخ آزاد نیستند؛ وضعیت هر ساعت مشخص شده است."
           );
           return;
         }
@@ -5721,20 +5720,19 @@ function BookingPage({
           return;
         }
 
-        const fallbackSlots = buildLocalBookingSlots_(date, config).filter(
-          (slot: Record<string, unknown>) => {
-            const status = String(slot.status || "").toUpperCase();
-            const isFree =
-              slot.available === true ||
-              String(slot.available).toLowerCase() === "true";
-
-            return isFree && (!status || status === "FREE");
-          }
-        );
+        const fallbackSlots = buildLocalBookingSlots_(date, config);
 
         if (fallbackSlots.length > 0) {
           setSlots(fallbackSlots);
-          setMessage("");
+          setTime("");
+          setMessage(
+            fallbackSlots.some((slot: Record<string, unknown>) =>
+              slot.available === true ||
+              String(slot.available).toLowerCase() === "true"
+            )
+              ? ""
+              : "ساعت‌های این تاریخ آزاد نیستند؛ وضعیت هر ساعت مشخص شده است."
+          );
           return;
         }
 
@@ -5966,21 +5964,47 @@ function BookingPage({
       const today = normalizeJalaliKey(getTodayJalaliKey());
       return value && (!today || value > today);
     })
-    .slice(0, 3);
+    .slice(0, 1);
 
-  /*
-   * Never hide an existing hold/confirmed slot. The backend is authoritative:
-   * anything that is not explicitly FREE is shown as unavailable so an old
-   * booking cannot accidentally appear selectable.
-   */
-  const visibleSlots = slots.filter((slot) => {
-    const status = String(slot.status || "").toUpperCase();
-    const isFree =
-      slot.available === true ||
-      String(slot.available).toLowerCase() === "true";
+  const nextOpenDateKey = normalizeJalaliKey(availableDates[0]?.date);
+  const todayKey = normalizeJalaliKey(getTodayJalaliKey());
+  const upcomingClosure = (config?.closures || [])
+    .filter((item) => {
+      const closureDate = normalizeJalaliKey(item.date);
+      const active = item.active === true ||
+        ["true", "1", "بله", "فعال", "yes"].includes(String(item.active || "").trim().toLowerCase());
+      return active && closureDate && (!todayKey || closureDate > todayKey) &&
+        (!nextOpenDateKey || closureDate < nextOpenDateKey);
+    })
+    .sort((a, b) => normalizeJalaliKey(a.date).localeCompare(normalizeJalaliKey(b.date)))[0];
 
-    return isFree && (!status || status === "FREE");
+  const visibleSlots = slots.filter((slot) =>
+    Boolean(String(slot.time || "").trim())
+  );
+  const morningSlots = visibleSlots.filter((slot) => {
+    const parts = String(slot.time || "00:00").split(":").map(Number);
+    return parts[0] * 60 + (parts[1] || 0) < 15 * 60;
   });
+  const eveningSlots = visibleSlots.filter((slot) => {
+    const parts = String(slot.time || "00:00").split(":").map(Number);
+    return parts[0] * 60 + (parts[1] || 0) >= 15 * 60;
+  });
+  const slotDisplay = (slot: Record<string, unknown>) => {
+    const status = String(slot.status || "").toUpperCase();
+    const isFree = (slot.available === true || String(slot.available).toLowerCase() === "true") &&
+      (!status || status === "FREE");
+    if (isFree) return String(slot.time);
+    const explicitClosure = (config?.blockedSlots || []).find((item) =>
+      normalizeJalaliKey(item.date) === normalizeJalaliKey(date) &&
+      String(item.time || "") === String(slot.time || "") &&
+      (item.active === true || !["false", "0", "خیر", "غیرفعال"].includes(String(item.active || "").trim().toLowerCase()))
+    );
+    if (status === "BLOCKED" && explicitClosure) {
+      const reason = String(explicitClosure.reason || "").trim();
+      return "⛔️ تعطیل" + (reason ? " — " + reason : "") + " · " + String(slot.time);
+    }
+    return "❌ رزرو شده · " + String(slot.time);
+  };
 
   const categoryGroups: Array<{
     id: ServiceCategory;
@@ -6210,7 +6234,7 @@ function BookingPage({
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
           <strong>۲. انتخاب زمان</strong>
-          <span>فقط سه تاریخ آینده نمایش داده می‌شود و هر روز خودکار به‌روزرسانی خواهد شد.</span>
+          <span>نزدیک‌ترین روز کاری بعد از امروز نمایش داده می‌شود؛ پنجشنبه و جمعه، نوبت بعدی شنبه است.</span>
         </div>
 
         <select
@@ -6234,24 +6258,40 @@ function BookingPage({
           })}
         </select>
 
+        {upcomingClosure && (
+          <div role="status" style={{marginTop:"10px",padding:"11px 13px",borderRadius:"15px",background:"rgba(180,80,45,.08)",border:"1px solid rgba(180,80,45,.16)",fontSize:"12px",lineHeight:1.9,color:"#824b35"}}>
+            <strong>⛔️ تعطیل — {String(upcomingClosure.date || "")}</strong>
+            {String(upcomingClosure.reason || "").trim() ? <span> · {String(upcomingClosure.reason)}</span> : null}
+            {availableDates[0]?.date ? <div>نوبت بعدی: {String(availableDates[0].dayOfWeek || "")} {String(availableDates[0].date)}</div> : null}
+          </div>
+        )}
+        <div style={{marginTop:"10px",fontSize:"12px",fontWeight:700,color:"#526256"}}>☀️ نوبت‌های صبح</div>
         <select
-          value={time}
+          value={morningSlots.some((slot) => String(slot.time) === time) ? time : ""}
           onChange={(e)=>setTime(e.target.value)}
-          disabled={!date}
-          style={{
-            ...inputBaseStyle,
-            appearance:"none",
-            WebkitAppearance:"none",
-            marginTop:"10px",
-            opacity: date ? 1 : .6,
-          }}
+          disabled={!date || !morningSlots.some((slot) => slot.available === true || String(slot.available).toLowerCase() === "true")}
+          style={{...inputBaseStyle,appearance:"none",WebkitAppearance:"none",marginTop:"6px",opacity:date ? 1 : .6}}
         >
-          <option value="">{date ? (slots.length ? "انتخاب ساعت" : "در حال دریافت ساعت‌ها...") : "ابتدا تاریخ را انتخاب کن"}</option>
-          {visibleSlots.map((item) => (
-            <option key={String(item.time)} value={String(item.time)}>
-              {String(item.time)}
-            </option>
-          ))}
+          <option value="">{date ? (morningSlots.length ? "انتخاب ساعت صبح" : "نوبت صبح ندارد") : "ابتدا تاریخ را انتخاب کن"}</option>
+          {morningSlots.map((item) => {
+            const status = String(item.status || "").toUpperCase();
+            const selectable = (item.available === true || String(item.available).toLowerCase() === "true") && (!status || status === "FREE");
+            return <option key={String(item.time)} value={selectable ? String(item.time) : ""} disabled={!selectable}>{slotDisplay(item)}</option>;
+          })}
+        </select>
+        <div style={{marginTop:"12px",fontSize:"12px",fontWeight:700,color:"#526256"}}>🌇 نوبت‌های عصر</div>
+        <select
+          value={eveningSlots.some((slot) => String(slot.time) === time) ? time : ""}
+          onChange={(e)=>setTime(e.target.value)}
+          disabled={!date || !eveningSlots.some((slot) => slot.available === true || String(slot.available).toLowerCase() === "true")}
+          style={{...inputBaseStyle,appearance:"none",WebkitAppearance:"none",marginTop:"6px",opacity:date ? 1 : .6}}
+        >
+          <option value="">{date ? (eveningSlots.length ? "انتخاب ساعت عصر" : "نوبت عصر ندارد") : "ابتدا تاریخ را انتخاب کن"}</option>
+          {eveningSlots.map((item) => {
+            const status = String(item.status || "").toUpperCase();
+            const selectable = (item.available === true || String(item.available).toLowerCase() === "true") && (!status || status === "FREE");
+            return <option key={String(item.time)} value={selectable ? String(item.time) : ""} disabled={!selectable}>{slotDisplay(item)}</option>;
+          })}
         </select>
         {renderBookingContent(["booking_guide", "date_time_guide"])}
       </div>
