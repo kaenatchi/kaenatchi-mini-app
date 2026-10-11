@@ -5630,7 +5630,7 @@ function BookingPage({
     setSlots([]);
     setMessage("");
 
-    void apiGet("getAvailableSlots", { date })
+    void apiGet("getAvailableSlots", { date, serviceId, serviceName: String(selectedService?.title || "") })
       .then((data) => {
         if (!active) return;
 
@@ -5693,7 +5693,7 @@ function BookingPage({
     return () => {
       active = false;
     };
-  }, [date, config]);
+  }, [date, config, serviceId, selectedService?.title]);
 
   const checkDiscount = async () => {
     const code = discountCode.trim();
