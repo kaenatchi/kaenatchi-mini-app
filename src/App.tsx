@@ -559,6 +559,20 @@ function cmsCategory(value: string, title: string): ServiceCategory {
   return "energy";
 }
 
+function displayServicePrice(value: string): string {
+  const raw = String(value || "").trim();
+  const normalized = raw.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/[,٬،\\s]/g, "");
+  if (/^\\d+$/.test(normalized)) return Number(normalized).toLocaleString("fa-IR") + " تومان";
+  return raw;
+}
+
+function displayServiceDuration(value: string): string {
+  const raw = String(value || "").trim();
+  const normalized = raw.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).trim();
+  if (/^\\d+$/.test(normalized)) return Number(normalized).toLocaleString("fa-IR") + " دقیقه";
+  return raw;
+}
+
 function mapCmsServices(rows: CmsRow[]): Service[] {
   return rows
     .filter(cmsActive)
@@ -580,12 +594,26 @@ function mapCmsServices(rows: CmsRow[]): Service[] {
           "text",
         ]);
 
+      const normalizedServiceTitle = title
+        .normalize("NFKC")
+        .replace(/[\\u200c\\u200f\\u200e\\s_-]+/g, "")
+        .toLocaleLowerCase("fa");
+      const cmsPrice = cmsText(row, ["قیمت", "هزینه", "price"]);
+      const cmsDuration = cmsText(row, ["مدت", "مدت زمان", "duration"]);
+      const isCandleTherapy =
+        normalizedServiceTitle.startsWith("شمع") &&
+        normalizedServiceTitle.includes("تراپی");
+      const isPsychotherapy =
+        normalizedServiceTitle.startsWith("سایکو") &&
+        normalizedServiceTitle.includes("تراپی");
+
       return {
         id,
         title,
         category: cmsCategory(categoryRaw, title),
-        price: cmsText(row, ["قیمت", "هزینه", "price"]),
-        duration: cmsText(row, ["مدت", "مدت زمان", "duration"]),
+        // Fallback only for the two agreed therapy services when CMS fields are blank.
+        price: cmsPrice || (isCandleTherapy ? "500000" : isPsychotherapy ? "700000" : ""),
+        duration: cmsDuration || (isCandleTherapy ? "20" : isPsychotherapy ? "45" : ""),
         description,
       };
     });
@@ -1849,14 +1877,14 @@ function ServiceCard({
               fontSize: "12px",
             }}
           >
-            {service.duration}
+            {displayServiceDuration(service.duration)}
 
             {service.duration &&
               service.price
               ? "  •  "
               : ""}
 
-            {service.price}
+            {displayServicePrice(service.price)}
           </small>
         )}
       </div>
@@ -1911,13 +1939,13 @@ function ServiceDetail({
             {service.duration && (
               <div style={{ marginBottom: "10px" }}>
                 <strong>مدت زمان</strong>
-                <span>{service.duration}</span>
+                <span>{displayServiceDuration(service.duration)}</span>
               </div>
             )}
             {service.price && (
               <div>
                 <strong>هزینه</strong>
-                <span>{service.price}</span>
+                <span>{displayServicePrice(service.price)}</span>
               </div>
             )}
           </div>
