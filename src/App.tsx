@@ -6269,7 +6269,7 @@ function BookingPage({
         <select
           value={morningSlots.some((slot) => String(slot.time) === time) ? time : ""}
           onChange={(e)=>setTime(e.target.value)}
-          disabled={!date || !morningSlots.some((slot) => slot.available === true || String(slot.available).toLowerCase() === "true")}
+          disabled={!date}
           style={{...inputBaseStyle,appearance:"none",WebkitAppearance:"none",marginTop:"6px",opacity:date ? 1 : .6}}
         >
           <option value="">{date ? (morningSlots.length ? "انتخاب ساعت صبح" : "نوبت صبح ندارد") : "ابتدا تاریخ را انتخاب کن"}</option>
@@ -6283,7 +6283,7 @@ function BookingPage({
         <select
           value={eveningSlots.some((slot) => String(slot.time) === time) ? time : ""}
           onChange={(e)=>setTime(e.target.value)}
-          disabled={!date || !eveningSlots.some((slot) => slot.available === true || String(slot.available).toLowerCase() === "true")}
+          disabled={!date}
           style={{...inputBaseStyle,appearance:"none",WebkitAppearance:"none",marginTop:"6px",opacity:date ? 1 : .6}}
         >
           <option value="">{date ? (eveningSlots.length ? "انتخاب ساعت عصر" : "نوبت عصر ندارد") : "ابتدا تاریخ را انتخاب کن"}</option>
