@@ -5885,6 +5885,8 @@ function BookingPage({
         setMessage("پرداخت و نوبت تأیید شده‌اند؛ نوبتت قطعی است.");
       } else if (appointmentStatus === "در انتظار پرداخت" && paymentStatus === "رد شد") {
         setBookingStage("payment");
+        setReceiptFile(null);
+        setTransactionNumber("");
         setMessage("فیش قبلی تأیید نشد. اگر مهلت پرداخت باقی است، رسید اصلاح‌شده را ارسال کن.");
       } else if (paymentStatus === "فیش دریافت شد") {
         setBookingStage("payment_submitted");
@@ -5906,6 +5908,7 @@ function BookingPage({
   const submitReceipt = async () => {
     setMessage("");
     if (!bookingId || !requestIdState) return setMessage("شناسهٔ نوبت پیدا نشد؛ ابتدا وضعیت درخواست را بررسی کن.");
+    if (!String(cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || "").trim()) return setMessage("اطلاعات کارت هنوز در CMS ثبت نشده است؛ لطفاً پیش از پرداخت با پشتیبانی تماس بگیر.");
     if (!receiptFile && !transactionNumber.trim()) return setMessage("تصویر فیش یا کد پیگیری پرداخت الزامی است.");
     if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
     setSubmittingReceipt(true);
