@@ -5333,8 +5333,14 @@ function BookingPage({
   };
 
   type BookingState = "idle" | "loading" | "submitting" | "success" | "error";
-
-
+  const BOOKING_FLOW_STORAGE_KEY = "kaenatchi-booking-flow-v1";
+  const [savedBookingFlow] = useState(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(BOOKING_FLOW_STORAGE_KEY) || "null");
+      if (saved && typeof saved.requestId === "string" && saved.requestId) return saved;
+    } catch {}
+    return null;
+  });
 
   const [config, setConfig] = useState<BookingConfig | null>(null);
   const [serviceId, setServiceId] = useState(initialService?.id || "");
@@ -5353,10 +5359,14 @@ function BookingPage({
   const [transactionNumber, setTransactionNumber] = useState("");
   const [message, setMessage] = useState("");
   const [state, setState] = useState<BookingState>("loading");
-  const [trackingCode, setTrackingCode] = useState("");
-  const [bookingId, setBookingId] = useState("");
-  const [requestIdState, setRequestIdState] = useState("");
-  const [bookingStage, setBookingStage] = useState<"request" | "pending_approval" | "payment" | "payment_submitted">("request");
+  const [trackingCode, setTrackingCode] = useState(String(savedBookingFlow?.trackingCode || ""));
+  const [bookingId, setBookingId] = useState(String(savedBookingFlow?.bookingId || ""));
+  const [requestIdState, setRequestIdState] = useState(String(savedBookingFlow?.requestId || ""));
+  const [bookingStage, setBookingStage] = useState<"request" | "pending_approval" | "payment" | "payment_submitted">(
+    ["pending_approval", "payment", "payment_submitted"].includes(String(savedBookingFlow?.stage))
+      ? savedBookingFlow.stage
+      : "request"
+  );
   const [checkingBookingStatus, setCheckingBookingStatus] = useState(false);
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
@@ -5580,7 +5590,7 @@ function BookingPage({
         setServiceId(initialService.id);
         setBookingCategory(initialService.category);
       }
-      setState("idle");
+      setState(bookingStage === "request" ? "idle" : "success");
     } catch (error) {
       setState("error");
       setMessage(
@@ -5598,6 +5608,21 @@ function BookingPage({
       (window as any).Telegram?.WebApp?.expand?.();
     } catch {}
   }, []);
+
+  useEffect(() => {
+    try {
+      if (bookingStage === "request" || !requestIdState) {
+        window.localStorage.removeItem(BOOKING_FLOW_STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(BOOKING_FLOW_STORAGE_KEY, JSON.stringify({
+          requestId: requestIdState,
+          bookingId,
+          trackingCode,
+          stage: bookingStage,
+        }));
+      }
+    } catch {}
+  }, [bookingStage, requestIdState, bookingId, trackingCode]);
 
   useEffect(() => {
     if (!date) {
@@ -5977,6 +6002,18 @@ function BookingPage({
           </button>
         )}
         {message && <div style={{padding:"13px",borderRadius:"15px",marginTop:"12px",background:"rgba(36,99,71,.08)",color:"#246347",fontSize:"13px",lineHeight:1.9,whiteSpace:"pre-line"}}>{message}</div>}
+        {bookingStage === "payment_submitted" && (
+          <button type="button" onClick={() => {
+            setBookingStage("request");
+            setRequestIdState("");
+            setBookingId("");
+            setTrackingCode("");
+            setReceiptFile(null);
+            setTransactionNumber("");
+            setMessage("");
+            setState("idle");
+          }} style={{...backButtonStyle,width:"100%",marginTop:"10px"}}>ثبت درخواست نوبت جدید</button>
+        )}
         <button type="button" onClick={onBack} style={{...backButtonStyle,width:"100%",marginTop:"16px"}}>بازگشت</button>
       </div>
     );
