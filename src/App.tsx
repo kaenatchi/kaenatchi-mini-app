@@ -5870,6 +5870,12 @@ function BookingPage({
         receiptFileName: receiptFile?.name || "",
         receiptMimeType: receiptFile?.type || "",
       });
+
+      // The Worker uses no-cors for POST, so its response is opaque and cannot
+      // confirm success. Only show success after Apps Script's status poll
+      // confirms that the payment receipt was actually saved.
+      await waitForBookingStatus(String(resumeBooking.requestId || ""), "paid");
+
       setTrackingCode(String(resumeBooking.trackingCode || trackingCode));
       setPaymentSubmitted(true);
       setState("success");
