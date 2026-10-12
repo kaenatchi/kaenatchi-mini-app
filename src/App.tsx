@@ -5756,9 +5756,9 @@ function BookingPage({
     if (!firstName.trim() || !lastName.trim() || !mobile.trim()) return setMessage("لطفاً نام، نام خانوادگی و شماره موبایل را کامل وارد کن.");
 
     setState("submitting");
+    let activeRequestId = "";
     try {
       const requestId = "REQ-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8).toUpperCase();
-      setRequestIdState(requestId);
       const serviceName = String(selectedService.title || "");
       const telegramProfile = await getTelegramProfile();
       const telegramId = telegramProfile.telegramId;
@@ -5770,6 +5770,9 @@ function BookingPage({
         setMessage("برای دریافت یادآوری تلگرامی، لطفاً مینی‌اپ را از داخل ربات کائنات‌چی باز کن و دوباره تلاش کن.");
         return;
       }
+      activeRequestId = requestId;
+      setRequestIdState(requestId);
+      setBookingStage("pending_approval");
 
       // A POST can time out after the backend has already committed the booking.
       // Recover by requestId before treating the attempt as failed, so a successful
@@ -5836,8 +5839,14 @@ function BookingPage({
       setState("success");
       setMessage("درخواست نوبت ثبت شد. تا تأیید مدیر پرداخت نکن؛ پس از تأیید، همین‌جا می‌توانی رسید را ارسال کنی.");
     } catch (error) {
-      setState("error");
-      setMessage(error instanceof Error ? error.message : "هنگام ثبت نوبت مشکلی پیش آمد.");
+      if (activeRequestId) {
+        setBookingStage("pending_approval");
+        setState("success");
+        setMessage("پاسخ ثبت درخواست دریافت نشد؛ ممکن است نوبت ثبت شده باشد. برای جلوگیری از رزرو تکراری، ابتدا وضعیت همین درخواست را بررسی کن.");
+      } else {
+        setState("error");
+        setMessage(error instanceof Error ? error.message : "هنگام ثبت نوبت مشکلی پیش آمد.");
+      }
     }
   };
 
