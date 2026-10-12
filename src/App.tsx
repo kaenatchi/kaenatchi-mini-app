@@ -5333,8 +5333,14 @@ function BookingPage({
   };
 
   type BookingState = "idle" | "loading" | "submitting" | "success" | "error";
-
-
+  const BOOKING_FLOW_STORAGE_KEY = "kaenatchi-booking-flow-v1";
+  const [savedBookingFlow] = useState(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(BOOKING_FLOW_STORAGE_KEY) || "null");
+      if (saved && typeof saved.requestId === "string" && saved.requestId) return saved;
+    } catch {}
+    return null;
+  });
 
   const [config, setConfig] = useState<BookingConfig | null>(null);
   const [serviceId, setServiceId] = useState(initialService?.id || "");
@@ -5353,7 +5359,16 @@ function BookingPage({
   const [transactionNumber, setTransactionNumber] = useState("");
   const [message, setMessage] = useState("");
   const [state, setState] = useState<BookingState>("loading");
-  const [trackingCode, setTrackingCode] = useState("");
+  const [trackingCode, setTrackingCode] = useState(String(savedBookingFlow?.trackingCode || ""));
+  const [bookingId, setBookingId] = useState(String(savedBookingFlow?.bookingId || ""));
+  const [requestIdState, setRequestIdState] = useState(String(savedBookingFlow?.requestId || ""));
+  const [bookingStage, setBookingStage] = useState<"request" | "pending_approval" | "payment" | "receipt_pending" | "payment_submitted" | "confirmed" | "closed">(
+    ["pending_approval", "payment", "receipt_pending", "payment_submitted", "confirmed", "closed"].includes(String(savedBookingFlow?.stage))
+      ? savedBookingFlow.stage
+      : "request"
+  );
+  const [checkingBookingStatus, setCheckingBookingStatus] = useState(false);
+  const [submittingReceipt, setSubmittingReceipt] = useState(false);
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
   const backendServices: Service[] = (config?.services || [])
@@ -5423,10 +5438,13 @@ function BookingPage({
   };
 
   const ENDPOINT = BOOKING_TRANSPORT_ENDPOINT;
+  // Safety gate for draft previews: never write real booking/payment data until a staging transport is configured.
+  const BOOKING_MUTATIONS_ENABLED = false;
 
   const waitForBookingStatus = async (
     requestId: string,
-    mode: "created" | "paid"
+    mode: "created" | "paid",
+    mobileNumber: string
   ) => {
     const started = Date.now();
     let attempt = 0;
@@ -5438,7 +5456,7 @@ function BookingPage({
      * Back off gradually to avoid hammering Apps Script if it is genuinely busy.
      */
     while (Date.now() - started < 30000) {
-      const data = await apiGet("bookingStatus", { requestId });
+      const data = await apiGet("bookingStatus", { requestId, mobile: mobileNumber });
 
       if (data.found) {
         if (mode === "created" && data.bookingId) return data;
@@ -5477,6 +5495,10 @@ function BookingPage({
     action: string,
     payload: Record<string, unknown>
   ) => {
+    if (!BOOKING_MUTATIONS_ENABLED && (action === "createBooking" || action === "submitPayment")) {
+      throw new Error("این نسخه آزمایشی است؛ ثبت واقعی نوبت و ارسال پرداخت موقتاً غیرفعال است.");
+    }
+
     const requestId = String(
       payload.requestId ||
         payload.clientRequestId ||
@@ -5537,7 +5559,8 @@ function BookingPage({
      */
     return waitForBookingStatus(
       requestId,
-      action === "createBooking" ? "created" : "paid"
+      action === "createBooking" ? "created" : "paid",
+      String(payload.mobile || mobile || "").trim()
     );
   };
 
@@ -5576,7 +5599,7 @@ function BookingPage({
         setServiceId(initialService.id);
         setBookingCategory(initialService.category);
       }
-      setState("idle");
+      setState(bookingStage === "request" ? "idle" : "success");
     } catch (error) {
       setState("error");
       setMessage(
@@ -5594,6 +5617,21 @@ function BookingPage({
       (window as any).Telegram?.WebApp?.expand?.();
     } catch {}
   }, []);
+
+  useEffect(() => {
+    try {
+      if (bookingStage === "request" || !requestIdState) {
+        window.localStorage.removeItem(BOOKING_FLOW_STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(BOOKING_FLOW_STORAGE_KEY, JSON.stringify({
+          requestId: requestIdState,
+          bookingId,
+          trackingCode,
+          stage: bookingStage,
+        }));
+      }
+    } catch {}
+  }, [bookingStage, requestIdState, bookingId, trackingCode]);
 
   useEffect(() => {
     if (!date) {
@@ -5724,10 +5762,9 @@ function BookingPage({
     if (!selectedService || !serviceId) return setMessage("لطفاً خدمت موردنظر را انتخاب کن.");
     if (!date || !time) return setMessage("لطفاً تاریخ و ساعت نوبت را انتخاب کن.");
     if (!firstName.trim() || !lastName.trim() || !mobile.trim()) return setMessage("لطفاً نام، نام خانوادگی و شماره موبایل را کامل وارد کن.");
-    if (!receiptFile && !transactionNumber.trim()) return setMessage("تصویر فیش یا کد پیگیری پرداخت الزامی است.");
-    if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
 
     setState("submitting");
+    let activeRequestId = "";
     try {
       const requestId = "REQ-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8).toUpperCase();
       const serviceName = String(selectedService.title || "");
@@ -5741,6 +5778,9 @@ function BookingPage({
         setMessage("برای دریافت یادآوری تلگرامی، لطفاً مینی‌اپ را از داخل ربات کائنات‌چی باز کن و دوباره تلاش کن.");
         return;
       }
+      activeRequestId = requestId;
+      setRequestIdState(requestId);
+      setBookingStage("pending_approval");
 
       // A POST can time out after the backend has already committed the booking.
       // Recover by requestId before treating the attempt as failed, so a successful
@@ -5775,7 +5815,7 @@ function BookingPage({
 
         let recovered: any = null;
         try {
-          recovered = await waitForBookingStatus(requestId, "created");
+          recovered = await waitForBookingStatus(requestId, "created", mobile.trim());
         } catch {}
 
         if (!recovered?.bookingId) {
@@ -5801,59 +5841,23 @@ function BookingPage({
       const bookingId = String(create?.booking?.bookingId || create?.bookingId || "");
       if (!bookingId) throw new Error("کد نوبت از سامانه دریافت نشد.");
 
-      let receiptData = "";
-      if (receiptFile) receiptData = await fileToDataUrl(receiptFile);
-
-      let payment: any;
-      try {
-        payment = await apiPost("submitPayment", {
-          requestId,
-          bookingId,
-          telegramId,
-          telegramChatId: telegramId,
-          telegramUsername: telegramProfile.telegramUsername,
-          telegramFirstName: telegramProfile.telegramFirstName,
-          telegramLastName: telegramProfile.telegramLastName,
-          transactionNumber:transactionNumber.trim(),
-          receiptData,
-          receiptFileName:receiptFile?.name || "",
-          receiptMimeType:receiptFile?.type || "",
-        });
-      } catch (error) {
-        const isTransportTimeout =
-          error instanceof Error &&
-          (
-            error.message === "BOOKING_TRANSPORT_TIMEOUT" ||
-            /HTTP 502|ارتباط با سامانه رزرو برقرار نشد|JSONP_TRANSPORT_TIMEOUT/i.test(error.message)
-          );
-
-        if (!isTransportTimeout) throw error;
-
-        let recovered: any = null;
-        try {
-          recovered = await waitForBookingStatus(requestId, "paid");
-        } catch {}
-
-        if (!recovered?.found) {
-          throw error;
-        }
-
-        payment = {
-          ok: true,
-          bookingId,
-          paymentStatus: recovered.paymentStatus || "",
-          recovered: true,
-        };
-      }
-
-      if (!payment?.ok) throw new Error(payment?.message || "ارسال پرداخت ناموفق بود.");
-
-      setTrackingCode(String(create?.booking?.trackingCode || payment?.trackingCode || ""));
+      setBookingId(bookingId);
+      setTrackingCode(String(create?.booking?.trackingCode || create?.trackingCode || ""));
+      setBookingStage("pending_approval");
       setState("success");
-      setMessage("درخواست نوبت و اطلاعات پرداخت با موفقیت ثبت شد و در انتظار بررسی ادمین است.");
+      setMessage("درخواست نوبت ثبت شد. تا تأیید مدیر پرداخت نکن؛ پس از تأیید، همین‌جا می‌توانی رسید را ارسال کنی.");
     } catch (error) {
-      setState("error");
-      setMessage(error instanceof Error ? error.message : "هنگام ثبت نوبت مشکلی پیش آمد.");
+      if (error instanceof Error && error.message.includes("این نسخه آزمایشی است")) {
+        setState("error");
+        setMessage(error.message);
+      } else if (activeRequestId) {
+        setBookingStage("pending_approval");
+        setState("success");
+        setMessage("پاسخ ثبت درخواست دریافت نشد؛ ممکن است نوبت ثبت شده باشد. برای جلوگیری از رزرو تکراری، ابتدا وضعیت همین درخواست را بررسی کن.");
+      } else {
+        setState("error");
+        setMessage(error instanceof Error ? error.message : "هنگام ثبت نوبت مشکلی پیش آمد.");
+      }
     }
   };
 
@@ -5869,19 +5873,156 @@ function BookingPage({
     );
   }
 
+  const checkBookingStatus = async () => {
+    if (!requestIdState) return setMessage("شناسهٔ پیگیری درخواست پیدا نشد.");
+    if (!mobile.trim()) return setMessage("برای حفظ امنیت اطلاعات، شماره موبایلی را وارد کن که با آن درخواست را ثبت کرده‌ای.");
+    setCheckingBookingStatus(true);
+    setMessage("");
+    try {
+      const data = await apiGet("bookingStatus", { requestId: requestIdState, mobile: mobile.trim() });
+      if (!data?.found) {
+        setBookingStage("closed");
+        setMessage("درخواست با این شناسه پیدا نشد. اگر تازه ثبتش کرده‌ای، دوباره وضعیت را بررسی کن؛ اگر ثبت نشده باشد می‌توانی فرم رزرو را از نو شروع کنی.");
+        return;
+      }
+      setBookingId(String(data.bookingId || bookingId));
+      setTrackingCode(String(data.trackingCode || trackingCode));
+      const appointmentStatus = String(data.appointmentStatus || "");
+      const paymentStatus = String(data.paymentStatus || "");
+      if (appointmentStatus === "در انتظار پرداخت" && paymentStatus === "در انتظار پرداخت") {
+        setBookingStage("payment");
+        setMessage("مدیر درخواستت را تأیید کرده است. حالا می‌توانی پرداخت کنی و رسید را برای بررسی دستی بفرستی.");
+      } else if (appointmentStatus === "تأیید شده" || paymentStatus === "تأیید شد") {
+        setBookingStage("confirmed");
+        setMessage("پرداخت و نوبت تأیید شده‌اند؛ نوبتت قطعی است.");
+      } else if (appointmentStatus === "در انتظار پرداخت" && paymentStatus === "رد شد") {
+        setBookingStage("payment");
+        setReceiptFile(null);
+        setTransactionNumber("");
+        setMessage("فیش قبلی تأیید نشد. اگر مهلت پرداخت باقی است، رسید اصلاح‌شده را ارسال کن.");
+      } else if (paymentStatus === "فیش دریافت شد" || appointmentStatus === "فیش ارسال شده") {
+        setBookingStage("receipt_pending");
+        setMessage("فیش دریافت شده و در انتظار بررسی دستی مدیر است؛ نوبت هنوز قطعی نیست.");
+      } else if (appointmentStatus === "رد شده" || appointmentStatus === "لغو شده") {
+        setBookingStage("closed");
+        setMessage("این درخواست رد شده یا مهلتش تمام شده است. برای ادامه با پشتیبانی کائنات‌چی تماس بگیر.");
+      } else {
+        setBookingStage("pending_approval");
+        setMessage("درخواست هنوز در انتظار تصمیم مدیر است. پس از تأیید دوباره وضعیت را بررسی کن.");
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "بررسی وضعیت نوبت ناموفق بود.");
+    } finally {
+      setCheckingBookingStatus(false);
+    }
+  };
+
+  const submitReceipt = async () => {
+    setMessage("");
+    if (!bookingId || !requestIdState) return setMessage("شناسهٔ نوبت پیدا نشد؛ ابتدا وضعیت درخواست را بررسی کن.");
+    if (!String(cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || "").trim()) return setMessage("اطلاعات کارت هنوز در CMS ثبت نشده است؛ لطفاً پیش از پرداخت با پشتیبانی تماس بگیر.");
+    if (!receiptFile) return setMessage("برای بررسی پرداخت، بارگذاری تصویر فیش الزامی است.");
+    if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
+    setSubmittingReceipt(true);
+    try {
+      const telegramProfile = await getTelegramProfile();
+      let receiptData = "";
+      if (receiptFile) receiptData = await fileToDataUrl(receiptFile);
+      const payment = await apiPost("submitPayment", {
+        requestId: requestIdState,
+        bookingId,
+        mobile: mobile.trim(),
+        telegramId: telegramProfile.telegramId,
+        telegramChatId: telegramProfile.telegramId,
+        transactionNumber: transactionNumber.trim(),
+        receiptData,
+        receiptFileName: receiptFile?.name || "",
+        receiptMimeType: receiptFile?.type || "",
+      });
+      if (!payment?.ok) throw new Error(payment?.message || "ارسال رسید ناموفق بود.");
+      setBookingStage("receipt_pending");
+      setMessage("رسید دریافت شد و برای بررسی دستی مدیر ارسال شد. تا تأیید نهایی، نوبت قطعی نیست.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "ارسال رسید ناموفق بود.");
+    } finally {
+      setSubmittingReceipt(false);
+    }
+  };
+
   if (state === "success") {
+    const paymentCardNumber = cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || "";
+    const paymentBank = cmsSetting(["booking_bank_name", "نام بانک", "بانک"]) || "";
+    const paymentHolder = cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || "";
     return (
       <div className="inner-page">
-        <SectionHeaderCard kicker="BOOKING RECEIVED" title="درخواست ثبت شد" description="اطلاعات نوبت و پرداخت دریافت شد و درخواست برای بررسی ادمین ارسال شده است." icon="check" status="در انتظار تأیید" />
+        <SectionHeaderCard
+          kicker="BOOKING TRACKING"
+          title={bookingStage === "payment" ? "پرداخت نوبت" : bookingStage === "receipt_pending" || bookingStage === "payment_submitted" ? "بررسی رسید پرداخت" : bookingStage === "confirmed" ? "نوبت قطعی شد" : bookingStage === "closed" ? "درخواست بسته شد" : "پیگیری درخواست"}
+          description={bookingStage === "payment" ? "درخواست تأیید شده است؛ پس از پرداخت، رسید برای بررسی دستی ارسال می‌شود." : bookingStage === "receipt_pending" || bookingStage === "payment_submitted" ? "رسید دریافت شده و در انتظار بررسی دستی مدیر است؛ نوبت تا تأیید پرداخت قطعی نیست." : bookingStage === "confirmed" ? "پرداخت بررسی شده و نوبتت قطعی است." : bookingStage === "closed" ? "این درخواست دیگر فعال نیست. برای رزرو جدید، درخواست تازه‌ای ثبت کن." : "درخواست ابتدا توسط مدیر بررسی می‌شود. پرداخت فقط پس از تأیید مدیر انجام بده."}
+          icon="calendar"
+          status={bookingStage === "confirmed" ? "نوبت قطعی" : bookingStage === "closed" ? "درخواست بسته شد" : bookingStage === "receipt_pending" || bookingStage === "payment_submitted" ? "در انتظار بررسی فیش" : bookingStage === "payment" ? "در انتظار پرداخت" : "در انتظار تأیید مدیر"}
+        />
         <div className="glass-list-card" style={{display:"block",textAlign:"center"}}>
           <div className="list-icon" style={{margin:"0 auto 12px"}}><Icon name="ticket" /></div>
           <div className="list-copy">
             <strong>کد پیگیری</strong>
             <span style={{direction:"ltr",fontWeight:700,fontSize:"18px"}}>{trackingCode || "ثبت شد"}</span>
-            <span>لطفاً این کد را نگه دار.</span>
+            <span>این کد را نگه دار.</span>
           </div>
         </div>
-        <button type="button" onClick={onBack} style={{...backButtonStyle, width:"100%", marginTop:"16px"}}>بازگشت</button>
+        {bookingStage === "payment" && (
+          <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
+            <div className="list-copy">
+              <strong>اطلاعات پرداخت</strong>
+              <span>{cmsSetting(["booking_payment_text", "توضیح پرداخت", "متن پرداخت"]) || "پس از پرداخت، تصویر فیش یا کد پیگیری پرداخت را ارسال کن."}</span>
+            </div>
+            <div style={{marginTop:"14px",padding:"16px",borderRadius:"20px",background:"rgba(165,139,91,.09)",border:"1px solid rgba(165,139,91,.18)",color:"#26342b"}}>
+              {paymentCardNumber ? (
+                <>
+                  <div style={{fontSize:"11px",opacity:.68,marginBottom:"5px"}}>شماره کارت</div>
+                  <b dir="ltr" style={{fontSize:"16px",letterSpacing:"1px"}}>{paymentCardNumber}</b>
+                  {(paymentBank || paymentHolder) && <div style={{marginTop:"8px",fontSize:"12px"}}>{[paymentBank,paymentHolder].filter(Boolean).join(" · ")}</div>}
+                </>
+              ) : <div style={{fontSize:"12px",lineHeight:1.9}}>اطلاعات کارت هنوز در CMS ثبت نشده است.</div>}
+            </div>
+            <input value={transactionNumber} onChange={e=>setTransactionNumber(e.target.value)} placeholder="کد پیگیری پرداخت (اختیاری)" inputMode="numeric" style={{width:"100%",boxSizing:"border-box",marginTop:"10px",padding:"14px 15px",borderRadius:"18px",border:"1px solid rgba(53,59,50,.14)",background:"rgba(255,255,255,.78)",fontFamily:"inherit",fontSize:"14px"}} />
+            <label style={{display:"block",marginTop:"14px",padding:"16px",borderRadius:"20px",border:"1px dashed rgba(36,99,71,.35)",background:"rgba(36,99,71,.05)",textAlign:"center",cursor:"pointer"}}>
+              📎 {receiptFile ? receiptFile.name : "انتخاب تصویر فیش"}
+              <input type="file" accept="image/*" onChange={e=>setReceiptFile(e.target.files?.[0] || null)} style={{display:"none"}} />
+            </label>
+            <button type="button" onClick={()=>void submitReceipt()} disabled={submittingReceipt} style={{width:"100%",marginTop:"14px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px",cursor:submittingReceipt?"default":"pointer",boxShadow:"0 10px 24px rgba(23,75,56,.2)"}}>
+              {submittingReceipt ? "در حال ارسال رسید..." : "ارسال رسید برای بررسی"}
+            </button>
+          </div>
+        )}
+        {!mobile.trim() && (
+          <input
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value)}
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="شماره موبایل ثبت‌شده برای این درخواست"
+            aria-label="شماره موبایل ثبت‌شده برای این درخواست"
+            style={{width:"100%",boxSizing:"border-box",marginTop:"14px",padding:"14px 15px",borderRadius:"18px",border:"1px solid rgba(53,59,50,.14)",background:"rgba(255,255,255,.78)",fontFamily:"inherit",fontSize:"14px"}}
+          />
+        )}
+        <button type="button" onClick={()=>void checkBookingStatus()} disabled={checkingBookingStatus} style={{width:"100%",marginTop:"14px",border:"1px solid rgba(36,99,71,.18)",borderRadius:"18px",padding:"15px",background:"rgba(36,99,71,.08)",color:"#174b38",fontFamily:"inherit",fontSize:"14px",cursor:checkingBookingStatus?"default":"pointer"}}>
+          {checkingBookingStatus ? "در حال بررسی..." : "بررسی وضعیت درخواست"}
+        </button>
+        {message && <div style={{padding:"13px",borderRadius:"15px",marginTop:"12px",background:"rgba(36,99,71,.08)",color:"#246347",fontSize:"13px",lineHeight:1.9,whiteSpace:"pre-line"}}>{message}</div>}
+        {(bookingStage === "confirmed" || bookingStage === "closed") && (
+          <button type="button" onClick={() => {
+            setBookingStage("request");
+            setRequestIdState("");
+            setBookingId("");
+            setTrackingCode("");
+            setReceiptFile(null);
+            setTransactionNumber("");
+            setMessage("");
+            setState("idle");
+          }} style={{...backButtonStyle,width:"100%",marginTop:"10px"}}>ثبت درخواست نوبت جدید</button>
+        )}
+        <button type="button" onClick={onBack} style={{...backButtonStyle,width:"100%",marginTop:"16px"}}>بازگشت</button>
       </div>
     );
   }
@@ -6283,73 +6424,9 @@ function BookingPage({
 
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
-          <strong>۵. پرداخت و رسید</strong>
-          <span>{paymentNote}</span>
+          <strong>۵. ثبت درخواست</strong>
+          <span>در این مرحله پرداخت نکن. ابتدا درخواست برای بررسی مدیر ثبت می‌شود؛ اگر تأیید شد، اطلاعات پرداخت و امکان ارسال رسید در همین صفحه فعال خواهد شد.</span>
         </div>
-        {renderBookingContent(["payment_guide"])} 
-
-        <div style={{
-          marginTop:"14px",
-          padding:"16px",
-          borderRadius:"20px",
-          background:"rgba(165,139,91,.09)",
-          border:"1px solid rgba(165,139,91,.18)",
-          color:"#26342b",
-          boxShadow:"0 8px 20px rgba(53,59,50,.06)",
-        }}>
-          {paymentCardNumber ? (
-            <>
-              <div style={{fontSize:"11px",opacity:.68,marginBottom:"5px"}}>شماره کارت</div>
-              <b dir="ltr" style={{fontSize:"16px",letterSpacing:"1px"}}>{paymentCardNumber}</b>
-              {(paymentBank || paymentHolder) && (
-                <div style={{marginTop:"8px",fontSize:"12px"}}>
-                  {[paymentBank,paymentHolder].filter(Boolean).join(" · ")}
-                </div>
-              )}
-            </>
-          ) : (
-            <div style={{fontSize:"12px",lineHeight:1.9}}>
-              اطلاعات کارت هنوز در CMS ثبت نشده است.
-            </div>
-          )}
-        </div>
-
-        <input
-          value={transactionNumber}
-          onChange={e=>setTransactionNumber(e.target.value)}
-          placeholder="کد پیگیری پرداخت (اختیاری)"
-          inputMode="numeric"
-          enterKeyHint="done"
-          style={inputBaseStyle}
-          {...tapHandlers}
-          onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
-        />
-
-        {renderBookingContent(["receipt_warning"])}
-        <label
-          style={{
-            display:"block",
-            marginTop:"14px",
-            padding:"16px",
-            borderRadius:"20px",
-            border:"1px dashed rgba(36,99,71,.35)",
-            background:"rgba(36,99,71,.05)",
-            color:"#26342b",
-            textAlign:"center",
-            cursor:"pointer",
-            transition:"transform .18s ease, box-shadow .18s ease, background .18s ease",
-          }}
-          onTouchStart={(e)=>{e.currentTarget.style.transform="scale(.985)";}}
-          onTouchEnd={(e)=>{e.currentTarget.style.transform="scale(1)";}}
-        >
-          📎 {receiptFile ? receiptFile.name : "انتخاب تصویر فیش"}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={e=>setReceiptFile(e.target.files?.[0] || null)}
-            style={{display:"none"}}
-          />
-        </label>
       </div>
       {message && (
         <div style={{padding:"13px",borderRadius:"15px",marginTop:"12px",background:state==="error"?"rgba(165,45,45,.08)":"rgba(36,99,71,.08)",color:state==="error"?"#a52d2d":"#246347",fontSize:"13px",lineHeight:1.9,whiteSpace:"pre-line"}}>
@@ -6359,7 +6436,7 @@ function BookingPage({
       {renderBookingContent(["tracking_guide", "custom_notice"])}
 
       <button type="button" onClick={()=>void submit()} disabled={state==="submitting"} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px",cursor:state==="submitting"?"default":"pointer",boxShadow:"0 10px 24px rgba(23,75,56,.2)"}}>
-        {state==="submitting" ? "در حال ثبت نوبت و پرداخت..." : "ثبت نهایی نوبت"}
+        {state==="submitting" ? "در حال ثبت درخواست..." : "ثبت درخواست نوبت"}
       </button>
     </div>
   );
