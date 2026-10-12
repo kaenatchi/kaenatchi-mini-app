@@ -5383,7 +5383,8 @@ function BookingPage({
 
   const waitForBookingStatus = async (
     requestId: string,
-    mode: "created" | "paid"
+    mode: "created" | "paid",
+    mobile: string
   ) => {
     const started = Date.now();
     let attempt = 0;
@@ -5395,7 +5396,7 @@ function BookingPage({
      * Back off gradually to avoid hammering Apps Script if it is genuinely busy.
      */
     while (Date.now() - started < 30000) {
-      const data = await apiGet("bookingStatus", { requestId });
+      const data = await apiGet("bookingStatus", { requestId, mobile });
 
       if (data.found) {
         if (mode === "created" && data.bookingId) return data;
@@ -5494,7 +5495,8 @@ function BookingPage({
      */
     return waitForBookingStatus(
       requestId,
-      action === "createBooking" ? "created" : "paid"
+      action === "createBooking" ? "created" : "paid",
+      String(payload.mobile || payload.phone || "")
     );
   };
 
@@ -5742,7 +5744,7 @@ function BookingPage({
 
         let recovered: any = null;
         try {
-          recovered = await waitForBookingStatus(requestId, "created");
+          recovered = await waitForBookingStatus(requestId, "created", mobile);
         } catch {}
 
         if (!recovered?.bookingId) {
@@ -5838,7 +5840,7 @@ function BookingPage({
       // The Worker uses no-cors for POST, so its response is opaque and cannot
       // confirm success. Only show success after Apps Script's status poll
       // confirms that the payment receipt was actually saved.
-      await waitForBookingStatus(String(resumeBooking.requestId || ""), "paid");
+      await waitForBookingStatus(String(resumeBooking.requestId || ""), "paid", lookupMobile.trim());
 
       setTrackingCode(String(resumeBooking.trackingCode || trackingCode));
       setPaymentSubmitted(true);
