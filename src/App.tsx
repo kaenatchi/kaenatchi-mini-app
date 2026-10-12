@@ -127,7 +127,10 @@ const readBookingConfigCache = () => {
     const raw = window.localStorage.getItem(BOOKING_CONFIG_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed?.data || typeof parsed.savedAt !== "number") return null;
+    if (
+      !isValidBookingConfig(parsed?.data) ||
+      typeof parsed.savedAt !== "number"
+    ) return null;
 
     return {
       data: parsed.data,
@@ -139,7 +142,18 @@ const readBookingConfigCache = () => {
   }
 };
 
+const isValidBookingConfig = (data: any): boolean =>
+  Boolean(
+    data &&
+      typeof data === "object" &&
+      data.ok !== false &&
+      Array.isArray(data.services) &&
+      data.services.length > 0
+  );
+
 const writeBookingConfigCache = (data: any) => {
+  if (!isValidBookingConfig(data)) return;
+
   try {
     window.localStorage.setItem(
       BOOKING_CONFIG_CACHE_KEY,
