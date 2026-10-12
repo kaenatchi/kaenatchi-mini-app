@@ -115,7 +115,7 @@ const BOOKING_TRANSPORT_ENDPOINT =
 const BOOKING_BACKEND_ENDPOINT =
   "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
 
-const BOOKING_TRANSPORT_VERSION = "v7-jsonp-fetch-backend";
+const BOOKING_TRANSPORT_VERSION = "v8-worker-only";
 const BOOKING_CONFIG_CACHE_KEY =
   "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
 const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
@@ -272,33 +272,9 @@ const apiGetLive = async (
   params: Record<string, string> = {}
 ): Promise<any> => {
   /*
-   * Slot reads use the verified Apps Script JSONP path first.
-   * The Worker remains the transport for config/date reads and
-   * remains available as fallback for slots. This isolates the
-   * slot-loading path without changing the booking architecture.
+   * All booking reads stay behind the existing Cloudflare Worker transport.
+   * Do not call the Apps Script deployment directly from the Mini App.
    */
-  if (action === "getAvailableSlots" || action === "bookingStatus") {
-    try {
-      /*
-       * Slot reads and mutation-status reads are authoritative backend reads.
-       * Prefer the direct Apps Script JSONP path for these two actions so a
-       * transient Worker GET/JSONP issue cannot make a successful booking or
-       * payment look failed in the Mini App.
-       */
-      return await apiGetJsonpOnce(
-        action,
-        params,
-        BOOKING_BACKEND_ENDPOINT
-      );
-    } catch (backendFirstError) {
-      console.warn(
-        "[KaenatChi Booking] direct backend read failed; falling back to Worker",
-        action,
-        backendFirstError
-      );
-    }
-  }
-
   let workerJsonpError: unknown = null;
 
   try {
@@ -313,25 +289,11 @@ const apiGetLive = async (
     workerJsonpError = error;
   }
 
-  let fetchError: unknown = null;
-
   try {
     const data = await apiGetFetchOnce(action, params);
     if (action === "getConfig") writeBookingConfigCache(data);
     return data;
-  } catch (error) {
-    fetchError = error;
-  }
-
-  try {
-    const data = await apiGetJsonpOnce(
-      action,
-      params,
-      BOOKING_BACKEND_ENDPOINT
-    );
-    if (action === "getConfig") writeBookingConfigCache(data);
-    return data;
-  } catch (backendJsonpError) {
+  } catch (fetchError) {
     const firstError =
       workerJsonpError instanceof Error
         ? workerJsonpError.message
@@ -339,27 +301,17 @@ const apiGetLive = async (
     const secondError =
       fetchError instanceof Error
         ? fetchError.message
-        : "FETCH_FAILED";
-    const thirdError =
-      backendJsonpError instanceof Error
-        ? backendJsonpError.message
-        : "BACKEND_JSONP_FAILED";
+        : "WORKER_FETCH_FAILED";
 
     console.warn(
-      "[KaenatChi Booking] Worker JSONP + fetch + backend JSONP failed",
+      "[KaenatChi Booking] Worker JSONP + fetch failed",
       action,
       firstError,
-      secondError,
-      thirdError
+      secondError
     );
 
     throw new Error(
-      "BOOKING_TRANSPORT_FAILED:" +
-        firstError +
-        "|" +
-        secondError +
-        "|" +
-        thirdError
+      "BOOKING_TRANSPORT_FAILED:" + firstError + "|" + secondError
     );
   }
 };
