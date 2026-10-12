@@ -5368,6 +5368,7 @@ function BookingPage({
       : "request"
   );
   const [checkingBookingStatus, setCheckingBookingStatus] = useState(false);
+  const [submittingReceipt, setSubmittingReceipt] = useState(false);
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
   const backendServices: Service[] = (config?.services || [])
@@ -5897,7 +5898,7 @@ function BookingPage({
     if (!bookingId || !requestIdState) return setMessage("شناسهٔ نوبت پیدا نشد؛ ابتدا وضعیت درخواست را بررسی کن.");
     if (!receiptFile && !transactionNumber.trim()) return setMessage("تصویر فیش یا کد پیگیری پرداخت الزامی است.");
     if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
-    setState("submitting");
+    setSubmittingReceipt(true);
     try {
       const telegramProfile = await getTelegramProfile();
       let receiptData = "";
@@ -5914,11 +5915,11 @@ function BookingPage({
       });
       if (!payment?.ok) throw new Error(payment?.message || "ارسال رسید ناموفق بود.");
       setBookingStage("payment_submitted");
-      setState("success");
       setMessage("رسید دریافت شد و برای بررسی دستی مدیر ارسال شد. تا تأیید نهایی، نوبت قطعی نیست.");
     } catch (error) {
-      setState("success");
       setMessage(error instanceof Error ? error.message : "ارسال رسید ناموفق بود.");
+    } finally {
+      setSubmittingReceipt(false);
     }
   };
 
@@ -5963,8 +5964,8 @@ function BookingPage({
               📎 {receiptFile ? receiptFile.name : "انتخاب تصویر فیش"}
               <input type="file" accept="image/*" onChange={e=>setReceiptFile(e.target.files?.[0] || null)} style={{display:"none"}} />
             </label>
-            <button type="button" onClick={()=>void submitReceipt()} disabled={state==="submitting"} style={{width:"100%",marginTop:"14px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px",cursor:state==="submitting"?"default":"pointer",boxShadow:"0 10px 24px rgba(23,75,56,.2)"}}>
-              {state==="submitting" ? "در حال ارسال رسید..." : "ارسال رسید برای بررسی"}
+            <button type="button" onClick={()=>void submitReceipt()} disabled={submittingReceipt} style={{width:"100%",marginTop:"14px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px",cursor:submittingReceipt?"default":"pointer",boxShadow:"0 10px 24px rgba(23,75,56,.2)"}}>
+              {submittingReceipt ? "در حال ارسال رسید..." : "ارسال رسید برای بررسی"}
             </button>
           </div>
         )}
