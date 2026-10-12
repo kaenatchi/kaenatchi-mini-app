@@ -5904,6 +5904,9 @@ function BookingPage({
       } else if (appointmentStatus === "تأیید شده" || paymentStatus === "تأیید شد") {
         setBookingStage("payment_submitted");
         setMessage("پرداخت و نوبت تأیید شده‌اند؛ نوبتت قطعی است.");
+      } else if (appointmentStatus === "در انتظار پرداخت" && paymentStatus === "رد شد") {
+        setBookingStage("payment");
+        setMessage("فیش قبلی تأیید نشد. اگر مهلت پرداخت باقی است، رسید اصلاح‌شده را ارسال کن.");
       } else if (paymentStatus === "فیش دریافت شد") {
         setBookingStage("payment_submitted");
         setMessage("فیش دریافت شده و در انتظار بررسی دستی مدیر است.");
