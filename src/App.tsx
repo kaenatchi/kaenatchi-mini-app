@@ -5732,7 +5732,19 @@ function BookingPage({
 
     setState("submitting");
     try {
-      const requestId = "REQ-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8).toUpperCase();
+      const requestId = (() => {
+    // Use a cryptographically strong opaque identifier where supported. The
+    // request ID is used by the public status poll, so it must not be guessable.
+    try {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return "REQ-" + window.crypto.randomUUID().toUpperCase();
+      }
+    } catch {}
+    const randomPart = Array.from({ length: 8 }, () =>
+      Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, "0")
+    ).join("");
+    return "REQ-" + Date.now().toString(36).toUpperCase() + "-" + randomPart.toUpperCase();
+  })();
       const serviceName = String(selectedService.title || "");
       const telegramProfile = await getTelegramProfile();
       const telegramId = telegramProfile.telegramId;
