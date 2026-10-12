@@ -5909,29 +5909,6 @@ function BookingPage({
     );
   }
 
-  if (resumeBooking?.canPay) {
-    return (
-      <div className="inner-page">
-        <button type="button" onClick={() => setResumeBooking(null)} style={backButtonStyle}>← بازگشت به پیگیری</button>
-        <SectionHeaderCard kicker="PAYMENT UNLOCKED" title="درخواست تأیید شد" description="مهلت پرداخت از زمان تأیید اولیه شروع می‌شود. رسید یا کد پیگیری پرداخت را ثبت کن." icon="check" status="آماده پرداخت" />
-        <div className="glass-list-card" style={{display:"block"}}>
-          <div className="list-copy"><strong>{String(resumeBooking.serviceName || "خدمت")}</strong><span>{String(resumeBooking.appointmentDate || "")} · {String(resumeBooking.appointmentTime || "")}</span><span>کد پیگیری: {String(resumeBooking.trackingCode || trackingCode)}</span></div>
-          <div style={{marginTop:"12px",fontWeight:700}}>مبلغ: {Number(resumeBooking.finalPrice || 0).toLocaleString("fa-IR")} تومان</div>
-          <div style={{marginTop:"16px",padding:"14px",borderRadius:"16px",background:"rgba(165,139,91,.09)"}}>
-            {paymentCardNumber ? <><div style={{fontSize:"11px",opacity:.68}}>شماره کارت</div><b dir="ltr">{paymentCardNumber}</b>{(paymentBank || paymentHolder) && <div>{[paymentBank,paymentHolder].filter(Boolean).join(" · ")}</div>}</> : <span>اطلاعات کارت هنوز در CMS ثبت نشده است.</span>}
-          </div>
-          <input value={transactionNumber} onChange={e=>setTransactionNumber(e.target.value)} placeholder="کد پیگیری پرداخت (اختیاری)" inputMode="numeric" style={{...inputBaseStyle,marginTop:"12px"}} />
-          <label style={{display:"block",marginTop:"12px",padding:"16px",borderRadius:"18px",border:"1px dashed rgba(36,99,71,.35)",textAlign:"center"}}>
-            📎 {receiptFile ? receiptFile.name : "انتخاب تصویر فیش"}
-            <input type="file" accept="image/*" onChange={e=>setReceiptFile(e.target.files?.[0] || null)} style={{display:"none"}} />
-          </label>
-          {message && <div style={{marginTop:"12px",fontSize:"13px",lineHeight:1.8,color:state==="error"?"#a52d2d":"#246347"}}>{message}</div>}
-          <button type="button" onClick={()=>void submitResumedPayment()} disabled={state==="submitting"} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px"}}>{state==="submitting" ? "در حال ثبت پرداخت..." : "ارسال پرداخت برای بررسی"}</button>
-        </div>
-      </div>
-    );
-  }
-
   const availableDates = (config?.availableDates || [])
     .filter((item) => {
       const value = normalizeJalaliKey(item.date);
@@ -6019,6 +5996,29 @@ function BookingPage({
       event.currentTarget.style.boxShadow = "none";
     },
   };
+
+  if (resumeBooking?.canPay) {
+    return (
+      <div className="inner-page">
+        <button type="button" onClick={() => setResumeBooking(null)} style={backButtonStyle}>← بازگشت به پیگیری</button>
+        <SectionHeaderCard kicker="PAYMENT UNLOCKED" title="درخواست تأیید شد" description="مهلت پرداخت از زمان تأیید اولیه شروع می‌شود. رسید یا کد پیگیری پرداخت را ثبت کن." icon="check" status="آماده پرداخت" />
+        <div className="glass-list-card" style={{display:"block"}}>
+          <div className="list-copy"><strong>{String(resumeBooking.serviceName || "خدمت")}</strong><span>{String(resumeBooking.appointmentDate || "")} · {String(resumeBooking.appointmentTime || "")}</span><span>کد پیگیری: {String(resumeBooking.trackingCode || trackingCode)}</span></div>
+          <div style={{marginTop:"12px",fontWeight:700}}>مبلغ: {Number(resumeBooking.finalPrice || 0).toLocaleString("fa-IR")} تومان</div>
+          <div style={{marginTop:"16px",padding:"14px",borderRadius:"16px",background:"rgba(165,139,91,.09)"}}>
+            {paymentCardNumber ? <><div style={{fontSize:"11px",opacity:.68}}>شماره کارت</div><b dir="ltr">{paymentCardNumber}</b>{(paymentBank || paymentHolder) && <div>{[paymentBank,paymentHolder].filter(Boolean).join(" · ")}</div>}</> : <span>اطلاعات کارت هنوز در CMS ثبت نشده است.</span>}
+          </div>
+          <input value={transactionNumber} onChange={e=>setTransactionNumber(e.target.value)} placeholder="کد پیگیری پرداخت (اختیاری)" inputMode="numeric" style={{...inputBaseStyle,marginTop:"12px"}} />
+          <label style={{display:"block",marginTop:"12px",padding:"16px",borderRadius:"18px",border:"1px dashed rgba(36,99,71,.35)",textAlign:"center"}}>
+            📎 {receiptFile ? receiptFile.name : "انتخاب تصویر فیش"}
+            <input type="file" accept="image/*" onChange={e=>setReceiptFile(e.target.files?.[0] || null)} style={{display:"none"}} />
+          </label>
+          {message && <div style={{marginTop:"12px",fontSize:"13px",lineHeight:1.8,color:state==="error"?"#a52d2d":"#246347"}}>{message}</div>}
+          <button type="button" onClick={()=>void submitResumedPayment()} disabled={state==="submitting"} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px"}}>{state==="submitting" ? "در حال ثبت پرداخت..." : "ارسال پرداخت برای بررسی"}</button>
+        </div>
+      </div>
+    );
+  }
 
   const hideKeyboard = (event: React.FocusEvent<HTMLInputElement>) => {
     // Telegram/WebKit does not expose a universal keyboard API. Blurring the
