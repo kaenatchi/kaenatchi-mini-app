@@ -5438,6 +5438,8 @@ function BookingPage({
   };
 
   const ENDPOINT = BOOKING_TRANSPORT_ENDPOINT;
+  // Safety gate for draft previews: never write real booking/payment data until a staging transport is configured.
+  const BOOKING_MUTATIONS_ENABLED = false;
 
   const waitForBookingStatus = async (
     requestId: string,
@@ -5492,6 +5494,10 @@ function BookingPage({
     action: string,
     payload: Record<string, unknown>
   ) => {
+    if (!BOOKING_MUTATIONS_ENABLED && (action === "createBooking" || action === "submitPayment")) {
+      throw new Error("این نسخه آزمایشی است؛ ثبت واقعی نوبت و ارسال پرداخت موقتاً غیرفعال است.");
+    }
+
     const requestId = String(
       payload.requestId ||
         payload.clientRequestId ||
