@@ -5358,6 +5358,7 @@ function BookingPage({
   const [lookupMobile, setLookupMobile] = useState("");
   const [lookupBusy, setLookupBusy] = useState(false);
   const [resumeBooking, setResumeBooking] = useState<any>(null);
+  const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
   const backendServices: Service[] = (config?.services || [])
@@ -5870,6 +5871,7 @@ function BookingPage({
         receiptMimeType: receiptFile?.type || "",
       });
       setTrackingCode(String(resumeBooking.trackingCode || trackingCode));
+      setPaymentSubmitted(true);
       setState("success");
       setMessage("اطلاعات پرداخت ثبت شد و برای بررسی ادمین ارسال شد.");
     } catch (error) {
@@ -5893,14 +5895,14 @@ function BookingPage({
   if (state === "success") {
     return (
       <div className="inner-page">
-        <SectionHeaderCard kicker="BOOKING RECEIVED" title="درخواست ثبت شد" description="درخواستت برای بررسی اولیه ارسال شد؛ هنوز پرداختی ثبت نشده است." icon="check" status="در انتظار بررسی" />
+        <SectionHeaderCard kicker="BOOKING RECEIVED" title="درخواست ثبت شد" description={paymentSubmitted ? "اطلاعات پرداخت دریافت شد و برای بررسی ادمین ارسال شده است." : "درخواستت برای بررسی اولیه ارسال شد؛ هنوز پرداختی ثبت نشده است."} icon="check" status={paymentSubmitted ? "در انتظار بررسی پرداخت" : "در انتظار بررسی اولیه"} />
         <div className="glass-list-card" style={{display:"block",textAlign:"center"}}>
           <div className="list-icon" style={{margin:"0 auto 12px"}}><Icon name="ticket" /></div>
           <div className="list-copy">
             <strong>کد پیگیری</strong>
             <span style={{direction:"ltr",fontWeight:700,fontSize:"18px"}}>{trackingCode || "ثبت شد"}</span>
             <span>لطفاً این کد را نگه دار.</span>
-            <span style={{marginTop:"10px",lineHeight:1.9}}>پس از تأیید اولیه ادمین، وارد رزرو شو و در بخش «پیگیری درخواست» همین کد و شماره موبایل ثبت‌شده را وارد کن تا پرداخت برایت فعال شود.</span>
+            {!paymentSubmitted && <span style={{marginTop:"10px",lineHeight:1.9}}>پس از تأیید اولیه ادمین، وارد رزرو شو و در بخش «پیگیری درخواست» همین کد و شماره موبایل ثبت‌شده را وارد کن تا پرداخت برایت فعال شود.</span>}
             {message && <span style={{marginTop:"8px"}}>{message}</span>}
           </div>
         </div>
