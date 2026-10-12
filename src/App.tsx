@@ -5874,7 +5874,7 @@ function BookingPage({
   const submitResumedPayment = async () => {
     setMessage("");
     if (!resumeBooking?.canPay) return setMessage("این نوبت هنوز مجاز به پرداخت نیست.");
-    if (!receiptFile && !transactionNumber.trim()) return setMessage("تصویر فیش یا کد پیگیری پرداخت الزامی است.");
+    if (!receiptFile) return setMessage("برای بررسی پرداخت، ارسال تصویر فیش الزامی است.");
     if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
     setState("submitting");
     try {
@@ -5943,9 +5943,9 @@ function BookingPage({
           <div style={{marginTop:"16px",padding:"14px",borderRadius:"16px",background:"rgba(165,139,91,.09)"}}>
             {paymentCardNumber ? <><div style={{fontSize:"11px",opacity:.68}}>شماره کارت</div><b dir="ltr">{paymentCardNumber}</b>{(paymentBank || paymentHolder) && <div>{[paymentBank,paymentHolder].filter(Boolean).join(" · ")}</div>}</> : <span>اطلاعات کارت هنوز در CMS ثبت نشده است.</span>}
           </div>
-          <input value={transactionNumber} onChange={e=>setTransactionNumber(e.target.value)} placeholder="کد پیگیری پرداخت (اختیاری)" inputMode="numeric" style={{...inputBaseStyle,marginTop:"12px"}} />
+          <input value={transactionNumber} onChange={e=>setTransactionNumber(e.target.value)} placeholder="کد پیگیری پرداخت (اختیاری؛ همراه تصویر فیش)" inputMode="numeric" style={{...inputBaseStyle,marginTop:"12px"}} />
           <label style={{display:"block",marginTop:"12px",padding:"16px",borderRadius:"18px",border:"1px dashed rgba(36,99,71,.35)",textAlign:"center"}}>
-            📎 {receiptFile ? receiptFile.name : "انتخاب تصویر فیش"}
+            📎 {receiptFile ? receiptFile.name : "انتخاب تصویر فیش (الزامی)"}
             <input type="file" accept="image/*" onChange={e=>setReceiptFile(e.target.files?.[0] || null)} style={{display:"none"}} />
           </label>
           {message && <div style={{marginTop:"12px",fontSize:"13px",lineHeight:1.8,color:state==="error"?"#a52d2d":"#246347"}}>{message}</div>}
