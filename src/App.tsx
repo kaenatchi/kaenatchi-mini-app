@@ -5683,6 +5683,10 @@ function BookingPage({
     if (!selectedService || !serviceId) return setMessage("لطفاً خدمت موردنظر را انتخاب کن.");
     if (!date || !time) return setMessage("لطفاً تاریخ و ساعت نوبت را انتخاب کن.");
     if (!firstName.trim() || !lastName.trim() || !mobile.trim()) return setMessage("لطفاً نام، نام خانوادگی و شماره موبایل را کامل وارد کن.");
+    if (!receiptFile) return setMessage("برای بررسی پرداخت، ارسال تصویر فیش الزامی است.");
+    if (!receiptFile.type.startsWith("image/")) return setMessage("فقط فایل تصویری فیش پرداخت را انتخاب کن.");
+    if (receiptFile.size === 0) return setMessage("فایل تصویر خالی است؛ لطفاً تصویر دیگری انتخاب کن.");
+    if (receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
 
     setState("submitting");
     try {
@@ -5819,7 +5823,9 @@ function BookingPage({
     setMessage("");
     if (!resumeBooking?.canPay) return setMessage("این نوبت هنوز مجاز به پرداخت نیست.");
     if (!receiptFile) return setMessage("برای بررسی پرداخت، ارسال تصویر فیش الزامی است.");
-    if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
+    if (!receiptFile.type.startsWith("image/")) return setMessage("فقط فایل تصویری فیش پرداخت را انتخاب کن.");
+    if (receiptFile.size === 0) return setMessage("فایل تصویر خالی است؛ لطفاً تصویر دیگری انتخاب کن.");
+    if (receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
     setState("submitting");
     try {
       const profile = await getTelegramProfile();
