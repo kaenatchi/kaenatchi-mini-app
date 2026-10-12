@@ -5805,9 +5805,19 @@ function BookingPage({
       if (!booking.canPay) {
         const status = String(booking.paymentStatus || "");
         const appointment = String(booking.appointmentStatus || "");
-        setMessage(status === "فیش دریافت شد" || status === "تأیید شد"
-          ? "پرداخت این نوبت قبلاً ثبت شده است؛ نتیجه بررسی از طریق تلگرام اطلاع داده می‌شود."
-          : appointment === "رد شده" || appointment === "لغو شده"
+        const paymentAlreadySubmitted =
+          status === "PAYMENT_RECEIVED" ||
+          status === "PAYMENT_APPROVED" ||
+          status === "فیش دریافت شد" ||
+          status === "تأیید شد";
+        const appointmentRejectedOrCancelled =
+          appointment === "BOOKING_REJECTED" ||
+          appointment === "BOOKING_CANCELLED" ||
+          appointment === "رد شده" ||
+          appointment === "لغو شده";
+        setMessage(paymentAlreadySubmitted
+          ? "فیش این نوبت قبلاً ثبت شده است؛ نتیجه بررسی بانکی از طریق تلگرام اطلاع داده می‌شود."
+          : appointmentRejectedOrCancelled
             ? "این درخواست رد یا لغو شده است."
             : "درخواست پیدا شد، اما هنوز در مرحله مجاز پرداخت نیست. پس از تأیید اولیه دوباره وضعیت را بررسی کن.");
       } else {
