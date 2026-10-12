@@ -321,6 +321,9 @@ const apiGetLive = async (
       params,
       BOOKING_TRANSPORT_ENDPOINT
     );
+    if (action === "getConfig" && !isValidBookingConfig(data)) {
+      throw new Error("INVALID_BOOKING_CONFIG_EMPTY_SERVICES");
+    }
     if (action === "getConfig") writeBookingConfigCache(data);
     return data;
   } catch (error) {
@@ -331,6 +334,9 @@ const apiGetLive = async (
 
   try {
     const data = await apiGetFetchOnce(action, params);
+    if (action === "getConfig" && !isValidBookingConfig(data)) {
+      throw new Error("INVALID_BOOKING_CONFIG_EMPTY_SERVICES");
+    }
     if (action === "getConfig") writeBookingConfigCache(data);
     return data;
   } catch (error) {
@@ -343,6 +349,9 @@ const apiGetLive = async (
       params,
       BOOKING_BACKEND_ENDPOINT
     );
+    if (action === "getConfig" && !isValidBookingConfig(data)) {
+      throw new Error("INVALID_BOOKING_CONFIG_EMPTY_SERVICES");
+    }
     if (action === "getConfig") writeBookingConfigCache(data);
     return data;
   } catch (backendJsonpError) {
