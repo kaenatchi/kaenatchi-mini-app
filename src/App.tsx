@@ -5982,11 +5982,9 @@ function BookingPage({
             </button>
           </div>
         )}
-        {bookingStage !== "payment" && (
-          <button type="button" onClick={()=>void checkBookingStatus()} disabled={checkingBookingStatus} style={{width:"100%",marginTop:"14px",border:"1px solid rgba(36,99,71,.18)",borderRadius:"18px",padding:"15px",background:"rgba(36,99,71,.08)",color:"#174b38",fontFamily:"inherit",fontSize:"14px",cursor:checkingBookingStatus?"default":"pointer"}}>
-            {checkingBookingStatus ? "در حال بررسی..." : "بررسی وضعیت درخواست"}
-          </button>
-        )}
+        <button type="button" onClick={()=>void checkBookingStatus()} disabled={checkingBookingStatus} style={{width:"100%",marginTop:"14px",border:"1px solid rgba(36,99,71,.18)",borderRadius:"18px",padding:"15px",background:"rgba(36,99,71,.08)",color:"#174b38",fontFamily:"inherit",fontSize:"14px",cursor:checkingBookingStatus?"default":"pointer"}}>
+          {checkingBookingStatus ? "در حال بررسی..." : "بررسی وضعیت درخواست"}
+        </button>
         {message && <div style={{padding:"13px",borderRadius:"15px",marginTop:"12px",background:"rgba(36,99,71,.08)",color:"#246347",fontSize:"13px",lineHeight:1.9,whiteSpace:"pre-line"}}>{message}</div>}
         {(bookingStage === "confirmed" || bookingStage === "closed") && (
           <button type="button" onClick={() => {
