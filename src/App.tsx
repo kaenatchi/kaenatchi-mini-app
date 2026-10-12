@@ -5377,6 +5377,10 @@ function BookingPage({
   const [message, setMessage] = useState("");
   const [state, setState] = useState<BookingState>("loading");
   const [trackingCode, setTrackingCode] = useState("");
+  const [lookupTrackingCode, setLookupTrackingCode] = useState("");
+  const [lookupMobile, setLookupMobile] = useState("");
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [resumeBooking, setResumeBooking] = useState<any>(null);
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
   const backendServices: Service[] = (config?.services || [])
@@ -5747,8 +5751,6 @@ function BookingPage({
     if (!selectedService || !serviceId) return setMessage("لطفاً خدمت موردنظر را انتخاب کن.");
     if (!date || !time) return setMessage("لطفاً تاریخ و ساعت نوبت را انتخاب کن.");
     if (!firstName.trim() || !lastName.trim() || !mobile.trim()) return setMessage("لطفاً نام، نام خانوادگی و شماره موبایل را کامل وارد کن.");
-    if (!receiptFile && !transactionNumber.trim()) return setMessage("تصویر فیش یا کد پیگیری پرداخت الزامی است.");
-    if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
 
     setState("submitting");
     try {
@@ -5824,56 +5826,9 @@ function BookingPage({
       const bookingId = String(create?.booking?.bookingId || create?.bookingId || "");
       if (!bookingId) throw new Error("کد نوبت از سامانه دریافت نشد.");
 
-      let receiptData = "";
-      if (receiptFile) receiptData = await fileToDataUrl(receiptFile);
-
-      let payment: any;
-      try {
-        payment = await apiPost("submitPayment", {
-          requestId,
-          bookingId,
-          telegramId,
-          telegramChatId: telegramId,
-          telegramUsername: telegramProfile.telegramUsername,
-          telegramFirstName: telegramProfile.telegramFirstName,
-          telegramLastName: telegramProfile.telegramLastName,
-          transactionNumber:transactionNumber.trim(),
-          receiptData,
-          receiptFileName:receiptFile?.name || "",
-          receiptMimeType:receiptFile?.type || "",
-        });
-      } catch (error) {
-        const isTransportTimeout =
-          error instanceof Error &&
-          (
-            error.message === "BOOKING_TRANSPORT_TIMEOUT" ||
-            /HTTP 502|ارتباط با سامانه رزرو برقرار نشد|JSONP_TRANSPORT_TIMEOUT/i.test(error.message)
-          );
-
-        if (!isTransportTimeout) throw error;
-
-        let recovered: any = null;
-        try {
-          recovered = await waitForBookingStatus(requestId, "paid");
-        } catch {}
-
-        if (!recovered?.found) {
-          throw error;
-        }
-
-        payment = {
-          ok: true,
-          bookingId,
-          paymentStatus: recovered.paymentStatus || "",
-          recovered: true,
-        };
-      }
-
-      if (!payment?.ok) throw new Error(payment?.message || "ارسال پرداخت ناموفق بود.");
-
-      setTrackingCode(String(create?.booking?.trackingCode || payment?.trackingCode || ""));
+      setTrackingCode(String(create?.booking?.trackingCode || create?.trackingCode || ""));
       setState("success");
-      setMessage("درخواست نوبت و اطلاعات پرداخت با موفقیت ثبت شد و در انتظار بررسی ادمین است.");
+      setMessage("درخواست نوبت ثبت شد. پس از تأیید اولیه ادمین، با کد پیگیری و شماره موبایل وضعیت را بررسی کن تا پرداخت را انجام بدهی.");
     } catch (error) {
       setState("error");
       setMessage(error instanceof Error ? error.message : "هنگام ثبت نوبت مشکلی پیش آمد.");
