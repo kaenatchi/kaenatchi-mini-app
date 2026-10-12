@@ -5440,6 +5440,8 @@ function BookingPage({
   const ENDPOINT = BOOKING_TRANSPORT_ENDPOINT;
   // Safety gate for draft previews: never write real booking/payment data until a staging transport is configured.
   const BOOKING_MUTATIONS_ENABLED = false;
+  // This branch is an isolated UI demo: never send booking/payment mutations to the backend.
+  const BOOKING_DEMO_MODE = true;
 
   const waitForBookingStatus = async (
     requestId: string,
@@ -5618,6 +5620,10 @@ function BookingPage({
 
   useEffect(() => {
     try {
+      if (BOOKING_DEMO_MODE) {
+        window.localStorage.removeItem(BOOKING_FLOW_STORAGE_KEY);
+        return;
+      }
       if (bookingStage === "request" || !requestIdState) {
         window.localStorage.removeItem(BOOKING_FLOW_STORAGE_KEY);
       } else {
@@ -5761,6 +5767,17 @@ function BookingPage({
     if (!date || !time) return setMessage("لطفاً تاریخ و ساعت نوبت را انتخاب کن.");
     if (!firstName.trim() || !lastName.trim() || !mobile.trim()) return setMessage("لطفاً نام، نام خانوادگی و شماره موبایل را کامل وارد کن.");
 
+    if (BOOKING_DEMO_MODE) {
+      const demoCode = "DEMO-" + Date.now().toString(36).toUpperCase();
+      setRequestIdState("DEMO-REQUEST-" + Date.now().toString(36).toUpperCase());
+      setBookingId("DEMO-BOOKING");
+      setTrackingCode(demoCode);
+      setBookingStage("pending_approval");
+      setState("success");
+      setMessage("این فقط پیش‌نمایش است؛ درخواست، نوبت، پرداخت یا پیام تلگرامی واقعی ثبت نشده است.");
+      return;
+    }
+
     setState("submitting");
     let activeRequestId = "";
     try {
@@ -5872,6 +5889,10 @@ function BookingPage({
   }
 
   const checkBookingStatus = async () => {
+    if (BOOKING_DEMO_MODE) {
+      setMessage("حالت آزمایشی فعال است؛ وضعیت مدیر/پرداخت از سامانه واقعی خوانده نمی‌شود و هیچ نوبت واقعی ثبت نشده است.");
+      return;
+    }
     if (!requestIdState) return setMessage("شناسهٔ پیگیری درخواست پیدا نشد.");
     setCheckingBookingStatus(true);
     setMessage("");
@@ -6119,6 +6140,7 @@ function BookingPage({
         description="خدمت، تاریخ و ساعت موردنظر را انتخاب کن؛ مبلغ نهایی از سامانه محاسبه می‌شود."
         icon="calendar"
       />
+      {BOOKING_DEMO_MODE && <div role="status" style={{margin:"0 0 14px",padding:"13px 15px",borderRadius:"16px",border:"1px solid rgba(165,139,91,.35)",background:"rgba(165,139,91,.12)",color:"#604c28",fontSize:"13px",lineHeight:1.9,textAlign:"center"}}><strong>حالت پیش‌نمایش آزمایشی</strong><br />ثبت فقط شبیه‌سازی می‌شود؛ هیچ نوبت، پرداخت یا پیام واقعی ارسال نمی‌شود.</div>}
 
       {/* متن‌های معرفی و راهنمای کلی در بالای صفحه نمایش داده نمی‌شوند. */}
 
