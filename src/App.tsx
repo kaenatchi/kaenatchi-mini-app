@@ -5961,7 +5961,7 @@ function BookingPage({
     return (
       <div className="inner-page">
         <button type="button" onClick={() => setResumeBooking(null)} style={backButtonStyle}>← بازگشت به پیگیری</button>
-        <SectionHeaderCard kicker="PAYMENT UNLOCKED" title="درخواست تأیید شد" description="مهلت پرداخت از زمان تأیید اولیه شروع می‌شود. رسید یا کد پیگیری پرداخت را ثبت کن." icon="check" status="آماده پرداخت" />
+        <SectionHeaderCard kicker="PAYMENT UNLOCKED" title="درخواست تأیید شد" description="مهلت پرداخت از زمان تأیید اولیه شروع می‌شود. تصویر فیش پرداخت الزامی است؛ کد پیگیری بانکی اختیاری است." icon="check" status="آماده پرداخت" />
         <div className="glass-list-card" style={{display:"block"}}>
           <div className="list-copy"><strong>{String(resumeBooking.serviceName || "خدمت")}</strong><span>{String(resumeBooking.appointmentDate || "")} · {String(resumeBooking.appointmentTime || "")}</span><span>کد پیگیری: {String(resumeBooking.trackingCode || trackingCode)}</span></div>
           <div style={{marginTop:"12px",fontWeight:700}}>مبلغ: {Number(resumeBooking.finalPrice || 0).toLocaleString("fa-IR")} تومان</div>
