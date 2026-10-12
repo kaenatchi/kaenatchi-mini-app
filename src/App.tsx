@@ -5835,38 +5835,6 @@ function BookingPage({
       setState("success");
       setMessage("درخواست نوبت ثبت شد. تا تأیید مدیر پرداخت نکن؛ پس از تأیید، همین‌جا می‌توانی رسید را ارسال کنی.");
     } catch (error) {
-        const isTransportTimeout =
-          error instanceof Error &&
-          (
-            error.message === "BOOKING_TRANSPORT_TIMEOUT" ||
-            /HTTP 502|ارتباط با سامانه رزرو برقرار نشد|JSONP_TRANSPORT_TIMEOUT/i.test(error.message)
-          );
-
-        if (!isTransportTimeout) throw error;
-
-        let recovered: any = null;
-        try {
-          recovered = await waitForBookingStatus(requestId, "paid");
-        } catch {}
-
-        if (!recovered?.found) {
-          throw error;
-        }
-
-        payment = {
-          ok: true,
-          bookingId,
-          paymentStatus: recovered.paymentStatus || "",
-          recovered: true,
-        };
-      }
-
-      if (!payment?.ok) throw new Error(payment?.message || "ارسال پرداخت ناموفق بود.");
-
-      setTrackingCode(String(create?.booking?.trackingCode || payment?.trackingCode || ""));
-      setState("success");
-      setMessage("درخواست نوبت و اطلاعات پرداخت با موفقیت ثبت شد و در انتظار بررسی ادمین است.");
-    } catch (error) {
       setState("error");
       setMessage(error instanceof Error ? error.message : "هنگام ثبت نوبت مشکلی پیش آمد.");
     }
