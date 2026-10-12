@@ -5724,7 +5724,7 @@ function BookingPage({
     if (!selectedService || !serviceId) return setMessage("لطفاً خدمت موردنظر را انتخاب کن.");
     if (!date || !time) return setMessage("لطفاً تاریخ و ساعت نوبت را انتخاب کن.");
     if (!firstName.trim() || !lastName.trim() || !mobile.trim()) return setMessage("لطفاً نام، نام خانوادگی و شماره موبایل را کامل وارد کن.");
-    if (!receiptFile && !transactionNumber.trim()) return setMessage("تصویر فیش یا کد پیگیری پرداخت الزامی است.");
+    if (!receiptFile) return setMessage("بارگذاری تصویر فیش پرداخت الزامی است.");
     if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
 
     setState("submitting");
@@ -5946,7 +5946,7 @@ function BookingPage({
     cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || "";
   const paymentNote =
     cmsSetting(["booking_payment_text", "توضیح پرداخت", "متن پرداخت"]) ||
-    "پس از پرداخت، تصویر فیش یا کد پیگیری پرداخت را ارسال کن.";
+    "پس از پرداخت، تصویر فیش پرداخت را بارگذاری کن.";
 
   const inputBaseStyle: React.CSSProperties = {
     width: "100%",
