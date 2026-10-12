@@ -5835,6 +5835,73 @@ function BookingPage({
     }
   };
 
+  const checkBookingStatus = async () => {
+    setMessage("");
+    if (!lookupTrackingCode.trim() || !lookupMobile.trim()) {
+      setMessage("کد پیگیری و همان شماره موبایلی که هنگام درخواست ثبت کردی وارد کن.");
+      return;
+    }
+    setLookupBusy(true);
+    try {
+      const result = await apiGet("getBookingPublicStatus", {
+        trackingCode: lookupTrackingCode.trim(),
+        mobile: lookupMobile.trim(),
+      });
+      const booking = result?.booking;
+      if (!result?.ok || !booking) throw new Error(result?.message || "اطلاعات نوبت پیدا نشد.");
+      setTrackingCode(String(booking.trackingCode || lookupTrackingCode.trim()));
+      setMobile(lookupMobile.trim());
+      setResumeBooking(booking);
+      if (!booking.canPay) {
+        const status = String(booking.paymentStatus || "");
+        const appointment = String(booking.appointmentStatus || "");
+        setMessage(status === "فیش دریافت شد" || status === "تأیید شد"
+          ? "پرداخت این نوبت قبلاً ثبت شده است؛ نتیجه بررسی از طریق تلگرام اطلاع داده می‌شود."
+          : appointment === "رد شده" || appointment === "لغو شده"
+            ? "این درخواست رد یا لغو شده است."
+            : "درخواست پیدا شد، اما هنوز در مرحله مجاز پرداخت نیست. پس از تأیید اولیه دوباره وضعیت را بررسی کن.");
+      } else {
+        setMessage("درخواست تأیید شده است؛ می‌توانی پرداخت را انجام بدهی.");
+      }
+    } catch (error) {
+      setResumeBooking(null);
+      setMessage(error instanceof Error ? error.message : "بررسی وضعیت نوبت ناموفق بود.");
+    } finally {
+      setLookupBusy(false);
+    }
+  };
+
+  const submitResumedPayment = async () => {
+    setMessage("");
+    if (!resumeBooking?.canPay) return setMessage("این نوبت هنوز مجاز به پرداخت نیست.");
+    if (!receiptFile && !transactionNumber.trim()) return setMessage("تصویر فیش یا کد پیگیری پرداخت الزامی است.");
+    if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
+    setState("submitting");
+    try {
+      const profile = await getTelegramProfile();
+      const receiptData = receiptFile ? await fileToDataUrl(receiptFile) : "";
+      await apiPost("submitPayment", {
+        requestId: String(resumeBooking.requestId || ""),
+        bookingId: String(resumeBooking.bookingId || ""),
+        trackingCode: String(resumeBooking.trackingCode || trackingCode),
+        mobile: lookupMobile.trim(),
+        telegramId: profile.telegramId,
+        telegramChatId: profile.telegramId,
+        transactionNumber: transactionNumber.trim(),
+        receiptData,
+        receiptFileName: receiptFile?.name || "",
+        receiptMimeType: receiptFile?.type || "",
+      });
+      await waitForBookingStatus(String(resumeBooking.requestId || ""), "paid");
+      setTrackingCode(String(resumeBooking.trackingCode || trackingCode));
+      setState("success");
+      setMessage("اطلاعات پرداخت ثبت شد و برای بررسی ادمین ارسال شد.");
+    } catch (error) {
+      setState("error");
+      setMessage(error instanceof Error ? error.message : "ثبت پرداخت ناموفق بود.");
+    }
+  };
+
   if (state === "loading" && !config) {
     return (
       <div className="inner-page">
@@ -5860,6 +5927,29 @@ function BookingPage({
           </div>
         </div>
         <button type="button" onClick={onBack} style={{...backButtonStyle, width:"100%", marginTop:"16px"}}>بازگشت</button>
+      </div>
+    );
+  }
+
+  if (resumeBooking?.canPay) {
+    return (
+      <div className="inner-page">
+        <button type="button" onClick={() => setResumeBooking(null)} style={backButtonStyle}>← بازگشت به پیگیری</button>
+        <SectionHeaderCard kicker="PAYMENT UNLOCKED" title="درخواست تأیید شد" description="مهلت پرداخت از زمان تأیید اولیه شروع می‌شود. رسید یا کد پیگیری پرداخت را ثبت کن." icon="check" status="آماده پرداخت" />
+        <div className="glass-list-card" style={{display:"block"}}>
+          <div className="list-copy"><strong>{String(resumeBooking.serviceName || "خدمت")}</strong><span>{String(resumeBooking.appointmentDate || "")} · {String(resumeBooking.appointmentTime || "")}</span><span>کد پیگیری: {String(resumeBooking.trackingCode || trackingCode)}</span></div>
+          <div style={{marginTop:"12px",fontWeight:700}}>مبلغ: {Number(resumeBooking.finalPrice || 0).toLocaleString("fa-IR")} تومان</div>
+          <div style={{marginTop:"16px",padding:"14px",borderRadius:"16px",background:"rgba(165,139,91,.09)"}}>
+            {paymentCardNumber ? <><div style={{fontSize:"11px",opacity:.68}}>شماره کارت</div><b dir="ltr">{paymentCardNumber}</b>{(paymentBank || paymentHolder) && <div>{[paymentBank,paymentHolder].filter(Boolean).join(" · ")}</div>}</> : <span>اطلاعات کارت هنوز در CMS ثبت نشده است.</span>}
+          </div>
+          <input value={transactionNumber} onChange={e=>setTransactionNumber(e.target.value)} placeholder="کد پیگیری پرداخت (اختیاری)" inputMode="numeric" style={{...inputBaseStyle,marginTop:"12px"}} />
+          <label style={{display:"block",marginTop:"12px",padding:"16px",borderRadius:"18px",border:"1px dashed rgba(36,99,71,.35)",textAlign:"center"}}>
+            📎 {receiptFile ? receiptFile.name : "انتخاب تصویر فیش"}
+            <input type="file" accept="image/*" onChange={e=>setReceiptFile(e.target.files?.[0] || null)} style={{display:"none"}} />
+          </label>
+          {message && <div style={{marginTop:"12px",fontSize:"13px",lineHeight:1.8,color:state==="error"?"#a52d2d":"#246347"}}>{message}</div>}
+          <button type="button" onClick={()=>void submitResumedPayment()} disabled={state==="submitting"} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px"}}>{state==="submitting" ? "در حال ثبت پرداخت..." : "ارسال پرداخت برای بررسی"}</button>
+        </div>
       </div>
     );
   }
@@ -6261,73 +6351,23 @@ function BookingPage({
 
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
-          <strong>۵. پرداخت و رسید</strong>
-          <span>{paymentNote}</span>
+          <strong>۵. پیگیری درخواست</strong>
+          <span>ابتدا درخواستت را ثبت کن. بعد از تأیید اولیه ادمین، با کد پیگیری و شماره موبایل وارد شو تا امکان پرداخت برایت باز شود.</span>
         </div>
-        {renderBookingContent(["payment_guide"])} 
-
-        <div style={{
-          marginTop:"14px",
-          padding:"16px",
-          borderRadius:"20px",
-          background:"rgba(165,139,91,.09)",
-          border:"1px solid rgba(165,139,91,.18)",
-          color:"#26342b",
-          boxShadow:"0 8px 20px rgba(53,59,50,.06)",
-        }}>
-          {paymentCardNumber ? (
-            <>
-              <div style={{fontSize:"11px",opacity:.68,marginBottom:"5px"}}>شماره کارت</div>
-              <b dir="ltr" style={{fontSize:"16px",letterSpacing:"1px"}}>{paymentCardNumber}</b>
-              {(paymentBank || paymentHolder) && (
-                <div style={{marginTop:"8px",fontSize:"12px"}}>
-                  {[paymentBank,paymentHolder].filter(Boolean).join(" · ")}
-                </div>
-              )}
-            </>
-          ) : (
-            <div style={{fontSize:"12px",lineHeight:1.9}}>
-              اطلاعات کارت هنوز در CMS ثبت نشده است.
-            </div>
-          )}
-        </div>
-
-        <input
-          value={transactionNumber}
-          onChange={e=>setTransactionNumber(e.target.value)}
-          placeholder="کد پیگیری پرداخت (اختیاری)"
-          inputMode="numeric"
-          enterKeyHint="done"
-          style={inputBaseStyle}
-          {...tapHandlers}
-          onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
-        />
-
-        {renderBookingContent(["receipt_warning"])}
-        <label
-          style={{
-            display:"block",
-            marginTop:"14px",
-            padding:"16px",
-            borderRadius:"20px",
-            border:"1px dashed rgba(36,99,71,.35)",
-            background:"rgba(36,99,71,.05)",
-            color:"#26342b",
-            textAlign:"center",
-            cursor:"pointer",
-            transition:"transform .18s ease, box-shadow .18s ease, background .18s ease",
-          }}
-          onTouchStart={(e)=>{e.currentTarget.style.transform="scale(.985)";}}
-          onTouchEnd={(e)=>{e.currentTarget.style.transform="scale(1)";}}
-        >
-          📎 {receiptFile ? receiptFile.name : "انتخاب تصویر فیش"}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={e=>setReceiptFile(e.target.files?.[0] || null)}
-            style={{display:"none"}}
-          />
-        </label>
+        <input value={lookupTrackingCode} onChange={e=>setLookupTrackingCode(e.target.value)} placeholder="کد پیگیری نوبت" autoComplete="off" style={{...inputBaseStyle,marginTop:"12px"}} />
+        <input value={lookupMobile} onChange={e=>setLookupMobile(e.target.value)} placeholder="شماره موبایل ثبت‌شده" inputMode="tel" autoComplete="tel" style={{...inputBaseStyle,marginTop:"10px"}} />
+        <button type="button" onClick={()=>void checkBookingStatus()} disabled={lookupBusy} style={{width:"100%",marginTop:"12px",border:"1px solid rgba(36,99,71,.22)",borderRadius:"16px",padding:"13px",background:"rgba(36,99,71,.08)",color:"#174b38",fontFamily:"inherit",fontSize:"14px",cursor:lookupBusy?"default":"pointer"}}>
+          {lookupBusy ? "در حال بررسی..." : "بررسی وضعیت درخواست"}
+        </button>
+        {resumeBooking && (
+          <div style={{marginTop:"12px",padding:"12px",borderRadius:"14px",background:"rgba(36,99,71,.06)",fontSize:"13px",lineHeight:1.9}}>
+            <div>خدمت: <b>{String(resumeBooking.serviceName || "—")}</b></div>
+            <div>زمان: <b>{String(resumeBooking.appointmentDate || "—")} · {String(resumeBooking.appointmentTime || "—")}</b></div>
+            <div>وضعیت درخواست: <b>{String(resumeBooking.appointmentStatus || "—")}</b></div>
+            <div>وضعیت پرداخت: <b>{String(resumeBooking.paymentStatus || "—")}</b></div>
+            {resumeBooking.canPay && <div style={{marginTop:"6px"}}>مبلغ قابل پرداخت: <b>{Number(resumeBooking.finalPrice || 0).toLocaleString("fa-IR")} تومان</b></div>}
+          </div>
+        )}
       </div>
       {message && (
         <div style={{padding:"13px",borderRadius:"15px",marginTop:"12px",background:state==="error"?"rgba(165,45,45,.08)":"rgba(36,99,71,.08)",color:state==="error"?"#a52d2d":"#246347",fontSize:"13px",lineHeight:1.9,whiteSpace:"pre-line"}}>
@@ -6337,7 +6377,7 @@ function BookingPage({
       {renderBookingContent(["tracking_guide", "custom_notice"])}
 
       <button type="button" onClick={()=>void submit()} disabled={state==="submitting"} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px",cursor:state==="submitting"?"default":"pointer",boxShadow:"0 10px 24px rgba(23,75,56,.2)"}}>
-        {state==="submitting" ? "در حال ثبت نوبت و پرداخت..." : "ثبت نهایی نوبت"}
+        {state==="submitting" ? "در حال ثبت درخواست..." : "ثبت درخواست نوبت"}
       </button>
     </div>
   );
