@@ -5815,7 +5815,7 @@ function BookingPage({
 
         let recovered: any = null;
         try {
-          recovered = await waitForBookingStatus(requestId, "created");
+          recovered = await waitForBookingStatus(requestId, "created", mobile.trim());
         } catch {}
 
         if (!recovered?.bookingId) {
