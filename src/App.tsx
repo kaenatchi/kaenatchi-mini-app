@@ -5362,8 +5362,8 @@ function BookingPage({
   const [trackingCode, setTrackingCode] = useState(String(savedBookingFlow?.trackingCode || ""));
   const [bookingId, setBookingId] = useState(String(savedBookingFlow?.bookingId || ""));
   const [requestIdState, setRequestIdState] = useState(String(savedBookingFlow?.requestId || ""));
-  const [bookingStage, setBookingStage] = useState<"request" | "pending_approval" | "payment" | "payment_submitted">(
-    ["pending_approval", "payment", "payment_submitted"].includes(String(savedBookingFlow?.stage))
+  const [bookingStage, setBookingStage] = useState<"request" | "pending_approval" | "payment" | "payment_submitted" | "confirmed" | "closed">(
+    ["pending_approval", "payment", "payment_submitted", "confirmed", "closed"].includes(String(savedBookingFlow?.stage))
       ? savedBookingFlow.stage
       : "request"
   );
@@ -5902,7 +5902,7 @@ function BookingPage({
         setBookingStage("payment");
         setMessage("مدیر درخواستت را تأیید کرده است. حالا می‌توانی پرداخت کنی و رسید را برای بررسی دستی بفرستی.");
       } else if (appointmentStatus === "تأیید شده" || paymentStatus === "تأیید شد") {
-        setBookingStage("payment_submitted");
+        setBookingStage("confirmed");
         setMessage("پرداخت و نوبت تأیید شده‌اند؛ نوبتت قطعی است.");
       } else if (appointmentStatus === "در انتظار پرداخت" && paymentStatus === "رد شد") {
         setBookingStage("payment");
@@ -5911,6 +5911,7 @@ function BookingPage({
         setBookingStage("payment_submitted");
         setMessage("فیش دریافت شده و در انتظار بررسی دستی مدیر است.");
       } else if (appointmentStatus === "رد شده" || appointmentStatus === "لغو شده") {
+        setBookingStage("closed");
         setMessage("این درخواست رد شده یا مهلتش تمام شده است. برای ادامه با پشتیبانی کائنات‌چی تماس بگیر.");
       } else {
         setBookingStage("pending_approval");
@@ -5961,10 +5962,10 @@ function BookingPage({
       <div className="inner-page">
         <SectionHeaderCard
           kicker="BOOKING TRACKING"
-          title={bookingStage === "payment" ? "پرداخت نوبت" : "پیگیری درخواست"}
-          description={bookingStage === "payment" ? "درخواست تأیید شده است؛ پس از پرداخت، رسید برای بررسی دستی ارسال می‌شود." : "درخواست ابتدا توسط مدیر بررسی می‌شود. پرداخت فقط پس از تأیید مدیر انجام بده."}
+          title={bookingStage === "payment" ? "پرداخت نوبت" : bookingStage === "confirmed" ? "نوبت قطعی شد" : bookingStage === "closed" ? "درخواست بسته شد" : "پیگیری درخواست"}
+          description={bookingStage === "payment" ? "درخواست تأیید شده است؛ پس از پرداخت، رسید برای بررسی دستی ارسال می‌شود." : bookingStage === "confirmed" ? "پرداخت بررسی شده و نوبتت قطعی است." : bookingStage === "closed" ? "این درخواست دیگر فعال نیست. برای رزرو جدید، درخواست تازه‌ای ثبت کن." : "درخواست ابتدا توسط مدیر بررسی می‌شود. پرداخت فقط پس از تأیید مدیر انجام بده."}
           icon="calendar"
-          status={bookingStage === "payment_submitted" ? "در انتظار بررسی فیش" : bookingStage === "payment" ? "در انتظار پرداخت" : "در انتظار تأیید مدیر"}
+          status={bookingStage === "confirmed" ? "نوبت قطعی" : bookingStage === "closed" ? "درخواست بسته شد" : bookingStage === "payment_submitted" ? "در انتظار بررسی فیش" : bookingStage === "payment" ? "در انتظار پرداخت" : "در انتظار تأیید مدیر"}
         />
         <div className="glass-list-card" style={{display:"block",textAlign:"center"}}>
           <div className="list-icon" style={{margin:"0 auto 12px"}}><Icon name="ticket" /></div>
@@ -6005,7 +6006,7 @@ function BookingPage({
           </button>
         )}
         {message && <div style={{padding:"13px",borderRadius:"15px",marginTop:"12px",background:"rgba(36,99,71,.08)",color:"#246347",fontSize:"13px",lineHeight:1.9,whiteSpace:"pre-line"}}>{message}</div>}
-        {bookingStage === "payment_submitted" && (
+        {(bookingStage === "confirmed" || bookingStage === "closed") && (
           <button type="button" onClick={() => {
             setBookingStage("request");
             setRequestIdState("");
