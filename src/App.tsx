@@ -706,11 +706,14 @@ function rebuildCmsContent(data: Partial<typeof cmsRows>) {
   ];
 }
 
+let cmsLoadDiagnostic = "not-started";
+
 async function loadCmsData(
   onProgress?: (progress: number | null) => void
 ): Promise<boolean> {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+  const timeoutId = window.setTimeout(() => controller.abort(), 45000);
+  cmsLoadDiagnostic = "fetch-started";
   try {
     // Apps Script / cross-origin responses may omit or misreport Content-Length.
     // Use an honest indeterminate animation instead of displaying a stuck 0%.
@@ -719,14 +722,34 @@ async function loadCmsData(
       `${CMS_API_URL}?action=getMiniAppData&_=${Date.now()}`,
       { method: "GET", cache: "no-store", signal: controller.signal }
     );
+    cmsLoadDiagnostic = `http-${response.status};type=${response.headers.get("content-type") || "unknown"}`;
     if (!response.ok) return false;
     const body = await response.text();
-    const data = JSON.parse(body) as Partial<typeof cmsRows> & { success?: boolean };
-    if (data.success === false) return false;
+    cmsLoadDiagnostic += `;body-length=${body.length}`;
+    let data: Partial<typeof cmsRows> & { success?: boolean };
+    try {
+      data = JSON.parse(body) as Partial<typeof cmsRows> & { success?: boolean };
+    } catch (error) {
+      const detail = error instanceof Error ? error.name : "parse-error";
+      cmsLoadDiagnostic += `;json-parse-failed=${detail};prefix=${body.slice(0, 80).replace(/[\\r\\n]+/g, " ")}`;
+      return false;
+    }
+    if (data.success === false) {
+      cmsLoadDiagnostic += ";payload-success-false";
+      return false;
+    }
+    const collectionNames = ["services", "courses", "events", "faq", "pages", "settings", "dailyContent", "bookingContent"] as const;
+    const collectionSummary = collectionNames
+      .map((key) => `${key}:${Array.isArray(data[key]) ? data[key]!.length : "missing"}`)
+      .join(",");
+    cmsLoadDiagnostic += `;collections=${collectionSummary}`;
     rebuildCmsContent(data);
     onProgress?.(100);
     return true;
-  } catch {
+  } catch (error) {
+    cmsLoadDiagnostic = error instanceof Error
+      ? `fetch-error=${error.name};message=${error.message};aborted=${controller.signal.aborted}`
+      : "fetch-error=unknown";
     return false;
   } finally {
     window.clearTimeout(timeoutId);
@@ -6717,6 +6740,9 @@ function App() {
           <div className="cms-loading-mark" aria-hidden="true">ک</div>
           <strong>محتوا در دسترس نیست</strong>
           <span>اتصال به سامانه محتوا برقرار نشد. لطفاً چند لحظه بعد دوباره تلاش کن.</span>
+          {new URLSearchParams(window.location.search).get("cmsDebug") === "1" && (
+            <pre style={{direction:"ltr",textAlign:"left",whiteSpace:"pre-wrap",overflowWrap:"anywhere",fontSize:"11px",maxWidth:"100%",opacity:0.8}} aria-label="CMS diagnostic">{cmsLoadDiagnostic}</pre>
+          )}
           <button type="button" className="loading-retry-button" onClick={() => window.location.reload()}>تلاش دوباره</button>
         </div>
       </div>
