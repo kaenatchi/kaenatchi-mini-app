@@ -127,7 +127,10 @@ const readBookingConfigCache = () => {
     const raw = window.localStorage.getItem(BOOKING_CONFIG_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed?.data || typeof parsed.savedAt !== "number") return null;
+    if (
+      !isValidBookingConfig(parsed?.data) ||
+      typeof parsed.savedAt !== "number"
+    ) return null;
 
     return {
       data: parsed.data,
@@ -139,7 +142,18 @@ const readBookingConfigCache = () => {
   }
 };
 
+const isValidBookingConfig = (data: any): boolean =>
+  Boolean(
+    data &&
+      typeof data === "object" &&
+      data.ok !== false &&
+      Array.isArray(data.services) &&
+      data.services.length > 0
+  );
+
 const writeBookingConfigCache = (data: any) => {
+  if (!isValidBookingConfig(data)) return;
+
   try {
     window.localStorage.setItem(
       BOOKING_CONFIG_CACHE_KEY,
@@ -307,6 +321,9 @@ const apiGetLive = async (
       params,
       BOOKING_TRANSPORT_ENDPOINT
     );
+    if (action === "getConfig" && !isValidBookingConfig(data)) {
+      throw new Error("INVALID_BOOKING_CONFIG_EMPTY_SERVICES");
+    }
     if (action === "getConfig") writeBookingConfigCache(data);
     return data;
   } catch (error) {
@@ -317,6 +334,9 @@ const apiGetLive = async (
 
   try {
     const data = await apiGetFetchOnce(action, params);
+    if (action === "getConfig" && !isValidBookingConfig(data)) {
+      throw new Error("INVALID_BOOKING_CONFIG_EMPTY_SERVICES");
+    }
     if (action === "getConfig") writeBookingConfigCache(data);
     return data;
   } catch (error) {
@@ -329,6 +349,9 @@ const apiGetLive = async (
       params,
       BOOKING_BACKEND_ENDPOINT
     );
+    if (action === "getConfig" && !isValidBookingConfig(data)) {
+      throw new Error("INVALID_BOOKING_CONFIG_EMPTY_SERVICES");
+    }
     if (action === "getConfig") writeBookingConfigCache(data);
     return data;
   } catch (backendJsonpError) {
