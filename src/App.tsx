@@ -5901,6 +5901,31 @@ function BookingPage({
     }
   };
 
+  const paymentCardNumber =
+    cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || "";
+  const paymentBank =
+    cmsSetting(["booking_bank_name", "نام بانک", "بانک"]) || "";
+  const paymentHolder =
+    cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || "";
+  const paymentNote =
+    cmsSetting(["booking_payment_text", "توضیح پرداخت", "متن پرداخت"]) ||
+    "پس از پرداخت، تصویر فیش یا کد پیگیری پرداخت را ارسال کن.";
+
+  const inputBaseStyle: React.CSSProperties = {
+    width: "100%",
+    boxSizing: "border-box",
+    marginTop: "10px",
+    padding: "14px 15px",
+    borderRadius: "18px",
+    border: "1px solid rgba(53,59,50,.14)",
+    background: "rgba(255,255,255,.78)",
+    color: "#253128",
+    fontFamily: "inherit",
+    fontSize: "14px",
+    outline: "none",
+    transition: "transform .18s ease, box-shadow .18s ease, border-color .18s ease",
+  };
+
   if (state === "loading" && !config) {
     return (
       <div className="inner-page">
@@ -6006,31 +6031,6 @@ function BookingPage({
   const activeGroup = bookingCategory
     ? categoryGroups.find((group) => group.id === bookingCategory) || null
     : null;
-
-  const paymentCardNumber =
-    cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || "";
-  const paymentBank =
-    cmsSetting(["booking_bank_name", "نام بانک", "بانک"]) || "";
-  const paymentHolder =
-    cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || "";
-  const paymentNote =
-    cmsSetting(["booking_payment_text", "توضیح پرداخت", "متن پرداخت"]) ||
-    "پس از پرداخت، تصویر فیش یا کد پیگیری پرداخت را ارسال کن.";
-
-  const inputBaseStyle: React.CSSProperties = {
-    width: "100%",
-    boxSizing: "border-box",
-    marginTop: "10px",
-    padding: "14px 15px",
-    borderRadius: "18px",
-    border: "1px solid rgba(53,59,50,.14)",
-    background: "rgba(255,255,255,.78)",
-    color: "#253128",
-    fontFamily: "inherit",
-    fontSize: "14px",
-    outline: "none",
-    transition: "transform .18s ease, box-shadow .18s ease, border-color .18s ease",
-  };
 
   const tapHandlers = {
     onFocus: (event: React.FocusEvent<HTMLInputElement>) => {
