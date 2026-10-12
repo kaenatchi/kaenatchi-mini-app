@@ -5443,7 +5443,8 @@ function BookingPage({
 
   const waitForBookingStatus = async (
     requestId: string,
-    mode: "created" | "paid"
+    mode: "created" | "paid",
+    mobileNumber: string
   ) => {
     const started = Date.now();
     let attempt = 0;
@@ -5455,7 +5456,7 @@ function BookingPage({
      * Back off gradually to avoid hammering Apps Script if it is genuinely busy.
      */
     while (Date.now() - started < 30000) {
-      const data = await apiGet("bookingStatus", { requestId });
+      const data = await apiGet("bookingStatus", { requestId, mobile: mobileNumber });
 
       if (data.found) {
         if (mode === "created" && data.bookingId) return data;
@@ -5558,7 +5559,8 @@ function BookingPage({
      */
     return waitForBookingStatus(
       requestId,
-      action === "createBooking" ? "created" : "paid"
+      action === "createBooking" ? "created" : "paid",
+      String(payload.mobile || mobile || "").trim()
     );
   };
 
@@ -5873,10 +5875,11 @@ function BookingPage({
 
   const checkBookingStatus = async () => {
     if (!requestIdState) return setMessage("شناسهٔ پیگیری درخواست پیدا نشد.");
+    if (!mobile.trim()) return setMessage("برای حفظ امنیت اطلاعات، شماره موبایلی را وارد کن که با آن درخواست را ثبت کرده‌ای.");
     setCheckingBookingStatus(true);
     setMessage("");
     try {
-      const data = await apiGet("bookingStatus", { requestId: requestIdState });
+      const data = await apiGet("bookingStatus", { requestId: requestIdState, mobile: mobile.trim() });
       if (!data?.found) {
         setBookingStage("closed");
         setMessage("درخواست با این شناسه پیدا نشد. اگر تازه ثبتش کرده‌ای، دوباره وضعیت را بررسی کن؛ اگر ثبت نشده باشد می‌توانی فرم رزرو را از نو شروع کنی.");
@@ -5918,7 +5921,7 @@ function BookingPage({
     setMessage("");
     if (!bookingId || !requestIdState) return setMessage("شناسهٔ نوبت پیدا نشد؛ ابتدا وضعیت درخواست را بررسی کن.");
     if (!String(cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || "").trim()) return setMessage("اطلاعات کارت هنوز در CMS ثبت نشده است؛ لطفاً پیش از پرداخت با پشتیبانی تماس بگیر.");
-    if (!receiptFile && !transactionNumber.trim()) return setMessage("تصویر فیش یا کد پیگیری پرداخت الزامی است.");
+    if (!receiptFile) return setMessage("برای بررسی پرداخت، بارگذاری تصویر فیش الزامی است.");
     if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
     setSubmittingReceipt(true);
     try {
@@ -5928,6 +5931,7 @@ function BookingPage({
       const payment = await apiPost("submitPayment", {
         requestId: requestIdState,
         bookingId,
+        mobile: mobile.trim(),
         telegramId: telegramProfile.telegramId,
         telegramChatId: telegramProfile.telegramId,
         transactionNumber: transactionNumber.trim(),
@@ -5990,6 +5994,17 @@ function BookingPage({
               {submittingReceipt ? "در حال ارسال رسید..." : "ارسال رسید برای بررسی"}
             </button>
           </div>
+        )}
+        {!mobile.trim() && (
+          <input
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value)}
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="شماره موبایل ثبت‌شده برای این درخواست"
+            aria-label="شماره موبایل ثبت‌شده برای این درخواست"
+            style={{width:"100%",boxSizing:"border-box",marginTop:"14px",padding:"14px 15px",borderRadius:"18px",border:"1px solid rgba(53,59,50,.14)",background:"rgba(255,255,255,.78)",fontFamily:"inherit",fontSize:"14px"}}
+          />
         )}
         <button type="button" onClick={()=>void checkBookingStatus()} disabled={checkingBookingStatus} style={{width:"100%",marginTop:"14px",border:"1px solid rgba(36,99,71,.18)",borderRadius:"18px",padding:"15px",background:"rgba(36,99,71,.08)",color:"#174b38",fontFamily:"inherit",fontSize:"14px",cursor:checkingBookingStatus?"default":"pointer"}}>
           {checkingBookingStatus ? "در حال بررسی..." : "بررسی وضعیت درخواست"}
