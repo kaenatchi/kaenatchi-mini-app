@@ -5869,7 +5869,8 @@ function BookingPage({
     try {
       const data = await apiGet("bookingStatus", { requestId: requestIdState });
       if (!data?.found) {
-        setMessage("درخواست هنوز در سامانه پیدا نشد؛ چند لحظه دیگر دوباره بررسی کن.");
+        setBookingStage("closed");
+        setMessage("درخواست با این شناسه پیدا نشد. اگر تازه ثبتش کرده‌ای، دوباره وضعیت را بررسی کن؛ اگر ثبت نشده باشد می‌توانی فرم رزرو را از نو شروع کنی.");
         return;
       }
       setBookingId(String(data.bookingId || bookingId));
