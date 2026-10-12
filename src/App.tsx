@@ -5917,13 +5917,15 @@ function BookingPage({
   if (state === "success") {
     return (
       <div className="inner-page">
-        <SectionHeaderCard kicker="BOOKING RECEIVED" title="درخواست ثبت شد" description="اطلاعات نوبت و پرداخت دریافت شد و درخواست برای بررسی ادمین ارسال شده است." icon="check" status="در انتظار تأیید" />
+        <SectionHeaderCard kicker="BOOKING RECEIVED" title="درخواست ثبت شد" description="درخواستت برای بررسی اولیه ارسال شد؛ هنوز پرداختی ثبت نشده است." icon="check" status="در انتظار بررسی" />
         <div className="glass-list-card" style={{display:"block",textAlign:"center"}}>
           <div className="list-icon" style={{margin:"0 auto 12px"}}><Icon name="ticket" /></div>
           <div className="list-copy">
             <strong>کد پیگیری</strong>
             <span style={{direction:"ltr",fontWeight:700,fontSize:"18px"}}>{trackingCode || "ثبت شد"}</span>
             <span>لطفاً این کد را نگه دار.</span>
+            <span style={{marginTop:"10px",lineHeight:1.9}}>پس از تأیید اولیه ادمین، وارد رزرو شو و در بخش «پیگیری درخواست» همین کد و شماره موبایل ثبت‌شده را وارد کن تا پرداخت برایت فعال شود.</span>
+            {message && <span style={{marginTop:"8px"}}>{message}</span>}
           </div>
         </div>
         <button type="button" onClick={onBack} style={{...backButtonStyle, width:"100%", marginTop:"16px"}}>بازگشت</button>
