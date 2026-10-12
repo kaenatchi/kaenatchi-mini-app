@@ -5362,8 +5362,8 @@ function BookingPage({
   const [trackingCode, setTrackingCode] = useState(String(savedBookingFlow?.trackingCode || ""));
   const [bookingId, setBookingId] = useState(String(savedBookingFlow?.bookingId || ""));
   const [requestIdState, setRequestIdState] = useState(String(savedBookingFlow?.requestId || ""));
-  const [bookingStage, setBookingStage] = useState<"request" | "pending_approval" | "payment" | "payment_submitted" | "confirmed" | "closed">(
-    ["pending_approval", "payment", "payment_submitted", "confirmed", "closed"].includes(String(savedBookingFlow?.stage))
+  const [bookingStage, setBookingStage] = useState<"request" | "pending_approval" | "payment" | "receipt_pending" | "payment_submitted" | "confirmed" | "closed">(
+    ["pending_approval", "payment", "receipt_pending", "payment_submitted", "confirmed", "closed"].includes(String(savedBookingFlow?.stage))
       ? savedBookingFlow.stage
       : "request"
   );
@@ -5845,7 +5845,10 @@ function BookingPage({
       setState("success");
       setMessage("درخواست نوبت ثبت شد. تا تأیید مدیر پرداخت نکن؛ پس از تأیید، همین‌جا می‌توانی رسید را ارسال کنی.");
     } catch (error) {
-      if (activeRequestId) {
+      if (error instanceof Error && error.message.includes("این نسخه آزمایشی است")) {
+        setState("error");
+        setMessage(error.message);
+      } else if (activeRequestId) {
         setBookingStage("pending_approval");
         setState("success");
         setMessage("پاسخ ثبت درخواست دریافت نشد؛ ممکن است نوبت ثبت شده باشد. برای جلوگیری از رزرو تکراری، ابتدا وضعیت همین درخواست را بررسی کن.");
@@ -5894,9 +5897,9 @@ function BookingPage({
         setReceiptFile(null);
         setTransactionNumber("");
         setMessage("فیش قبلی تأیید نشد. اگر مهلت پرداخت باقی است، رسید اصلاح‌شده را ارسال کن.");
-      } else if (paymentStatus === "فیش دریافت شد") {
-        setBookingStage("payment_submitted");
-        setMessage("فیش دریافت شده و در انتظار بررسی دستی مدیر است.");
+      } else if (paymentStatus === "فیش دریافت شد" || appointmentStatus === "فیش ارسال شده") {
+        setBookingStage("receipt_pending");
+        setMessage("فیش دریافت شده و در انتظار بررسی دستی مدیر است؛ نوبت هنوز قطعی نیست.");
       } else if (appointmentStatus === "رد شده" || appointmentStatus === "لغو شده") {
         setBookingStage("closed");
         setMessage("این درخواست رد شده یا مهلتش تمام شده است. برای ادامه با پشتیبانی کائنات‌چی تماس بگیر.");
@@ -5933,7 +5936,7 @@ function BookingPage({
         receiptMimeType: receiptFile?.type || "",
       });
       if (!payment?.ok) throw new Error(payment?.message || "ارسال رسید ناموفق بود.");
-      setBookingStage("payment_submitted");
+      setBookingStage("receipt_pending");
       setMessage("رسید دریافت شد و برای بررسی دستی مدیر ارسال شد. تا تأیید نهایی، نوبت قطعی نیست.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "ارسال رسید ناموفق بود.");
@@ -5950,10 +5953,10 @@ function BookingPage({
       <div className="inner-page">
         <SectionHeaderCard
           kicker="BOOKING TRACKING"
-          title={bookingStage === "payment" ? "پرداخت نوبت" : bookingStage === "confirmed" ? "نوبت قطعی شد" : bookingStage === "closed" ? "درخواست بسته شد" : "پیگیری درخواست"}
-          description={bookingStage === "payment" ? "درخواست تأیید شده است؛ پس از پرداخت، رسید برای بررسی دستی ارسال می‌شود." : bookingStage === "confirmed" ? "پرداخت بررسی شده و نوبتت قطعی است." : bookingStage === "closed" ? "این درخواست دیگر فعال نیست. برای رزرو جدید، درخواست تازه‌ای ثبت کن." : "درخواست ابتدا توسط مدیر بررسی می‌شود. پرداخت فقط پس از تأیید مدیر انجام بده."}
+          title={bookingStage === "payment" ? "پرداخت نوبت" : bookingStage === "receipt_pending" || bookingStage === "payment_submitted" ? "بررسی رسید پرداخت" : bookingStage === "confirmed" ? "نوبت قطعی شد" : bookingStage === "closed" ? "درخواست بسته شد" : "پیگیری درخواست"}
+          description={bookingStage === "payment" ? "درخواست تأیید شده است؛ پس از پرداخت، رسید برای بررسی دستی ارسال می‌شود." : bookingStage === "receipt_pending" || bookingStage === "payment_submitted" ? "رسید دریافت شده و در انتظار بررسی دستی مدیر است؛ نوبت تا تأیید پرداخت قطعی نیست." : bookingStage === "confirmed" ? "پرداخت بررسی شده و نوبتت قطعی است." : bookingStage === "closed" ? "این درخواست دیگر فعال نیست. برای رزرو جدید، درخواست تازه‌ای ثبت کن." : "درخواست ابتدا توسط مدیر بررسی می‌شود. پرداخت فقط پس از تأیید مدیر انجام بده."}
           icon="calendar"
-          status={bookingStage === "confirmed" ? "نوبت قطعی" : bookingStage === "closed" ? "درخواست بسته شد" : bookingStage === "payment_submitted" ? "در انتظار بررسی فیش" : bookingStage === "payment" ? "در انتظار پرداخت" : "در انتظار تأیید مدیر"}
+          status={bookingStage === "confirmed" ? "نوبت قطعی" : bookingStage === "closed" ? "درخواست بسته شد" : bookingStage === "receipt_pending" || bookingStage === "payment_submitted" ? "در انتظار بررسی فیش" : bookingStage === "payment" ? "در انتظار پرداخت" : "در انتظار تأیید مدیر"}
         />
         <div className="glass-list-card" style={{display:"block",textAlign:"center"}}>
           <div className="list-icon" style={{margin:"0 auto 12px"}}><Icon name="ticket" /></div>
