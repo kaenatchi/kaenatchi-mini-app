@@ -5972,6 +5972,7 @@ function BookingPage({
     const paymentHolder = cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || "";
     return (
       <div className="inner-page">
+        {BOOKING_DEMO_MODE && <div role="status" style={{margin:"0 0 14px",padding:"13px 15px",borderRadius:"16px",border:"1px solid rgba(165,139,91,.35)",background:"rgba(165,139,91,.12)",color:"#604c28",fontSize:"13px",lineHeight:1.9,textAlign:"center"}}><strong>حالت پیش‌نمایش آزمایشی</strong><br />این کد پیگیری ساختگی است؛ هیچ نوبت، پرداخت یا پیام واقعی ثبت نشده است.</div>}
         <SectionHeaderCard
           kicker="BOOKING TRACKING"
           title={bookingStage === "payment" ? "پرداخت نوبت" : bookingStage === "receipt_pending" || bookingStage === "payment_submitted" ? "بررسی رسید پرداخت" : bookingStage === "confirmed" ? "نوبت قطعی شد" : bookingStage === "closed" ? "درخواست بسته شد" : "پیگیری درخواست"}
