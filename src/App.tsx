@@ -710,7 +710,7 @@ async function loadCmsData(
   onProgress?: (progress: number | null) => void
 ): Promise<boolean> {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+  const timeoutId = window.setTimeout(() => controller.abort(), 45000);
   try {
     // Apps Script / cross-origin responses may omit or misreport Content-Length.
     // Use an honest indeterminate animation instead of displaying a stuck 0%.
