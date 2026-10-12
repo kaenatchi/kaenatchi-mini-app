@@ -5403,6 +5403,8 @@ function BookingPage({
         if (
           mode === "paid" &&
           (
+            data.paymentStatus === "PAYMENT_RECEIVED" ||
+            data.paymentStatus === "PAYMENT_APPROVED" ||
             data.paymentStatus === "فیش دریافت شد" ||
             data.paymentStatus === "تأیید شد"
           )
