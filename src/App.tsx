@@ -5892,7 +5892,6 @@ function BookingPage({
         receiptFileName: receiptFile?.name || "",
         receiptMimeType: receiptFile?.type || "",
       });
-      await waitForBookingStatus(String(resumeBooking.requestId || ""), "paid");
       setTrackingCode(String(resumeBooking.trackingCode || trackingCode));
       setState("success");
       setMessage("اطلاعات پرداخت ثبت شد و برای بررسی ادمین ارسال شد.");
