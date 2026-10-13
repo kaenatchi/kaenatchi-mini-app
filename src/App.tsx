@@ -5951,6 +5951,291 @@ function BookingPage({
 
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
+          <strong>۱. انتخاب خدمت</strong>
+          <span>یکی از سه دسته را باز کن و خدمت موردنظرت را انتخاب کن.</span>
+        </div>
+
+        {initialService && selectedService ? (
+          <div style={{marginTop:"12px",padding:"15px",borderRadius:"20px",background:"rgba(36,99,71,.07)",border:"1px solid rgba(36,99,71,.12)"}}>
+            <div className="list-copy">
+              <strong>{selectedService.title}</strong>
+              <span>{selectedService.description || "خدمت انتخاب‌شده"}</span>
+              {selectedService.price && (
+                <span style={{marginTop:"5px",fontWeight:700}}>
+                  {selectedService.price} تومان
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setServiceId("");
+                setBookingCategory(null);
+                setDiscount({valid:false,percent:0,amount:0});
+              }}
+              style={{marginTop:"12px",width:"100%"}}
+            >
+              تغییر خدمت
+            </button>
+          </div>
+        ) : (
+          <div style={{display:"grid",gap:"10px",marginTop:"12px"}}>
+            {categoryGroups.map((group, index) => (
+              <div key={group.id} className="booking-category-shell">
+                <button
+                  type="button"
+                  className="booking-category-trigger"
+                  onClick={() =>
+                    setBookingCategory((current) =>
+                      current === group.id ? null : group.id
+                    )
+                  }
+                  style={{
+                    width:"100%",
+                    minHeight:"64px",
+                    border:"1px solid rgba(53,59,50,.12)",
+                    borderRadius:"20px",
+                    background: bookingCategory === group.id
+                      ? "rgba(36,99,71,.12)"
+                      : "rgba(255,255,255,.66)",
+                    color:"#26342b",
+                    fontFamily:"inherit",
+                    boxShadow:"0 8px 22px rgba(53,59,50,.07)",
+                    cursor:"pointer",
+                    textAlign:"right",
+                    padding:"13px 15px",
+                    transition:"transform .18s ease, box-shadow .18s ease, background .18s ease",
+                  }}
+                >
+                  <span style={{display:"inline-flex",verticalAlign:"middle",marginLeft:"8px",color:"#246347"}}>
+                    <Icon name={group.icon} />
+                  </span>
+                  <strong>{group.title}</strong>
+                  <span style={{display:"block",marginTop:"4px",fontSize:"11px",opacity:.68}}>
+                    {group.items.length} خدمت
+                  </span>
+                </button>
+
+                {bookingCategory === group.id && (
+                  <div
+                    className="booking-service-menu"
+                    style={{
+                      display:"grid",
+                      gap:"8px",
+                      marginTop:"8px",
+                      padding:"8px",
+                      borderRadius:"20px",
+                      background:"rgba(255,255,255,.42)",
+                      border:"1px solid rgba(255,255,255,.58)",
+                      backdropFilter:"blur(18px)",
+                      WebkitBackdropFilter:"blur(18px)",
+                      boxShadow:"inset 0 1px 0 rgba(255,255,255,.62), 0 10px 25px rgba(53,59,50,.06)",
+                    }}
+                  >
+                    {group.items.length ? group.items.map((service) => (
+                      <button
+                        key={service.id}
+                        type="button"
+                        className="booking-service-option"
+                        onClick={() => {
+                          setServiceId(service.id);
+                          setBookingCategory(group.id);
+                          setDiscount({valid:false,percent:0,amount:0});
+                          setMessage("");
+                        }}
+                        style={{
+                          width:"100%",
+                          textAlign:"right",
+                          padding:"13px 14px",
+                          border:"1px solid rgba(53,59,50,.09)",
+                          borderRadius:"17px",
+                          background: serviceId === service.id
+                            ? "rgba(36,99,71,.12)"
+                            : "rgba(255,255,255,.70)",
+                          color:"#26342b",
+                          fontFamily:"inherit",
+                          boxShadow:"0 6px 17px rgba(53,59,50,.05)",
+                          cursor:"pointer",
+                          transition:"transform .18s ease, box-shadow .18s ease, background .18s ease",
+                        }}
+                      >
+                        <strong style={{display:"block"}}>{service.title}</strong>
+                        {service.price && (
+                          <span style={{display:"block",marginTop:"4px",fontSize:"12px",opacity:.76}}>
+                            {service.price} تومان
+                          </span>
+                        )}
+                      </button>
+                    )) : (
+                      <div style={{padding:"13px",borderRadius:"16px",background:"rgba(53,59,50,.06)",fontSize:"12px",color:"#4b564e"}}>
+                        هنوز خدمتی در این دسته فعال نیست.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {selectedService && (
+          <div style={{marginTop:"12px",fontSize:"12px",lineHeight:1.9,color:"#59655d"}}>
+            {selectedService.description}
+          </div>
+        )}
+        {renderBookingContent(["booking_intro", "service_guide"])}
+      </div>
+
+      <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
+        <div className="list-copy">
+          <strong>۲. انتخاب زمان</strong>
+          <span>فقط سه تاریخ آینده نمایش داده می‌شود و هر روز خودکار به‌روزرسانی خواهد شد.</span>
+        </div>
+
+        <select
+          value={date}
+          onChange={(e)=>{
+            setDate(e.target.value);
+            setTime("");
+          }}
+          style={{
+            ...inputBaseStyle,
+            appearance:"none",
+            WebkitAppearance:"none",
+            marginTop:"12px",
+          }}
+        >
+          <option value="">انتخاب تاریخ</option>
+          {availableDates.map((item) => {
+            const value=String(item.date||"");
+            const label=String(item.dayOfWeek||"") + (item.dayOfWeek ? " — " : "") + value;
+            return <option key={value} value={value}>{label}</option>;
+          })}
+        </select>
+
+        <select
+          value={time}
+          onChange={(e)=>setTime(e.target.value)}
+          disabled={!date}
+          style={{
+            ...inputBaseStyle,
+            appearance:"none",
+            WebkitAppearance:"none",
+            marginTop:"10px",
+            opacity: date ? 1 : .6,
+          }}
+        >
+          <option value="">{date ? (slots.length ? "انتخاب ساعت" : "در حال دریافت ساعت‌ها...") : "ابتدا تاریخ را انتخاب کن"}</option>
+          {visibleSlots.map((item) => (
+            <option key={String(item.time)} value={String(item.time)}>
+              {String(item.time)}
+            </option>
+          ))}
+        </select>
+        {renderBookingContent(["booking_guide", "date_time_guide"])}
+      </div>
+
+      <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
+        <div className="list-copy">
+          <strong>۳. اطلاعات شما</strong>
+          <span>اطلاعات واقعی وارد کن؛ این بخش برای جلوگیری از رزروهای تکراری و پرداخت‌های جعلی کنترل می‌شود.</span>
+        </div>
+
+        <input
+          value={firstName}
+          onChange={e=>setFirstName(e.target.value)}
+          placeholder="نام"
+          autoComplete="given-name"
+          enterKeyHint="next"
+          style={inputBaseStyle}
+          {...tapHandlers}
+          onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
+        />
+        <input
+          value={lastName}
+          onChange={e=>setLastName(e.target.value)}
+          placeholder="نام خانوادگی"
+          autoComplete="family-name"
+          enterKeyHint="next"
+          style={inputBaseStyle}
+          {...tapHandlers}
+          onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
+        />
+        <input
+          value={mobile}
+          onChange={e=>setMobile(e.target.value)}
+          placeholder="09xxxxxxxxx"
+          inputMode="tel"
+          autoComplete="tel"
+          enterKeyHint="done"
+          style={inputBaseStyle}
+          {...tapHandlers}
+          onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
+        />
+      </div>
+
+      <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
+        <div className="list-copy">
+          <strong>۴. کد تخفیف VIP</strong>
+          <span>اگر توکن VIP داری، قبل از پرداخت بررسی‌اش کن.</span>
+        </div>
+
+        <div style={{display:"flex",gap:"8px",marginTop:"12px",alignItems:"stretch"}}>
+          <input
+            value={discountCode}
+            onChange={e=>{setDiscountCode(e.target.value.toUpperCase());setDiscount({valid:false,percent:0,amount:0});}}
+            placeholder="کد تخفیف"
+            enterKeyHint="done"
+            style={{...inputBaseStyle,marginTop:0,flex:1}}
+            {...tapHandlers}
+            onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
+          />
+          <button
+            type="button"
+            onClick={()=>void checkDiscount()}
+            disabled={checkingDiscount || !discountCode.trim() || !basePrice}
+            style={{
+              width:"112px",
+              marginTop:0,
+              border:"1px solid rgba(36,99,71,.18)",
+              borderRadius:"18px",
+              background:"linear-gradient(135deg,#174b38,#2c7658)",
+              color:"#fff",
+              fontFamily:"inherit",
+              fontSize:"13px",
+              boxShadow:"0 8px 18px rgba(23,75,56,.16)",
+              cursor:"pointer",
+            }}
+          >
+            {checkingDiscount ? "..." : "بررسی"}
+          </button>
+        </div>
+
+        {discount.valid && (
+          <div style={{marginTop:"10px",fontSize:"12px",color:"#246347",fontWeight:600}}>
+            تخفیف {discount.percent}% اعمال شد.
+          </div>
+        )}
+
+        {basePrice > 0 && (
+          <div style={{marginTop:"14px",padding:"14px",borderRadius:"18px",background:"rgba(36,99,71,.06)",color:"#26342b"}}>
+            <div style={{display:"flex",justifyContent:"space-between",gap:"12px",fontSize:"12px",marginBottom:"7px"}}>
+              <span>مبلغ خدمت</span><strong>{basePrice.toLocaleString("fa-IR")} تومان</strong>
+            </div>
+            {discount.valid && (
+              <div style={{display:"flex",justifyContent:"space-between",gap:"12px",fontSize:"12px",marginBottom:"7px"}}>
+                <span>تخفیف</span><strong>{discount.amount.toLocaleString("fa-IR")} تومان</strong>
+              </div>
+            )}
+            <div style={{display:"flex",justifyContent:"space-between",gap:"12px",fontSize:"15px",color:"#174b38"}}>
+              <strong>مبلغ نهایی</strong><strong>{finalPrice.toLocaleString("fa-IR")} تومان</strong>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
+        <div className="list-copy">
           <strong>۵. پس از پذیرش درخواست</strong>
           <span>در این مرحله پرداختی انجام نده. مایا درخواست را بررسی می‌کند؛ اگر پذیرفته شود، مهلت ۱۰ دقیقه‌ای پرداخت از طریق تلگرام به تو اطلاع داده می‌شود. پس از ارسال فیش، نوبت تا بررسی دستی واریز در انتظار می‌ماند.</span>
         </div>
