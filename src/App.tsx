@@ -5426,7 +5426,8 @@ function BookingPage({
 
   const waitForBookingStatus = async (
     requestId: string,
-    mode: "created" | "paid"
+    mode: "created" | "paid",
+    mobile?: string
   ) => {
     const started = Date.now();
     let attempt = 0;
