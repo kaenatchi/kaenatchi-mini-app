@@ -5537,7 +5537,8 @@ function BookingPage({
      */
     return waitForBookingStatus(
       requestId,
-      action === "createBooking" ? "created" : "paid"
+      action === "createBooking" ? "created" : "paid",
+      String(payload.mobile || payload.phone || "")
     );
   };
 
