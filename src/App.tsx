@@ -5355,6 +5355,9 @@ function BookingPage({
   const [message, setMessage] = useState("");
   const [state, setState] = useState<BookingState>("loading");
   const [trackingCode, setTrackingCode] = useState("");
+  const [requestId, setRequestId] = useState("");
+  const [backendBookingStatus, setBackendBookingStatus] = useState("");
+  const [paymentDeadline, setPaymentDeadline] = useState("");
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
   const backendServices: Service[] = (config?.services || [])
@@ -5449,8 +5452,8 @@ function BookingPage({
         if (
           mode === "paid" &&
           (
-            data.paymentStatus === "فیش دریافت شد" ||
-            data.paymentStatus === "تأیید شد"
+            data.status === "RECEIPT_REVIEW" ||
+            data.status === "CONFIRMED"
           )
         ) {
           return data;
@@ -5540,6 +5543,76 @@ function BookingPage({
      * submitPayment and works through the Worker JSONP transport.
      */
     return waitForBookingStatus(requestId, String(payload.phone || payload.mobile || ""), action === "createRequest" ? "created" : "paid");
+  };
+
+  const refreshBookingStatus = async () => {
+    if (!requestId || !mobile.trim()) {
+      setMessage("برای بررسی وضعیت، کد درخواست و شماره همراه لازم است.");
+      return;
+    }
+    setMessage("در حال بررسی وضعیت درخواست...");
+    try {
+      const data = await apiGet("getStatus", { requestId, phone: mobile.trim() });
+      if (!data?.found) {
+        setMessage(data?.message || "وضعیت درخواست پیدا نشد؛ شماره همراه را بررسی کن.");
+        return;
+      }
+      setBackendBookingStatus(String(data.status || ""));
+      setPaymentDeadline(String(data.paymentDeadline || ""));
+      setMessage(
+        data.status === "REQUEST_PENDING" ? "درخواستت در صف بررسی مایا است؛ فعلاً پرداخت نکن." :
+        data.status === "PAYMENT_PENDING" ? "درخواست پذیرفته شده است. فقط حالا پرداخت کن و فیش را ارسال کن." :
+        data.status === "RECEIPT_REVIEW" ? "فیش دریافت شده و تا بررسی واقعی پرداخت، نوبت نگه داشته می‌شود." :
+        data.status === "CONFIRMED" ? "پرداخت تأیید شده و نوبت قطعی است." :
+        "وضعیت فعلی: " + String(data.status || "نامشخص")
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "بررسی وضعیت ناموفق بود.");
+    }
+  };
+
+  const submitReceipt = async () => {
+    if (!receiptFile || !transactionNumber.trim()) {
+      setMessage("تصویر فیش و شماره پیگیری تراکنش را وارد کن.");
+      return;
+    }
+    if (receiptFile.size > 5 * 1024 * 1024) {
+      setMessage("حجم تصویر باید حداکثر ۵ مگابایت باشد.");
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(receiptFile.type)) {
+      setMessage("فرمت تصویر باید JPG، PNG یا WebP باشد.");
+      return;
+    }
+    setState("submitting");
+    setMessage("در حال ارسال فیش...");
+    try {
+      const receiptBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("خواندن تصویر فیش ناموفق بود."));
+        reader.onload = () => {
+          const result = String(reader.result || "");
+          const comma = result.indexOf(",");
+          if (comma < 0) return reject(new Error("محتوای تصویر معتبر نیست."));
+          resolve(result.slice(comma + 1));
+        };
+        reader.readAsDataURL(receiptFile);
+      });
+      const data = await apiPost("submitReceipt", {
+        requestId,
+        trackingCode,
+        phone: mobile.trim(),
+        mimeType: receiptFile.type,
+        receiptBase64,
+        transactionRef: transactionNumber.trim(),
+      });
+      setBackendBookingStatus(String(data.status || "RECEIPT_REVIEW"));
+      setState("success");
+      setMessage("فیش دریافت شد؛ نوبت تا بررسی واقعی پرداخت توسط مایا نگه داشته می‌شود.");
+    } catch (error) {
+      setState("success");
+      setMessage(error instanceof Error ? error.message : "ارسال فیش ناموفق بود.");
+    }
   };
 
   const loadConfig = async () => {
@@ -5738,6 +5811,8 @@ function BookingPage({
       const resolvedTrackingCode = String(create?.trackingCode || "");
       if (!create?.requestId || !resolvedTrackingCode) throw new Error("کد پیگیری درخواست از سامانه دریافت نشد.");
       setTrackingCode(resolvedTrackingCode);
+      setRequestId(String(create.requestId));
+      setBackendBookingStatus(String(create.status || "REQUEST_PENDING"));
       setState("success");
       setMessage("درخواست نوبت ثبت شد؛ هنوز قطعی نیست و فعلاً پرداختی انجام نده. کد پیگیری را نگه دار؛ ارسال اعلان خودکار به مشتری هنوز در این نسخه تأیید نشده است.");
     } catch (error) {
@@ -5758,6 +5833,16 @@ function BookingPage({
     );
   }
 
+    const paymentCardNumber =
+    cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || "";
+  const paymentBank =
+    cmsSetting(["booking_bank_name", "نام بانک", "بانک"]) || "";
+  const paymentHolder =
+    cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || "";
+  const paymentNote =
+    cmsSetting(["booking_payment_text", "توضیح پرداخت", "متن پرداخت"]) ||
+    "پس از پرداخت، تصویر فیش یا کد پیگیری پرداخت را ارسال کن.";
+
   if (state === "success") {
     return (
       <div className="inner-page">
@@ -5768,8 +5853,39 @@ function BookingPage({
             <strong>کد پیگیری</strong>
             <span style={{direction:"ltr",fontWeight:700,fontSize:"18px"}}>{trackingCode || "ثبت شد"}</span>
             <span>لطفاً این کد را نگه دار.</span>
+            <span>وضعیت فعلی: {backendBookingStatus || "در انتظار بررسی"}</span>
           </div>
+          <button type="button" onClick={refreshBookingStatus} style={{...backButtonStyle,width:"100%",marginTop:"14px"}}>بررسی وضعیت درخواست</button>
         </div>
+        {backendBookingStatus === "PAYMENT_PENDING" && (
+          <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
+            <div className="list-copy">
+              <strong>درخواست پذیرفته شد؛ مهلت پرداخت ۳۰ دقیقه است</strong>
+              <span>فقط پس از پذیرش مایا پرداخت کن. نوبت تا تأیید واقعی و دستی واریز قطعی نمی‌شود.</span>
+              {paymentDeadline && <span>مهلت پرداخت تا: {new Date(paymentDeadline).toLocaleString("fa-IR")}</span>}
+              {paymentBank && <span>بانک: {paymentBank}</span>}
+              {paymentHolder && <span>به نام: {paymentHolder}</span>}
+              {paymentCardNumber && <span style={{direction:"ltr",fontWeight:700}}>شماره کارت: {paymentCardNumber}</span>}
+              <span>{paymentNote}</span>
+            </div>
+            <label style={{display:"block",marginTop:"12px"}}>تصویر فیش (JPG، PNG یا WebP، حداکثر ۵ مگابایت)
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e)=>setReceiptFile(e.target.files?.[0] || null)} style={{...inputBaseStyle}} />
+            </label>
+            <input value={transactionNumber} onChange={(e)=>setTransactionNumber(e.target.value)} placeholder="شماره پیگیری تراکنش" style={inputBaseStyle} />
+            <button type="button" onClick={submitReceipt} style={{...backButtonStyle,width:"100%",marginTop:"12px"}}>ارسال فیش برای بررسی</button>
+          </div>
+        )}
+        {backendBookingStatus === "RECEIPT_REVIEW" && (
+          <div className="glass-list-card" style={{display:"block"}}>
+            <div className="list-copy"><strong>فیش در انتظار بررسی</strong><span>نوبت تا بررسی واقعی پرداخت توسط مایا نگه داشته می‌شود؛ از پرداخت دوباره خودداری کن.</span></div>
+          </div>
+        )}
+        {backendBookingStatus === "CONFIRMED" && (
+          <div className="glass-list-card" style={{display:"block"}}>
+            <div className="list-copy"><strong>نوبت قطعی شد</strong><span>پرداخت تأیید شده است.</span></div>
+          </div>
+        )}
+        {message && <p role="status" style={{marginTop:"12px"}}>{message}</p>}
         <button type="button" onClick={onBack} style={{...backButtonStyle, width:"100%", marginTop:"16px"}}>بازگشت</button>
       </div>
     );
@@ -5820,15 +5936,7 @@ function BookingPage({
     ? categoryGroups.find((group) => group.id === bookingCategory) || null
     : null;
 
-  const paymentCardNumber =
-    cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || "";
-  const paymentBank =
-    cmsSetting(["booking_bank_name", "نام بانک", "بانک"]) || "";
-  const paymentHolder =
-    cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || "";
-  const paymentNote =
-    cmsSetting(["booking_payment_text", "توضیح پرداخت", "متن پرداخت"]) ||
-    "پس از پرداخت، تصویر فیش یا کد پیگیری پرداخت را ارسال کن.";
+
 
   const inputBaseStyle: React.CSSProperties = {
     width: "100%",
