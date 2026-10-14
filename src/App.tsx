@@ -6028,7 +6028,7 @@ function BookingPage({
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
           <strong>۲. انتخاب زمان</strong>
-          <span>فقط سه تاریخ آینده نمایش داده می‌شود و هر روز خودکار به‌روزرسانی خواهد شد.</span>
+          <span>فقط تاریخ فردا قابل انتخاب است؛ ساعت‌های رزروشده و مسدود قابل انتخاب نیستند.</span>
         </div>
 
         <select
