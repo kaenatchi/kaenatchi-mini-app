@@ -1,0 +1,33 @@
+name: Staging Two-Stage Booking Contract
+on:
+  push:
+    branches:
+      - staging/two-stage-booking-flow
+    paths:
+      - "src/booking/twoStageBookingContract.ts"
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - ".github/workflows/staging-two-stage-booking-contract.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/booking/twoStageBookingContract.ts"
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - ".github/workflows/staging-two-stage-booking-contract.yml"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run test:booking-contract
+      - run: npm run build
