@@ -14,7 +14,11 @@ export type TwoStageBookingStatus =
   | "EXPIRED"
   | "REJECTED"
   | "CANCEL_PENDING"
-  | "RESCHEDULE_PENDING";
+  | "RESCHEDULE_PENDING"
+  | "CANCEL_REQUESTED"
+  | "RESCHEDULE_REQUESTED"
+  | "MANAGER_RESCHEDULE_OFFERED"
+  | "CANCELLED";
 
 export type TwoStagePaymentStatus =
   | "NOT_DUE"
@@ -54,6 +58,7 @@ export type BookingStatusSnapshot = {
   status?: TwoStageBookingStatus;
   paymentStatus?: TwoStagePaymentStatus;
   paymentDeadline?: string;
+  canResumeReceipt?: boolean;
 };
 
 export type TwoStageAction =
@@ -82,12 +87,67 @@ export const TWO_STAGE_ACTIONS: ReadonlySet<TwoStageAction> = new Set([
 ]);
 
 /** Customer must never submit payment while the initial request awaits review. */
-export function canSubmitReceipt(snapshot: BookingStatusSnapshot): boolean {
+export function canSubmitReceipt(
+  snapshot: BookingStatusSnapshot,
+  now: number = Date.now()
+): boolean {
+  const deadline = snapshot.paymentDeadline
+    ? Date.parse(snapshot.paymentDeadline)
+    : Number.NaN;
   return snapshot.found === true
     && snapshot.status === "PAYMENT_PENDING"
     && snapshot.paymentStatus === "DUE"
+    && Number.isFinite(deadline)
+    && deadline > now
     && Boolean(snapshot.bookingId)
     && Boolean(snapshot.requestId);
+}
+
+/** Convert the actual Staging getStatus response into a fail-closed UI snapshot. */
+export function normalizeStagingStatus(
+  raw: Record<string, unknown>,
+  now: number = Date.now()
+): BookingStatusSnapshot {
+  if (raw.found !== true) return { found: false };
+  const status = String(raw.status || "") as TwoStageBookingStatus;
+  const deadline = typeof raw.paymentDeadline === "string" ? raw.paymentDeadline : "";
+  const deadlineMs = deadline ? Date.parse(deadline) : Number.NaN;
+  const paymentStatus: TwoStagePaymentStatus =
+    status === "RECEIPT_REVIEW" ? "RECEIPT_REVIEW"
+      : status === "CONFIRMED" ? "VERIFIED"
+      : status === "REJECTED" ? "REJECTED"
+      : status === "EXPIRED" ? "EXPIRED"
+      : status === "PAYMENT_PENDING" && Number.isFinite(deadlineMs) && deadlineMs > now
+        ? "DUE"
+        : status === "PAYMENT_PENDING" ? "EXPIRED" : "NOT_DUE";
+  return {
+    found: true,
+    requestId: typeof raw.requestId === "string" ? raw.requestId : undefined,
+    // Staging uses Tracking Code as the customer lookup key; never invent bookingId.
+    trackingCode: typeof raw.trackingCode === "string" ? raw.trackingCode : undefined,
+    status,
+    paymentStatus,
+    paymentDeadline: deadline || undefined,
+    canResumeReceipt: raw.canResumeReceipt === true
+      && status === "PAYMENT_PENDING"
+      && paymentStatus === "DUE",
+  };
+}
+
+/** Translate Staging slot statuses into the Mini App's existing slot filter contract. */
+export function normalizeStagingSlot<T extends Record<string, unknown>>(raw: T): T & {
+  available: boolean;
+  status: "FREE" | "BOOKED" | "BLOCKED";
+} {
+  const backendStatus = String(raw.status || "").toUpperCase();
+  const status = backendStatus === "AVAILABLE" ? "FREE"
+    : backendStatus === "BOOKED" ? "BOOKED"
+    : "BLOCKED";
+  return {
+    ...raw,
+    available: status === "FREE",
+    status,
+  };
 }
 
 /** A receipt under manual review is a hold, not an expiring payment window. */
@@ -116,9 +176,10 @@ export function buildCreateRequestPayload(
 /** Refuse to build a receipt mutation unless the server status says payment is due. */
 export function buildSubmitReceiptPayload(
   snapshot: BookingStatusSnapshot,
-  input: SubmitReceiptRequest
+  input: SubmitReceiptRequest,
+  now: number = Date.now()
 ): SubmitReceiptRequest {
-  if (!canSubmitReceipt(snapshot)) {
+  if (!canSubmitReceipt(snapshot, now)) {
     throw new Error("پرداخت فقط پس از پذیرش درخواست و فعال‌شدن مهلت پرداخت مجاز است.");
   }
   if (input.requestId !== snapshot.requestId || input.bookingId !== snapshot.bookingId) {
