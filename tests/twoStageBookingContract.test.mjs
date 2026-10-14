@@ -84,14 +84,13 @@ test("receipt payload must match the verified tracking code and phone format", (
   const input = {
     trackingCode: "TRACK-123",
     phone: "09371234567",
-    transactionNumber: " 9988 ",
-    receiptData: "base64",
-    receiptFileName: " receipt.jpg ",
-    receiptMimeType: " image/jpeg ",
+    transactionRef: " 9988 ",
+    receiptBase64: "base64",
+    mimeType: "image/jpeg",
   };
   const built = buildSubmitReceiptPayload(snapshot, input, NOW);
-  assert.equal(built.transactionNumber, "9988");
-  assert.equal(built.receiptFileName, "receipt.jpg");
+  assert.equal(built.transactionRef, "9988");
+  assert.equal(built.mimeType, "image/jpeg");
   assert.throws(() => buildSubmitReceiptPayload(snapshot, { ...input, trackingCode: "WRONG" }, NOW));
   assert.throws(() => buildSubmitReceiptPayload(snapshot, { ...input, phone: "۰۹۳۷۱۲۳۴۵۶۷" }, NOW));
 });
