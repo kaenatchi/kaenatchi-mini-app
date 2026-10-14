@@ -205,7 +205,7 @@ export function buildSubmitReceiptPayload(
   if (input.trackingCode !== snapshot.trackingCode || !/^09[0-9]{9}$/.test(input.phone)) {
     throw new Error("کد پیگیری یا شماره همراه با وضعیت معتبر سامانه مطابقت ندارد.");
   }
-  if (!input.receiptBase64.trim() || !/^image\\/(jpeg|png|webp)$/.test(input.mimeType)) {
+  if (!input.receiptBase64.trim() || !/^image\/(jpeg|png|webp)$/.test(input.mimeType)) {
     throw new Error("تصویر فیش باید JPEG، PNG یا WebP معتبر باشد.");
   }
   if (!input.transactionRef.trim()) {
