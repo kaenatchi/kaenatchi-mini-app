@@ -96,6 +96,7 @@ export function canSubmitReceipt(
   return snapshot.found === true
     && snapshot.status === "PAYMENT_PENDING"
     && snapshot.paymentStatus === "DUE"
+    && snapshot.canResumeReceipt === true
     && Number.isFinite(deadline)
     && deadline > now
     && Boolean(snapshot.trackingCode)
