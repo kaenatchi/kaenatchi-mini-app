@@ -549,7 +549,7 @@ function mapCmsServices(rows: CmsRow[]): Service[] {
         "خدمت";
       const categoryRaw = cmsText(row, ["دسته", "دسته‌بندی", "category"]);
       const id =
-        cmsText(row, ["شناسه", "id", "slug"]) ||
+        cmsText(row, ["شناسه", "شناسه خدمت", "Service ID", "ServiceId", "ID", "Id", "id", "slug"]) ||
         cmsSlug(title);
       const description =
         cmsText(row, [
