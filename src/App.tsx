@@ -5871,7 +5871,7 @@ function BookingPage({
             <label style={{display:"block",marginTop:"12px"}}>تصویر فیش (JPG، PNG یا WebP، حداکثر ۵ مگابایت)
               <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e)=>setReceiptFile(e.target.files?.[0] || null)} style={{width:"100%",boxSizing:"border-box",marginTop:"10px",padding:"14px 15px",borderRadius:"18px",border:"1px solid rgba(53,59,50,.14)",background:"rgba(255,255,255,.78)",color:"#253128",fontFamily:"inherit",fontSize:"14px",outline:"none"}} />
             </label>
-            <input value={transactionNumber} onChange={(e)=>setTransactionNumber(e.target.value)} placeholder="شماره پیگیری تراکنش" style={inputBaseStyle} />
+            <input value={transactionNumber} onChange={(e)=>setTransactionNumber(e.target.value)} placeholder="شماره پیگیری تراکنش" style={{width:"100%",boxSizing:"border-box",marginTop:"10px",padding:"14px 15px",borderRadius:"18px",border:"1px solid rgba(53,59,50,.14)",background:"rgba(255,255,255,.78)",color:"#253128",fontFamily:"inherit",fontSize:"14px",outline:"none"}} />
             <button type="button" onClick={submitReceipt} style={{...backButtonStyle,width:"100%",marginTop:"12px"}}>ارسال فیش برای بررسی</button>
           </div>
         )}
