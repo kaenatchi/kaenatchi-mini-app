@@ -277,7 +277,7 @@ const apiGetLive = async (
    * remains available as fallback for slots. This isolates the
    * slot-loading path without changing the booking architecture.
    */
-  if (action === "getAvailableSlots" || action === "bookingStatus") {
+  if (action === "getSlots" || action === "getStatus") {
     try {
       /*
        * Slot reads and mutation-status reads are authoritative backend reads.
@@ -5364,7 +5364,7 @@ function BookingPage({
         title
       );
       return {
-        id: String(item.id ?? item.ID ?? "").trim() || "booking-" + cmsSlug(title) + "-" + (index + 1),
+        id: String(item.id ?? item.ID ?? "").trim() || "booking-" + cmsSlug(title),
         title,
         category,
         price: String(item.price ?? item.Price ?? ""),
@@ -5426,6 +5426,7 @@ function BookingPage({
 
   const waitForBookingStatus = async (
     requestId: string,
+    phone: string,
     mode: "created" | "paid"
   ) => {
     const started = Date.now();
@@ -5438,10 +5439,10 @@ function BookingPage({
      * Back off gradually to avoid hammering Apps Script if it is genuinely busy.
      */
     while (Date.now() - started < 30000) {
-      const data = await apiGet("bookingStatus", { requestId });
+      const data = await apiGet("getStatus", { requestId, phone });
 
       if (data.found) {
-        if (mode === "created" && data.bookingId) return data;
+        if (mode === "created" && data.requestId && data.trackingCode) return data;
         if (
           mode === "paid" &&
           (
@@ -5535,10 +5536,7 @@ function BookingPage({
      * authoritative confirmation path for both createBooking and
      * submitPayment and works through the Worker JSONP transport.
      */
-    return waitForBookingStatus(
-      requestId,
-      action === "createBooking" ? "created" : "paid"
-    );
+    return waitForBookingStatus(requestId, String(payload.phone || payload.mobile || ""), action === "createRequest" ? "created" : "paid");
   };
 
   const loadConfig = async () => {
@@ -5564,7 +5562,7 @@ function BookingPage({
 
       const next: BookingConfig = {
         services,
-        availableDates: Array.isArray(data.availableDates) ? data.availableDates : [],
+        availableDates: Array.isArray(data.availableDates) ? data.availableDates.map((item: unknown) => typeof item === "string" ? { date: item } : item as Record<string, unknown>) : [],
         workHours: Array.isArray(data.workHours) ? data.workHours : [],
         blockedSlots: Array.isArray(data.blockedSlots) ? data.blockedSlots : [],
         bookedSlots: Array.isArray(data.bookedSlots) ? data.bookedSlots : [],
@@ -5572,6 +5570,7 @@ function BookingPage({
       };
 
       setConfig(next);
+      if (next.availableDates.length) setDate(String(next.availableDates[0]?.date || ""));
       if (initialService) {
         setServiceId(initialService.id);
         setBookingCategory(initialService.category);
@@ -5611,28 +5610,14 @@ function BookingPage({
     setSlots([]);
     setMessage("");
 
-    void apiGet("getAvailableSlots", { date })
+    void apiGet("getSlots", { date, serviceIds: serviceId })
       .then((data) => {
         if (!active) return;
 
         if (Array.isArray(data.slots)) {
-          const authoritativeSlots = data.slots.filter(
-            (slot: Record<string, unknown>) => {
-              const status = String(slot.status || "").toUpperCase();
-              const isFree =
-                slot.available === true ||
-                String(slot.available).toLowerCase() === "true";
-
-              return isFree && (!status || status === "FREE");
-            }
-          );
-
+          const authoritativeSlots = data.slots;
           setSlots(authoritativeSlots);
-          setMessage(
-            authoritativeSlots.length
-              ? ""
-              : "برای این تاریخ ساعت آزادی وجود ندارد."
-          );
+          setMessage(authoritativeSlots.some((slot: Record<string, unknown>) => String(slot.status || "").toUpperCase() === "AVAILABLE") ? "" : String(data.message || "برای این تاریخ ساعت آزادی وجود ندارد."));
           return;
         }
 
@@ -5640,41 +5625,15 @@ function BookingPage({
       })
       .catch(() => {
         if (!active) return;
-
-        /*
-         * The direct slot endpoint is authoritative when it responds.
-         * If transport fails, rebuild from the already loaded config.
-         * buildLocalBookingSlots_ uses bookedSlots/blockedSlots, so a slot
-         * already held or confirmed is still excluded from the fallback.
-         */
-        const fallbackSlots = buildLocalBookingSlots_(date, config).filter(
-          (slot: Record<string, unknown>) => {
-            const status = String(slot.status || "").toUpperCase();
-            const isFree =
-              slot.available === true ||
-              String(slot.available).toLowerCase() === "true";
-
-            return isFree && (!status || status === "FREE");
-          }
-        );
-
-        if (fallbackSlots.length > 0) {
-          setSlots(fallbackSlots);
-          setMessage("");
-          return;
-        }
-
         setSlots([]);
         setTime("");
-        setMessage(
-          "برای این تاریخ ساعت آزادی وجود ندارد."
-        );
+        setMessage("اتصال به سامانهٔ ساعت‌های رزرو برقرار نشد؛ تا دریافت پاسخ معتبر، ساعتی قابل انتخاب نیست.");
       });
 
     return () => {
       active = false;
     };
-  }, [date, config]);
+  }, [date, config, serviceId]);
 
   const checkDiscount = async () => {
     const code = discountCode.trim();
@@ -5733,20 +5692,12 @@ function BookingPage({
       const telegramProfile = await getTelegramProfile();
       const telegramId = telegramProfile.telegramId;
 
-      // Telegram reminders require a real Telegram user/chat ID.
-      // Never create a booking that cannot receive its customer reminder.
-      if (!telegramId) {
-        setState("error");
-        setMessage("برای دریافت یادآوری تلگرامی، لطفاً مینی‌اپ را از داخل ربات کائنات‌چی باز کن و دوباره تلاش کن.");
-        return;
-      }
-
       // A POST can time out after the backend has already committed the booking.
       // Recover by requestId before treating the attempt as failed, so a successful
       // booking never leaves a hidden hold that forces the customer to choose another slot.
       let create: any;
       try {
-        create = await apiPost("createBooking", {
+        create = await apiPost("createRequest", {
           requestId,
           telegramId,
           telegramChatId: telegramId,
@@ -5755,8 +5706,8 @@ function BookingPage({
           telegramLastName: telegramProfile.telegramLastName,
           firstName:firstName.trim(),
           lastName:lastName.trim(),
-          mobile:mobile.trim(),
-          serviceId,
+          phone:mobile.trim(),
+          serviceIds:[serviceId],
           serviceName,
           date,
           time,
@@ -5774,36 +5725,18 @@ function BookingPage({
 
         let recovered: any = null;
         try {
-          recovered = await waitForBookingStatus(requestId, "created");
+          recovered = await waitForBookingStatus(requestId, mobile.trim(), "created");
         } catch {}
 
-        if (!recovered?.bookingId) {
-          throw error;
-        }
-
-        create = {
-          ok: true,
-          bookingId: recovered.bookingId,
-          trackingCode: recovered.trackingCode || "",
-          booking: {
-            bookingId: recovered.bookingId,
-            trackingCode: recovered.trackingCode || "",
-            date,
-            time,
-            paymentStatus: recovered.paymentStatus || "",
-            appointmentStatus: recovered.appointmentStatus || "",
-          },
-          recovered: true,
-        };
+        if (!recovered?.requestId || !recovered?.trackingCode) throw error;
+        create = { ok: true, requestId: recovered.requestId, trackingCode: recovered.trackingCode, status: recovered.status || "REQUEST_PENDING", recovered: true };
       }
 
-      const bookingId = String(create?.booking?.bookingId || create?.bookingId || "");
-      if (!bookingId) throw new Error("کد نوبت از سامانه دریافت نشد.");
-
-
-      setTrackingCode(String(create?.booking?.trackingCode || create?.trackingCode || ""));
+      const resolvedTrackingCode = String(create?.trackingCode || "");
+      if (!create?.requestId || !resolvedTrackingCode) throw new Error("کد پیگیری درخواست از سامانه دریافت نشد.");
+      setTrackingCode(resolvedTrackingCode);
       setState("success");
-      setMessage("درخواست نوبت ثبت شد. تا زمان پذیرش مایا پرداختی انجام نده؛ نتیجه از طریق تلگرام اطلاع داده می‌شود.");
+      setMessage("درخواست نوبت ثبت شد؛ هنوز قطعی نیست و فعلاً پرداختی انجام نده. کد پیگیری را نگه دار؛ ارسال اعلان خودکار به مشتری هنوز در این نسخه تأیید نشده است.");
     } catch (error) {
       setState("error");
       setMessage(error instanceof Error ? error.message : "هنگام ثبت نوبت مشکلی پیش آمد.");
@@ -5852,14 +5785,7 @@ function BookingPage({
    * anything that is not explicitly FREE is shown as unavailable so an old
    * booking cannot accidentally appear selectable.
    */
-  const visibleSlots = slots.filter((slot) => {
-    const status = String(slot.status || "").toUpperCase();
-    const isFree =
-      slot.available === true ||
-      String(slot.available).toLowerCase() === "true";
-
-    return isFree && (!status || status === "FREE");
-  });
+  const visibleSlots = slots;
 
   const categoryGroups: Array<{
     id: ServiceCategory;
@@ -6127,8 +6053,8 @@ function BookingPage({
         >
           <option value="">{date ? (slots.length ? "انتخاب ساعت" : "در حال دریافت ساعت‌ها...") : "ابتدا تاریخ را انتخاب کن"}</option>
           {visibleSlots.map((item) => (
-            <option key={String(item.time)} value={String(item.time)}>
-              {String(item.time)}
+            <option key={String(item.time)} value={String(item.time)} disabled={String(item.status || "").toUpperCase() !== "AVAILABLE"}>
+              {String(item.status || "").toUpperCase() === "AVAILABLE" ? String(item.time) : "⛔ " + String(item.time) + " — " + String(item.label || (String(item.status || "").toUpperCase() === "BOOKED" ? "رزرو شده" : "مسدود"))}
             </option>
           ))}
         </select>
@@ -6237,7 +6163,7 @@ function BookingPage({
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
           <strong>۵. پس از پذیرش درخواست</strong>
-          <span>در این مرحله پرداختی انجام نده. مایا درخواست را بررسی می‌کند؛ اگر پذیرفته شود، مهلت ۱۰ دقیقه‌ای پرداخت از طریق تلگرام به تو اطلاع داده می‌شود. پس از ارسال فیش، نوبت تا بررسی دستی واریز در انتظار می‌ماند.</span>
+          <span>در این مرحله پرداختی انجام نده. مایا درخواست را بررسی می‌کند؛ اگر پذیرفته شود، مهلت ۳۰ دقیقه‌ای پرداخت از طریق تلگرام به تو اطلاع داده می‌شود. پس از ارسال فیش، نوبت تا بررسی دستی واریز در انتظار می‌ماند.</span>
         </div>
       </div>
       {message && (
@@ -6248,7 +6174,7 @@ function BookingPage({
       {renderBookingContent(["tracking_guide", "custom_notice"])}
 
       <button type="button" onClick={()=>void submit()} disabled={state==="submitting"} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px",cursor:state==="submitting"?"default":"pointer",boxShadow:"0 10px 24px rgba(23,75,56,.2)"}}>
-        {state==="submitting" ? "در حال ثبت نوبت و پرداخت..." : "ثبت نهایی نوبت"}
+        {state==="submitting" ? "در حال ثبت درخواست..." : "ثبت درخواست نوبت"}
       </button>
     </div>
   );
