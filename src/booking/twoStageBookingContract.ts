@@ -41,9 +41,8 @@ export type CreateBookingRequest = {
 };
 
 export type SubmitReceiptRequest = {
-  requestId: string;
-  bookingId: string;
-  telegramId: string;
+  trackingCode: string;
+  phone: string;
   transactionNumber: string;
   receiptData: string;
   receiptFileName: string;
@@ -99,7 +98,7 @@ export function canSubmitReceipt(
     && snapshot.paymentStatus === "DUE"
     && Number.isFinite(deadline)
     && deadline > now
-    && Boolean(snapshot.bookingId)
+    && Boolean(snapshot.trackingCode)
     && Boolean(snapshot.requestId);
 }
 
@@ -182,8 +181,8 @@ export function buildSubmitReceiptPayload(
   if (!canSubmitReceipt(snapshot, now)) {
     throw new Error("پرداخت فقط پس از پذیرش درخواست و فعال‌شدن مهلت پرداخت مجاز است.");
   }
-  if (input.requestId !== snapshot.requestId || input.bookingId !== snapshot.bookingId) {
-    throw new Error("شناسهٔ درخواست یا نوبت با وضعیت معتبر سامانه مطابقت ندارد.");
+  if (input.trackingCode !== snapshot.trackingCode || !/^09[0-9]{9}$/.test(input.phone)) {
+    throw new Error("کد پیگیری یا شماره همراه با وضعیت معتبر سامانه مطابقت ندارد.");
   }
   return {
     ...input,
