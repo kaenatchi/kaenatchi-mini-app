@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test:booking-contract": "node --experimental-strip-types --test tests/twoStageBookingContract.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
