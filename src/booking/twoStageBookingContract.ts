@@ -150,6 +150,27 @@ export function normalizeStagingSlot<T extends Record<string, unknown>>(raw: T):
   };
 }
 
+/** Normalize the complete Staging getSlots envelope; errors fail closed. */
+export function normalizeStagingSlotsResponse(
+  raw: Record<string, unknown>
+): { ok: boolean; date?: string; slots: Array<Record<string, unknown> & {
+  available: boolean;
+  status: "FREE" | "BOOKED" | "BLOCKED";
+}>; message?: string; serviceMode?: string; durationMinutes?: number } {
+  const ok = raw.ok === true && Array.isArray(raw.slots);
+  const slots = ok
+    ? (raw.slots as Array<Record<string, unknown>>).map(normalizeStagingSlot)
+    : [];
+  return {
+    ok,
+    date: typeof raw.date === "string" ? raw.date : undefined,
+    slots,
+    message: typeof raw.message === "string" ? raw.message : undefined,
+    serviceMode: typeof raw.serviceMode === "string" ? raw.serviceMode : undefined,
+    durationMinutes: typeof raw.durationMinutes === "number" ? raw.durationMinutes : undefined,
+  };
+}
+
 /** A receipt under manual review is a hold, not an expiring payment window. */
 export function shouldKeepSlotHeld(snapshot: BookingStatusSnapshot): boolean {
   return snapshot.status === "RECEIPT_REVIEW"
