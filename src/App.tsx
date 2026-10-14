@@ -5969,9 +5969,11 @@ function BookingPage({
                         className="booking-service-option"
                         onClick={() => {
                           if (group.id === "energy") {
-                            const nextIds = selectedServiceIds.includes(service.id)
-                              ? selectedServiceIds.filter((id) => id !== service.id)
-                              : [...selectedServiceIds, service.id];
+                            // Never carry a therapy/candle selection into an energy bundle.
+                            const currentEnergyIds = bookingCategory === "energy" ? selectedServiceIds : [];
+                            const nextIds = currentEnergyIds.includes(service.id)
+                              ? currentEnergyIds.filter((id) => id !== service.id)
+                              : [...currentEnergyIds, service.id];
                             setSelectedServiceIds(nextIds);
                             setServiceId(nextIds[0] || "");
                           } else {
