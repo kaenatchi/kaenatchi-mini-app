@@ -5364,7 +5364,7 @@ function BookingPage({
         title
       );
       return {
-        id: String(item.id ?? item.ID ?? "").trim() || "booking-" + cmsSlug(title),
+        id: String(item.id ?? item.ID ?? "").trim() || cmsSlug(title),
         title,
         category,
         price: String(item.price ?? item.Price ?? ""),
