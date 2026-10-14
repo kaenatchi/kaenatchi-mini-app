@@ -5724,8 +5724,7 @@ function BookingPage({
     if (!selectedService || !serviceId) return setMessage("لطفاً خدمت موردنظر را انتخاب کن.");
     if (!date || !time) return setMessage("لطفاً تاریخ و ساعت نوبت را انتخاب کن.");
     if (!firstName.trim() || !lastName.trim() || !mobile.trim()) return setMessage("لطفاً نام، نام خانوادگی و شماره موبایل را کامل وارد کن.");
-    if (!receiptFile && !transactionNumber.trim()) return setMessage("تصویر فیش یا کد پیگیری پرداخت الزامی است.");
-    if (receiptFile && receiptFile.size > 8 * 1024 * 1024) return setMessage("حجم تصویر فیش باید کمتر از ۸ مگابایت باشد.");
+    // This stage only submits a request. Payment proof is not collected until Maya accepts it.
 
     setState("submitting");
     try {
@@ -5801,56 +5800,10 @@ function BookingPage({
       const bookingId = String(create?.booking?.bookingId || create?.bookingId || "");
       if (!bookingId) throw new Error("کد نوبت از سامانه دریافت نشد.");
 
-      let receiptData = "";
-      if (receiptFile) receiptData = await fileToDataUrl(receiptFile);
 
-      let payment: any;
-      try {
-        payment = await apiPost("submitPayment", {
-          requestId,
-          bookingId,
-          telegramId,
-          telegramChatId: telegramId,
-          telegramUsername: telegramProfile.telegramUsername,
-          telegramFirstName: telegramProfile.telegramFirstName,
-          telegramLastName: telegramProfile.telegramLastName,
-          transactionNumber:transactionNumber.trim(),
-          receiptData,
-          receiptFileName:receiptFile?.name || "",
-          receiptMimeType:receiptFile?.type || "",
-        });
-      } catch (error) {
-        const isTransportTimeout =
-          error instanceof Error &&
-          (
-            error.message === "BOOKING_TRANSPORT_TIMEOUT" ||
-            /HTTP 502|ارتباط با سامانه رزرو برقرار نشد|JSONP_TRANSPORT_TIMEOUT/i.test(error.message)
-          );
-
-        if (!isTransportTimeout) throw error;
-
-        let recovered: any = null;
-        try {
-          recovered = await waitForBookingStatus(requestId, "paid");
-        } catch {}
-
-        if (!recovered?.found) {
-          throw error;
-        }
-
-        payment = {
-          ok: true,
-          bookingId,
-          paymentStatus: recovered.paymentStatus || "",
-          recovered: true,
-        };
-      }
-
-      if (!payment?.ok) throw new Error(payment?.message || "ارسال پرداخت ناموفق بود.");
-
-      setTrackingCode(String(create?.booking?.trackingCode || payment?.trackingCode || ""));
+      setTrackingCode(String(create?.booking?.trackingCode || create?.trackingCode || ""));
       setState("success");
-      setMessage("درخواست نوبت و اطلاعات پرداخت با موفقیت ثبت شد و در انتظار بررسی ادمین است.");
+      setMessage("درخواست نوبت ثبت شد. تا زمان پذیرش مایا پرداختی انجام نده؛ نتیجه از طریق تلگرام اطلاع داده می‌شود.");
     } catch (error) {
       setState("error");
       setMessage(error instanceof Error ? error.message : "هنگام ثبت نوبت مشکلی پیش آمد.");
@@ -5872,7 +5825,7 @@ function BookingPage({
   if (state === "success") {
     return (
       <div className="inner-page">
-        <SectionHeaderCard kicker="BOOKING RECEIVED" title="درخواست ثبت شد" description="اطلاعات نوبت و پرداخت دریافت شد و درخواست برای بررسی ادمین ارسال شده است." icon="check" status="در انتظار تأیید" />
+        <SectionHeaderCard kicker="BOOKING RECEIVED" title="درخواست ثبت شد" description="درخواست نوبت دریافت شد؛ هنوز تأیید نشده و فعلاً نیازی به پرداخت نیست." icon="check" status="در انتظار تأیید" />
         <div className="glass-list-card" style={{display:"block",textAlign:"center"}}>
           <div className="list-icon" style={{margin:"0 auto 12px"}}><Icon name="ticket" /></div>
           <div className="list-copy">
@@ -6283,73 +6236,9 @@ function BookingPage({
 
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
-          <strong>۵. پرداخت و رسید</strong>
-          <span>{paymentNote}</span>
+          <strong>۵. پس از پذیرش درخواست</strong>
+          <span>در این مرحله پرداختی انجام نده. مایا درخواست را بررسی می‌کند؛ اگر پذیرفته شود، مهلت ۱۰ دقیقه‌ای پرداخت از طریق تلگرام به تو اطلاع داده می‌شود. پس از ارسال فیش، نوبت تا بررسی دستی واریز در انتظار می‌ماند.</span>
         </div>
-        {renderBookingContent(["payment_guide"])} 
-
-        <div style={{
-          marginTop:"14px",
-          padding:"16px",
-          borderRadius:"20px",
-          background:"rgba(165,139,91,.09)",
-          border:"1px solid rgba(165,139,91,.18)",
-          color:"#26342b",
-          boxShadow:"0 8px 20px rgba(53,59,50,.06)",
-        }}>
-          {paymentCardNumber ? (
-            <>
-              <div style={{fontSize:"11px",opacity:.68,marginBottom:"5px"}}>شماره کارت</div>
-              <b dir="ltr" style={{fontSize:"16px",letterSpacing:"1px"}}>{paymentCardNumber}</b>
-              {(paymentBank || paymentHolder) && (
-                <div style={{marginTop:"8px",fontSize:"12px"}}>
-                  {[paymentBank,paymentHolder].filter(Boolean).join(" · ")}
-                </div>
-              )}
-            </>
-          ) : (
-            <div style={{fontSize:"12px",lineHeight:1.9}}>
-              اطلاعات کارت هنوز در CMS ثبت نشده است.
-            </div>
-          )}
-        </div>
-
-        <input
-          value={transactionNumber}
-          onChange={e=>setTransactionNumber(e.target.value)}
-          placeholder="کد پیگیری پرداخت (اختیاری)"
-          inputMode="numeric"
-          enterKeyHint="done"
-          style={inputBaseStyle}
-          {...tapHandlers}
-          onBlur={(e)=>{tapHandlers.onBlur(e);hideKeyboard(e);}}
-        />
-
-        {renderBookingContent(["receipt_warning"])}
-        <label
-          style={{
-            display:"block",
-            marginTop:"14px",
-            padding:"16px",
-            borderRadius:"20px",
-            border:"1px dashed rgba(36,99,71,.35)",
-            background:"rgba(36,99,71,.05)",
-            color:"#26342b",
-            textAlign:"center",
-            cursor:"pointer",
-            transition:"transform .18s ease, box-shadow .18s ease, background .18s ease",
-          }}
-          onTouchStart={(e)=>{e.currentTarget.style.transform="scale(.985)";}}
-          onTouchEnd={(e)=>{e.currentTarget.style.transform="scale(1)";}}
-        >
-          📎 {receiptFile ? receiptFile.name : "انتخاب تصویر فیش"}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={e=>setReceiptFile(e.target.files?.[0] || null)}
-            style={{display:"none"}}
-          />
-        </label>
       </div>
       {message && (
         <div style={{padding:"13px",borderRadius:"15px",marginTop:"12px",background:state==="error"?"rgba(165,45,45,.08)":"rgba(36,99,71,.08)",color:state==="error"?"#a52d2d":"#246347",fontSize:"13px",lineHeight:1.9,whiteSpace:"pre-line"}}>
