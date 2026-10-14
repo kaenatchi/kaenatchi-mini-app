@@ -5338,6 +5338,7 @@ function BookingPage({
 
   const [config, setConfig] = useState<BookingConfig | null>(null);
   const [serviceId, setServiceId] = useState(initialService?.id || "");
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(initialService?.id ? [initialService.id] : []);
   const [date, setDate] = useState("");
   const [bookingCategory, setBookingCategory] = useState<ServiceCategory | null>(
     initialService?.category || null
@@ -5394,10 +5395,12 @@ function BookingPage({
 
   const selectedService =
     bookingServices.find((item) => item.id === serviceId) ||
-    initialService ||
-    null;
-  const basePrice =
-    Number(String(selectedService?.price || "").replace(/[,٬،\s]/g, "")) || 0;
+    (initialService && initialService.category !== "energy" ? initialService : null);
+  const pricedServices = selectedServiceIds
+    .map((id) => bookingServices.find((item) => item.id === id))
+    .filter((item): item is Service => Boolean(item));
+  const basePrice = (pricedServices.length ? pricedServices : selectedService ? [selectedService] : [])
+    .reduce((sum, item) => sum + (Number(String(item.price || "").replace(/[,٬،\s]/g, "")) || 0), 0);
   const finalPrice = Math.max(0, basePrice - discount.amount);
 
   const getTelegramProfile = async () => {
@@ -5610,7 +5613,7 @@ function BookingPage({
     setSlots([]);
     setMessage("");
 
-    void apiGet("getSlots", { date, serviceIds: serviceId })
+    void apiGet("getSlots", { date, serviceIds: selectedServiceIds.length ? selectedServiceIds.join(",") : serviceId })
       .then((data) => {
         if (!active) return;
 
@@ -5633,7 +5636,7 @@ function BookingPage({
     return () => {
       active = false;
     };
-  }, [date, config, serviceId]);
+  }, [date, config, serviceId, selectedServiceIds]);
 
   const checkDiscount = async () => {
     const code = discountCode.trim();
@@ -5688,7 +5691,7 @@ function BookingPage({
     setState("submitting");
     try {
       const requestId = "REQ-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8).toUpperCase();
-      const serviceName = String(selectedService.title || "");
+      const serviceName = selectedServiceIds.map((id) => bookingServices.find((item) => item.id === id)?.title).filter(Boolean).join("، ") || String(selectedService.title || "");
       const telegramProfile = await getTelegramProfile();
       const telegramId = telegramProfile.telegramId;
 
@@ -5707,7 +5710,7 @@ function BookingPage({
           firstName:firstName.trim(),
           lastName:lastName.trim(),
           phone:mobile.trim(),
-          serviceIds:[serviceId],
+          serviceIds:selectedServiceIds.length ? selectedServiceIds : [serviceId],
           serviceName,
           date,
           time,
@@ -5878,10 +5881,10 @@ function BookingPage({
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
           <strong>۱. انتخاب خدمت</strong>
-          <span>یکی از سه دسته را باز کن و خدمت موردنظرت را انتخاب کن.</span>
+          <span>برای انرژی‌خوانی می‌توانی چند خدمت انتخاب کنی؛ مبلغ آن‌ها با هم جمع می‌شود. خدمات درمانی و شمع‌تراپی جداگانه انتخاب می‌شوند.</span>
         </div>
 
-        {initialService && selectedService ? (
+        {initialService && selectedService && initialService.category !== "energy" ? (
           <div style={{marginTop:"12px",padding:"15px",borderRadius:"20px",background:"rgba(36,99,71,.07)",border:"1px solid rgba(36,99,71,.12)"}}>
             <div className="list-copy">
               <strong>{selectedService.title}</strong>
@@ -5896,6 +5899,7 @@ function BookingPage({
               type="button"
               onClick={() => {
                 setServiceId("");
+                setSelectedServiceIds([]);
                 setBookingCategory(null);
                 setDiscount({valid:false,percent:0,amount:0});
               }}
@@ -5964,7 +5968,16 @@ function BookingPage({
                         type="button"
                         className="booking-service-option"
                         onClick={() => {
-                          setServiceId(service.id);
+                          if (group.id === "energy") {
+                            const nextIds = selectedServiceIds.includes(service.id)
+                              ? selectedServiceIds.filter((id) => id !== service.id)
+                              : [...selectedServiceIds, service.id];
+                            setSelectedServiceIds(nextIds);
+                            setServiceId(nextIds[0] || "");
+                          } else {
+                            setSelectedServiceIds([service.id]);
+                            setServiceId(service.id);
+                          }
                           setBookingCategory(group.id);
                           setDiscount({valid:false,percent:0,amount:0});
                           setMessage("");
@@ -5975,7 +5988,7 @@ function BookingPage({
                           padding:"13px 14px",
                           border:"1px solid rgba(53,59,50,.09)",
                           borderRadius:"17px",
-                          background: serviceId === service.id
+                          background: selectedServiceIds.includes(service.id)
                             ? "rgba(36,99,71,.12)"
                             : "rgba(255,255,255,.70)",
                           color:"#26342b",
