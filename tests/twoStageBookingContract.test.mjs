@@ -95,3 +95,26 @@ test("receipt payload must match the verified tracking code and phone format", (
   assert.throws(() => buildSubmitReceiptPayload(snapshot, { ...input, trackingCode: "WRONG" }, NOW));
   assert.throws(() => buildSubmitReceiptPayload(snapshot, { ...input, phone: "۰۹۳۷۱۲۳۴۵۶۷" }, NOW));
 });
+
+test("getSlots envelope preserves blocked/booked slots and fails closed on API errors", async () => {
+  const { normalizeStagingSlotsResponse } = await import("../src/booking/twoStageBookingContract.ts");
+  const response = normalizeStagingSlotsResponse({
+    ok: true,
+    date: "1405/07/23",
+    serviceMode: "energy",
+    durationMinutes: 30,
+    slots: [
+      { time: "11:00", status: "AVAILABLE", label: "11:00" },
+      { time: "12:00", status: "BOOKED", label: "رزرو شده" },
+      { time: "13:00", status: "BLOCKED", label: "تعطیل" },
+    ],
+  });
+  assert.equal(response.ok, true);
+  assert.equal(response.slots.length, 3);
+  assert.equal(response.slots[0].available, true);
+  assert.equal(response.slots[1].available, false);
+  assert.equal(response.slots[1].status, "BOOKED");
+  assert.equal(response.slots[2].available, false);
+  assert.equal(response.slots[2].status, "BLOCKED");
+  assert.deepEqual(normalizeStagingSlotsResponse({ ok: false, message: "error" }).slots, []);
+});
