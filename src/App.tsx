@@ -116,6 +116,9 @@ const BOOKING_BACKEND_ENDPOINT =
   "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
 
 const BOOKING_TRANSPORT_VERSION = "v7-jsonp-fetch-backend";
+// Safety gate: the existing Worker still points at the live Apps Script URL.
+// Keep all write actions disabled in this preview until a dedicated staging transport is configured.
+const BOOKING_MUTATIONS_ENABLED = false;
 const BOOKING_CONFIG_CACHE_KEY =
   "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
 const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
@@ -5492,6 +5495,10 @@ function BookingPage({
         ""
     ).trim();
 
+    if (!BOOKING_MUTATIONS_ENABLED && ["createRequest", "submitReceipt", "requestCancel", "requestReschedule", "acceptManagerReschedule"].includes(action)) {
+      throw new Error("STAGING_MUTATIONS_DISABLED: پیش‌نمایش امن است؛ تا اتصال به Worker و Apps Script اختصاصی Staging، هیچ درخواست یا فیش واقعی ارسال نمی‌شود.");
+    }
+
     const url = new URL(ENDPOINT);
     url.searchParams.set("_", String(Date.now()));
 
@@ -5617,6 +5624,12 @@ function BookingPage({
       setState("success");
       setMessage("فیش دریافت شد؛ نوبت تا بررسی واقعی پرداخت توسط مایا نگه داشته می‌شود.");
     } catch (error) {
+      if (error instanceof Error && error.message.startsWith("STAGING_MUTATIONS_DISABLED:")) {
+        setState("success");
+        setMessage(error.message.slice("STAGING_MUTATIONS_DISABLED: ".length));
+        return;
+      }
+
       // The POST response is opaque. Before showing an error, re-read the
       // authoritative state: the backend may have stored the receipt even if
       // the status poll timed out.
