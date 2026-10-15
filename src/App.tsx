@@ -5822,6 +5822,9 @@ function BookingPage({
       const serviceName = selectedServiceIds.map((id) => bookingServices.find((item) => item.id === id)?.title).filter(Boolean).join("، ") || String(selectedService.title || "");
       const telegramProfile = await getTelegramProfile();
       const telegramId = telegramProfile.telegramId;
+      // The backend verifies this signed Telegram payload itself. Client-supplied
+      // telegramId/chatId fields are informational only and never authorize VIP.
+      const telegramInitData = await getTelegramInitData();
 
       // A POST can time out after the backend has already committed the booking.
       // Recover by requestId before treating the attempt as failed, so a successful
@@ -5830,6 +5833,7 @@ function BookingPage({
       try {
         create = await apiPost("createRequest", {
           requestId,
+          telegramInitData: telegramInitData || "",
           telegramId,
           telegramChatId: telegramId,
           telegramUsername: telegramProfile.telegramUsername,
