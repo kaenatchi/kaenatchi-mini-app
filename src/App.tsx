@@ -116,6 +116,9 @@ const BOOKING_BACKEND_ENDPOINT =
   "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
 
 const BOOKING_TRANSPORT_VERSION = "v7-jsonp-fetch-backend";
+// Safety gate: the existing Worker still points at the live Apps Script URL.
+// Keep all write actions disabled in this preview until a dedicated staging transport is configured.
+const BOOKING_MUTATIONS_ENABLED = false;
 const BOOKING_CONFIG_CACHE_KEY =
   "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
 const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
@@ -277,7 +280,7 @@ const apiGetLive = async (
    * remains available as fallback for slots. This isolates the
    * slot-loading path without changing the booking architecture.
    */
-  if (action === "getAvailableSlots" || action === "bookingStatus") {
+  if (action === "getSlots" || action === "getStatus") {
     try {
       /*
        * Slot reads and mutation-status reads are authoritative backend reads.
@@ -549,8 +552,8 @@ function mapCmsServices(rows: CmsRow[]): Service[] {
         "خدمت";
       const categoryRaw = cmsText(row, ["دسته", "دسته‌بندی", "category"]);
       const id =
-        cmsText(row, ["شناسه", "id", "slug"]) ||
-        `${cmsSlug(title)}-${index + 1}`;
+        cmsText(row, ["شناسه", "شناسه خدمت", "Service ID", "ServiceId", "ID", "Id", "id", "slug"]) ||
+        cmsSlug(title);
       const description =
         cmsText(row, [
           "توضیحات کامل",
@@ -5338,6 +5341,7 @@ function BookingPage({
 
   const [config, setConfig] = useState<BookingConfig | null>(null);
   const [serviceId, setServiceId] = useState(initialService?.id || "");
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(initialService?.id ? [initialService.id] : []);
   const [date, setDate] = useState("");
   const [bookingCategory, setBookingCategory] = useState<ServiceCategory | null>(
     initialService?.category || null
@@ -5351,9 +5355,13 @@ function BookingPage({
   const [discount, setDiscount] = useState<{valid:boolean; percent:number; amount:number}>({valid:false,percent:0,amount:0});
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [transactionNumber, setTransactionNumber] = useState("");
+  const [receiptOutcomeUnknown, setReceiptOutcomeUnknown] = useState(false);
   const [message, setMessage] = useState("");
   const [state, setState] = useState<BookingState>("loading");
   const [trackingCode, setTrackingCode] = useState("");
+  const [requestId, setRequestId] = useState("");
+  const [backendBookingStatus, setBackendBookingStatus] = useState("");
+  const [paymentDeadline, setPaymentDeadline] = useState("");
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
   const backendServices: Service[] = (config?.services || [])
@@ -5364,7 +5372,7 @@ function BookingPage({
         title
       );
       return {
-        id: String(item.id ?? item.ID ?? "").trim() || "booking-" + cmsSlug(title) + "-" + (index + 1),
+        id: String(item.id ?? item.ID ?? "").trim() || cmsSlug(title),
         title,
         category,
         price: String(item.price ?? item.Price ?? ""),
@@ -5394,10 +5402,12 @@ function BookingPage({
 
   const selectedService =
     bookingServices.find((item) => item.id === serviceId) ||
-    initialService ||
-    null;
-  const basePrice =
-    Number(String(selectedService?.price || "").replace(/[,٬،\s]/g, "")) || 0;
+    (initialService && initialService.category !== "energy" ? initialService : null);
+  const pricedServices = selectedServiceIds
+    .map((id) => bookingServices.find((item) => item.id === id))
+    .filter((item): item is Service => Boolean(item));
+  const basePrice = (pricedServices.length ? pricedServices : selectedService ? [selectedService] : [])
+    .reduce((sum, item) => sum + (Number(String(item.price || "").replace(/[,٬،\s]/g, "")) || 0), 0);
   const finalPrice = Math.max(0, basePrice - discount.amount);
 
   const getTelegramProfile = async () => {
@@ -5426,6 +5436,7 @@ function BookingPage({
 
   const waitForBookingStatus = async (
     requestId: string,
+    phone: string,
     mode: "created" | "paid"
   ) => {
     const started = Date.now();
@@ -5438,15 +5449,15 @@ function BookingPage({
      * Back off gradually to avoid hammering Apps Script if it is genuinely busy.
      */
     while (Date.now() - started < 30000) {
-      const data = await apiGet("bookingStatus", { requestId });
+      const data = await apiGet("getStatus", { requestId, phone });
 
       if (data.found) {
-        if (mode === "created" && data.bookingId) return data;
+        if (mode === "created" && data.requestId && data.trackingCode) return data;
         if (
           mode === "paid" &&
           (
-            data.paymentStatus === "فیش دریافت شد" ||
-            data.paymentStatus === "تأیید شد"
+            data.status === "RECEIPT_REVIEW" ||
+            data.status === "CONFIRMED"
           )
         ) {
           return data;
@@ -5483,6 +5494,10 @@ function BookingPage({
         payload.clientTrackingCode ||
         ""
     ).trim();
+
+    if (!BOOKING_MUTATIONS_ENABLED && ["createRequest", "submitReceipt", "requestCancel", "requestReschedule", "acceptManagerReschedule"].includes(action)) {
+      throw new Error("STAGING_MUTATIONS_DISABLED: پیش‌نمایش امن است؛ تا اتصال به Worker و Apps Script اختصاصی Staging، هیچ درخواست یا فیش واقعی ارسال نمی‌شود.");
+    }
 
     const url = new URL(ENDPOINT);
     url.searchParams.set("_", String(Date.now()));
@@ -5535,10 +5550,124 @@ function BookingPage({
      * authoritative confirmation path for both createBooking and
      * submitPayment and works through the Worker JSONP transport.
      */
-    return waitForBookingStatus(
-      requestId,
-      action === "createBooking" ? "created" : "paid"
-    );
+    return waitForBookingStatus(requestId, String(payload.phone || payload.mobile || ""), action === "createRequest" ? "created" : "paid");
+  };
+
+  const refreshBookingStatus = async () => {
+    if (!requestId || !mobile.trim()) {
+      setMessage("برای بررسی وضعیت، کد درخواست و شماره همراه لازم است.");
+      return;
+    }
+    setMessage("در حال بررسی وضعیت درخواست...");
+    try {
+      const data = await apiGet("getStatus", { requestId, phone: mobile.trim() });
+      if (!data?.found) {
+        setMessage(data?.message || "وضعیت درخواست پیدا نشد؛ شماره همراه را بررسی کن.");
+        return;
+      }
+      setBackendBookingStatus(String(data.status || ""));
+      setPaymentDeadline(String(data.paymentDeadline || ""));
+      if (["PAYMENT_PENDING", "RECEIPT_REVIEW", "CONFIRMED"].includes(String(data.status || ""))) {
+        setReceiptOutcomeUnknown(false);
+      } else {
+        setReceiptOutcomeUnknown(true);
+      }
+      setMessage(
+        data.status === "REQUEST_PENDING" ? "درخواستت در صف بررسی مایا است؛ فعلاً پرداخت نکن." :
+        data.status === "PAYMENT_PENDING" ? "درخواست پذیرفته شده است. فقط حالا پرداخت کن و فیش را ارسال کن." :
+        data.status === "RECEIPT_REVIEW" ? "فیش دریافت شده و تا بررسی واقعی پرداخت، نوبت نگه داشته می‌شود." :
+        data.status === "CONFIRMED" ? "پرداخت تأیید شده و نوبت قطعی است." :
+        "وضعیت فعلی: " + String(data.status || "نامشخص")
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "بررسی وضعیت ناموفق بود.");
+    }
+  };
+
+  const submitReceipt = async () => {
+    if (!receiptFile || !transactionNumber.trim()) {
+      setMessage("تصویر فیش و شماره پیگیری تراکنش را وارد کن.");
+      return;
+    }
+    if (receiptFile.size > 5 * 1024 * 1024) {
+      setMessage("حجم تصویر باید حداکثر ۵ مگابایت باشد.");
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(receiptFile.type)) {
+      setMessage("فرمت تصویر باید JPG، PNG یا WebP باشد.");
+      return;
+    }
+    setState("submitting");
+    setMessage("در حال ارسال فیش...");
+    try {
+      const receiptBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("خواندن تصویر فیش ناموفق بود."));
+        reader.onload = () => {
+          const result = String(reader.result || "");
+          const comma = result.indexOf(",");
+          if (comma < 0) return reject(new Error("محتوای تصویر معتبر نیست."));
+          resolve(result.slice(comma + 1));
+        };
+        reader.readAsDataURL(receiptFile);
+      });
+      const data = await apiPost("submitReceipt", {
+        requestId,
+        trackingCode,
+        phone: mobile.trim(),
+        mimeType: receiptFile.type,
+        receiptBase64,
+        transactionRef: transactionNumber.trim(),
+      });
+      setBackendBookingStatus(String(data.status || "RECEIPT_REVIEW"));
+      setReceiptOutcomeUnknown(false);
+      setState("success");
+      setMessage("فیش دریافت شد؛ نوبت تا بررسی واقعی پرداخت توسط مایا نگه داشته می‌شود.");
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("STAGING_MUTATIONS_DISABLED:")) {
+        setState("success");
+        setMessage(error.message.slice("STAGING_MUTATIONS_DISABLED: ".length));
+        return;
+      }
+
+      // The POST response is opaque. Before showing an error, re-read the
+      // authoritative state: the backend may have stored the receipt even if
+      // the status poll timed out.
+      let recovered: any = null;
+      try {
+        recovered = await apiGet("getStatus", { requestId, phone: mobile.trim() });
+      } catch {}
+
+      if (recovered?.found) {
+        const recoveredStatus = String(recovered.status || "");
+        setBackendBookingStatus(recoveredStatus);
+        setPaymentDeadline(String(recovered.paymentDeadline || ""));
+
+        if (recoveredStatus === "RECEIPT_REVIEW" || recoveredStatus === "CONFIRMED") {
+          setReceiptOutcomeUnknown(false);
+          setState("success");
+          setMessage(
+            recoveredStatus === "CONFIRMED"
+              ? "وضعیت سامانه تأیید می‌کند که پرداخت نهایی شده است."
+              : "فیش در سامانه ثبت شده است؛ نوبت تا بررسی واقعی پرداخت توسط مایا نگه داشته می‌شود. فیش را دوباره ارسال نکن."
+          );
+          return;
+        }
+
+        if (recoveredStatus === "PAYMENT_PENDING") {
+          setReceiptOutcomeUnknown(false);
+          setState("success");
+          setMessage("سامانه هنوز فیشی برای این درخواست ثبت‌شده نشان نمی‌دهد. تصویر و شماره پیگیری حفظ شده‌اند؛ می‌توانی پس از بررسی وضعیت دوباره تلاش کنی.");
+          return;
+        }
+      }
+
+      // If the authoritative status cannot resolve the outcome, preserve the
+      // receipt form and disable resubmission until the customer checks status.
+      setReceiptOutcomeUnknown(true);
+      setState("success");
+      setMessage("نتیجهٔ ارسال فیش هنوز مشخص نیست. برای جلوگیری از ارسال تکراری، فعلاً دوباره ارسال نکن؛ «بررسی وضعیت درخواست» را بزن. فرم فیش حفظ شده است.");
+    }
   };
 
   const loadConfig = async () => {
@@ -5564,7 +5693,7 @@ function BookingPage({
 
       const next: BookingConfig = {
         services,
-        availableDates: Array.isArray(data.availableDates) ? data.availableDates : [],
+        availableDates: Array.isArray(data.availableDates) ? data.availableDates.map((item: unknown) => typeof item === "string" ? { date: item } : item as Record<string, unknown>) : [],
         workHours: Array.isArray(data.workHours) ? data.workHours : [],
         blockedSlots: Array.isArray(data.blockedSlots) ? data.blockedSlots : [],
         bookedSlots: Array.isArray(data.bookedSlots) ? data.bookedSlots : [],
@@ -5572,6 +5701,7 @@ function BookingPage({
       };
 
       setConfig(next);
+      if (next.availableDates.length) setDate(String(next.availableDates[0]?.date || ""));
       if (initialService) {
         setServiceId(initialService.id);
         setBookingCategory(initialService.category);
@@ -5611,28 +5741,14 @@ function BookingPage({
     setSlots([]);
     setMessage("");
 
-    void apiGet("getAvailableSlots", { date })
+    void apiGet("getSlots", { date, serviceIds: selectedServiceIds.length ? selectedServiceIds.join(",") : serviceId })
       .then((data) => {
         if (!active) return;
 
         if (Array.isArray(data.slots)) {
-          const authoritativeSlots = data.slots.filter(
-            (slot: Record<string, unknown>) => {
-              const status = String(slot.status || "").toUpperCase();
-              const isFree =
-                slot.available === true ||
-                String(slot.available).toLowerCase() === "true";
-
-              return isFree && (!status || status === "FREE");
-            }
-          );
-
+          const authoritativeSlots = data.slots;
           setSlots(authoritativeSlots);
-          setMessage(
-            authoritativeSlots.length
-              ? ""
-              : "برای این تاریخ ساعت آزادی وجود ندارد."
-          );
+          setMessage(authoritativeSlots.some((slot: Record<string, unknown>) => String(slot.status || "").toUpperCase() === "AVAILABLE") ? "" : String(data.message || "برای این تاریخ ساعت آزادی وجود ندارد."));
           return;
         }
 
@@ -5640,41 +5756,15 @@ function BookingPage({
       })
       .catch(() => {
         if (!active) return;
-
-        /*
-         * The direct slot endpoint is authoritative when it responds.
-         * If transport fails, rebuild from the already loaded config.
-         * buildLocalBookingSlots_ uses bookedSlots/blockedSlots, so a slot
-         * already held or confirmed is still excluded from the fallback.
-         */
-        const fallbackSlots = buildLocalBookingSlots_(date, config).filter(
-          (slot: Record<string, unknown>) => {
-            const status = String(slot.status || "").toUpperCase();
-            const isFree =
-              slot.available === true ||
-              String(slot.available).toLowerCase() === "true";
-
-            return isFree && (!status || status === "FREE");
-          }
-        );
-
-        if (fallbackSlots.length > 0) {
-          setSlots(fallbackSlots);
-          setMessage("");
-          return;
-        }
-
         setSlots([]);
         setTime("");
-        setMessage(
-          "برای این تاریخ ساعت آزادی وجود ندارد."
-        );
+        setMessage("اتصال به سامانهٔ ساعت‌های رزرو برقرار نشد؛ تا دریافت پاسخ معتبر، ساعتی قابل انتخاب نیست.");
       });
 
     return () => {
       active = false;
     };
-  }, [date, config]);
+  }, [date, config, serviceId, selectedServiceIds]);
 
   const checkDiscount = async () => {
     const code = discountCode.trim();
@@ -5729,25 +5819,21 @@ function BookingPage({
     setState("submitting");
     try {
       const requestId = "REQ-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8).toUpperCase();
-      const serviceName = String(selectedService.title || "");
+      const serviceName = selectedServiceIds.map((id) => bookingServices.find((item) => item.id === id)?.title).filter(Boolean).join("، ") || String(selectedService.title || "");
       const telegramProfile = await getTelegramProfile();
       const telegramId = telegramProfile.telegramId;
-
-      // Telegram reminders require a real Telegram user/chat ID.
-      // Never create a booking that cannot receive its customer reminder.
-      if (!telegramId) {
-        setState("error");
-        setMessage("برای دریافت یادآوری تلگرامی، لطفاً مینی‌اپ را از داخل ربات کائنات‌چی باز کن و دوباره تلاش کن.");
-        return;
-      }
+      // The backend verifies this signed Telegram payload itself. Client-supplied
+      // telegramId/chatId fields are informational only and never authorize VIP.
+      const telegramInitData = await getTelegramInitData();
 
       // A POST can time out after the backend has already committed the booking.
       // Recover by requestId before treating the attempt as failed, so a successful
       // booking never leaves a hidden hold that forces the customer to choose another slot.
       let create: any;
       try {
-        create = await apiPost("createBooking", {
+        create = await apiPost("createRequest", {
           requestId,
+          telegramInitData: telegramInitData || "",
           telegramId,
           telegramChatId: telegramId,
           telegramUsername: telegramProfile.telegramUsername,
@@ -5755,8 +5841,8 @@ function BookingPage({
           telegramLastName: telegramProfile.telegramLastName,
           firstName:firstName.trim(),
           lastName:lastName.trim(),
-          mobile:mobile.trim(),
-          serviceId,
+          phone:mobile.trim(),
+          serviceIds:selectedServiceIds.length ? selectedServiceIds : [serviceId],
           serviceName,
           date,
           time,
@@ -5774,36 +5860,20 @@ function BookingPage({
 
         let recovered: any = null;
         try {
-          recovered = await waitForBookingStatus(requestId, "created");
+          recovered = await waitForBookingStatus(requestId, mobile.trim(), "created");
         } catch {}
 
-        if (!recovered?.bookingId) {
-          throw error;
-        }
-
-        create = {
-          ok: true,
-          bookingId: recovered.bookingId,
-          trackingCode: recovered.trackingCode || "",
-          booking: {
-            bookingId: recovered.bookingId,
-            trackingCode: recovered.trackingCode || "",
-            date,
-            time,
-            paymentStatus: recovered.paymentStatus || "",
-            appointmentStatus: recovered.appointmentStatus || "",
-          },
-          recovered: true,
-        };
+        if (!recovered?.requestId || !recovered?.trackingCode) throw error;
+        create = { ok: true, requestId: recovered.requestId, trackingCode: recovered.trackingCode, status: recovered.status || "REQUEST_PENDING", recovered: true };
       }
 
-      const bookingId = String(create?.booking?.bookingId || create?.bookingId || "");
-      if (!bookingId) throw new Error("کد نوبت از سامانه دریافت نشد.");
-
-
-      setTrackingCode(String(create?.booking?.trackingCode || create?.trackingCode || ""));
+      const resolvedTrackingCode = String(create?.trackingCode || "");
+      if (!create?.requestId || !resolvedTrackingCode) throw new Error("کد پیگیری درخواست از سامانه دریافت نشد.");
+      setTrackingCode(resolvedTrackingCode);
+      setRequestId(String(create.requestId));
+      setBackendBookingStatus(String(create.status || "REQUEST_PENDING"));
       setState("success");
-      setMessage("درخواست نوبت ثبت شد. تا زمان پذیرش مایا پرداختی انجام نده؛ نتیجه از طریق تلگرام اطلاع داده می‌شود.");
+      setMessage("درخواست نوبت ثبت شد؛ هنوز قطعی نیست و فعلاً پرداختی انجام نده. کد پیگیری را نگه دار؛ ارسال اعلان خودکار به مشتری هنوز در این نسخه تأیید نشده است.");
     } catch (error) {
       setState("error");
       setMessage(error instanceof Error ? error.message : "هنگام ثبت نوبت مشکلی پیش آمد.");
@@ -5822,6 +5892,16 @@ function BookingPage({
     );
   }
 
+    const paymentCardNumber =
+    cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || "";
+  const paymentBank =
+    cmsSetting(["booking_bank_name", "نام بانک", "بانک"]) || "";
+  const paymentHolder =
+    cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || "";
+  const paymentNote =
+    cmsSetting(["booking_payment_text", "توضیح پرداخت", "متن پرداخت"]) ||
+    "پس از پرداخت، تصویر فیش یا کد پیگیری پرداخت را ارسال کن.";
+
   if (state === "success") {
     return (
       <div className="inner-page">
@@ -5832,8 +5912,39 @@ function BookingPage({
             <strong>کد پیگیری</strong>
             <span style={{direction:"ltr",fontWeight:700,fontSize:"18px"}}>{trackingCode || "ثبت شد"}</span>
             <span>لطفاً این کد را نگه دار.</span>
+            <span>وضعیت فعلی: {backendBookingStatus || "در انتظار بررسی"}</span>
           </div>
+          <button type="button" onClick={refreshBookingStatus} style={{...backButtonStyle,width:"100%",marginTop:"14px"}}>بررسی وضعیت درخواست</button>
         </div>
+        {backendBookingStatus === "PAYMENT_PENDING" && (
+          <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
+            <div className="list-copy">
+              <strong>درخواست پذیرفته شد؛ مهلت پرداخت ۳۰ دقیقه است</strong>
+              <span>فقط پس از پذیرش مایا پرداخت کن. نوبت تا تأیید واقعی و دستی واریز قطعی نمی‌شود.</span>
+              {paymentDeadline && <span>مهلت پرداخت تا: {new Date(paymentDeadline).toLocaleString("fa-IR")}</span>}
+              {paymentBank && <span>بانک: {paymentBank}</span>}
+              {paymentHolder && <span>به نام: {paymentHolder}</span>}
+              {paymentCardNumber && <span style={{direction:"ltr",fontWeight:700}}>شماره کارت: {paymentCardNumber}</span>}
+              <span>{paymentNote}</span>
+            </div>
+            <label style={{display:"block",marginTop:"12px"}}>تصویر فیش (JPG، PNG یا WebP، حداکثر ۵ مگابایت)
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e)=>setReceiptFile(e.target.files?.[0] || null)} style={{width:"100%",boxSizing:"border-box",marginTop:"10px",padding:"14px 15px",borderRadius:"18px",border:"1px solid rgba(53,59,50,.14)",background:"rgba(255,255,255,.78)",color:"#253128",fontFamily:"inherit",fontSize:"14px",outline:"none"}} />
+            </label>
+            <input value={transactionNumber} onChange={(e)=>setTransactionNumber(e.target.value)} placeholder="شماره پیگیری تراکنش" style={{width:"100%",boxSizing:"border-box",marginTop:"10px",padding:"14px 15px",borderRadius:"18px",border:"1px solid rgba(53,59,50,.14)",background:"rgba(255,255,255,.78)",color:"#253128",fontFamily:"inherit",fontSize:"14px",outline:"none"}} />
+            <button type="button" onClick={submitReceipt} disabled={receiptOutcomeUnknown} style={{...backButtonStyle,width:"100%",marginTop:"12px",opacity:receiptOutcomeUnknown ? 0.55 : 1,cursor:receiptOutcomeUnknown ? "not-allowed" : "pointer"}}>{receiptOutcomeUnknown ? "ابتدا وضعیت درخواست را بررسی کن" : "ارسال فیش برای بررسی"}</button>
+          </div>
+        )}
+        {backendBookingStatus === "RECEIPT_REVIEW" && (
+          <div className="glass-list-card" style={{display:"block"}}>
+            <div className="list-copy"><strong>فیش در انتظار بررسی</strong><span>نوبت تا بررسی واقعی پرداخت توسط مایا نگه داشته می‌شود؛ از پرداخت دوباره خودداری کن.</span></div>
+          </div>
+        )}
+        {backendBookingStatus === "CONFIRMED" && (
+          <div className="glass-list-card" style={{display:"block"}}>
+            <div className="list-copy"><strong>نوبت قطعی شد</strong><span>پرداخت تأیید شده است.</span></div>
+          </div>
+        )}
+        {message && <p role="status" style={{marginTop:"12px"}}>{message}</p>}
         <button type="button" onClick={onBack} style={{...backButtonStyle, width:"100%", marginTop:"16px"}}>بازگشت</button>
       </div>
     );
@@ -5852,14 +5963,7 @@ function BookingPage({
    * anything that is not explicitly FREE is shown as unavailable so an old
    * booking cannot accidentally appear selectable.
    */
-  const visibleSlots = slots.filter((slot) => {
-    const status = String(slot.status || "").toUpperCase();
-    const isFree =
-      slot.available === true ||
-      String(slot.available).toLowerCase() === "true";
-
-    return isFree && (!status || status === "FREE");
-  });
+  const visibleSlots = slots;
 
   const categoryGroups: Array<{
     id: ServiceCategory;
@@ -5891,15 +5995,7 @@ function BookingPage({
     ? categoryGroups.find((group) => group.id === bookingCategory) || null
     : null;
 
-  const paymentCardNumber =
-    cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || "";
-  const paymentBank =
-    cmsSetting(["booking_bank_name", "نام بانک", "بانک"]) || "";
-  const paymentHolder =
-    cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || "";
-  const paymentNote =
-    cmsSetting(["booking_payment_text", "توضیح پرداخت", "متن پرداخت"]) ||
-    "پس از پرداخت، تصویر فیش یا کد پیگیری پرداخت را ارسال کن.";
+
 
   const inputBaseStyle: React.CSSProperties = {
     width: "100%",
@@ -5952,10 +6048,10 @@ function BookingPage({
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
           <strong>۱. انتخاب خدمت</strong>
-          <span>یکی از سه دسته را باز کن و خدمت موردنظرت را انتخاب کن.</span>
+          <span>برای انرژی‌خوانی می‌توانی چند خدمت انتخاب کنی؛ مبلغ آن‌ها با هم جمع می‌شود. خدمات درمانی و شمع‌تراپی جداگانه انتخاب می‌شوند.</span>
         </div>
 
-        {initialService && selectedService ? (
+        {initialService && selectedService && initialService.category !== "energy" ? (
           <div style={{marginTop:"12px",padding:"15px",borderRadius:"20px",background:"rgba(36,99,71,.07)",border:"1px solid rgba(36,99,71,.12)"}}>
             <div className="list-copy">
               <strong>{selectedService.title}</strong>
@@ -5970,6 +6066,7 @@ function BookingPage({
               type="button"
               onClick={() => {
                 setServiceId("");
+                setSelectedServiceIds([]);
                 setBookingCategory(null);
                 setDiscount({valid:false,percent:0,amount:0});
               }}
@@ -6038,7 +6135,18 @@ function BookingPage({
                         type="button"
                         className="booking-service-option"
                         onClick={() => {
-                          setServiceId(service.id);
+                          if (group.id === "energy") {
+                            // Never carry a therapy/candle selection into an energy bundle.
+                            const currentEnergyIds = bookingCategory === "energy" ? selectedServiceIds : [];
+                            const nextIds = currentEnergyIds.includes(service.id)
+                              ? currentEnergyIds.filter((id) => id !== service.id)
+                              : [...currentEnergyIds, service.id];
+                            setSelectedServiceIds(nextIds);
+                            setServiceId(nextIds[0] || "");
+                          } else {
+                            setSelectedServiceIds([service.id]);
+                            setServiceId(service.id);
+                          }
                           setBookingCategory(group.id);
                           setDiscount({valid:false,percent:0,amount:0});
                           setMessage("");
@@ -6049,7 +6157,7 @@ function BookingPage({
                           padding:"13px 14px",
                           border:"1px solid rgba(53,59,50,.09)",
                           borderRadius:"17px",
-                          background: serviceId === service.id
+                          background: selectedServiceIds.includes(service.id)
                             ? "rgba(36,99,71,.12)"
                             : "rgba(255,255,255,.70)",
                           color:"#26342b",
@@ -6089,7 +6197,7 @@ function BookingPage({
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
           <strong>۲. انتخاب زمان</strong>
-          <span>فقط سه تاریخ آینده نمایش داده می‌شود و هر روز خودکار به‌روزرسانی خواهد شد.</span>
+          <span>فقط تاریخ فردا قابل انتخاب است؛ ساعت‌های رزروشده و مسدود قابل انتخاب نیستند.</span>
         </div>
 
         <select
@@ -6127,8 +6235,8 @@ function BookingPage({
         >
           <option value="">{date ? (slots.length ? "انتخاب ساعت" : "در حال دریافت ساعت‌ها...") : "ابتدا تاریخ را انتخاب کن"}</option>
           {visibleSlots.map((item) => (
-            <option key={String(item.time)} value={String(item.time)}>
-              {String(item.time)}
+            <option key={String(item.time)} value={String(item.time)} disabled={String(item.status || "").toUpperCase() !== "AVAILABLE"}>
+              {String(item.status || "").toUpperCase() === "AVAILABLE" ? String(item.time) : "⛔ " + String(item.time) + " — " + String(item.label || (String(item.status || "").toUpperCase() === "BOOKED" ? "رزرو شده" : "مسدود"))}
             </option>
           ))}
         </select>
@@ -6237,7 +6345,7 @@ function BookingPage({
       <div className="glass-list-card booking-glass-card" style={{display:"block"}}>
         <div className="list-copy">
           <strong>۵. پس از پذیرش درخواست</strong>
-          <span>در این مرحله پرداختی انجام نده. مایا درخواست را بررسی می‌کند؛ اگر پذیرفته شود، مهلت ۱۰ دقیقه‌ای پرداخت از طریق تلگرام به تو اطلاع داده می‌شود. پس از ارسال فیش، نوبت تا بررسی دستی واریز در انتظار می‌ماند.</span>
+          <span>در این مرحله پرداختی انجام نده. مایا درخواست را بررسی می‌کند؛ اگر پذیرفته شود، مهلت ۳۰ دقیقه‌ای پرداخت از طریق تلگرام به تو اطلاع داده می‌شود. پس از ارسال فیش، نوبت تا بررسی دستی واریز در انتظار می‌ماند.</span>
         </div>
       </div>
       {message && (
@@ -6248,7 +6356,7 @@ function BookingPage({
       {renderBookingContent(["tracking_guide", "custom_notice"])}
 
       <button type="button" onClick={()=>void submit()} disabled={state==="submitting"} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px",cursor:state==="submitting"?"default":"pointer",boxShadow:"0 10px 24px rgba(23,75,56,.2)"}}>
-        {state==="submitting" ? "در حال ثبت نوبت و پرداخت..." : "ثبت نهایی نوبت"}
+        {state==="submitting" ? "در حال ثبت درخواست..." : "ثبت درخواست نوبت"}
       </button>
     </div>
   );
