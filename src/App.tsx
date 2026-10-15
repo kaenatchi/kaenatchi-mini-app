@@ -5311,6 +5311,7 @@ function BookingPage({
   const [lookupBusy, setLookupBusy] = useState(false);
   const [resumeBooking, setResumeBooking] = useState<any>(null);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
+  const [receiptOutcomeUnknown, setReceiptOutcomeUnknown] = useState(false);
   const [checkingDiscount, setCheckingDiscount] = useState(false);
 
   const backendServices: Service[] = (config?.services || [])
@@ -5833,6 +5834,9 @@ function BookingPage({
 
   const submitResumedPayment = async () => {
     setMessage("");
+    if (receiptOutcomeUnknown) {
+      return setMessage("نتیجهٔ ارسال قبلی هنوز مشخص نیست. ابتدا وضعیت نوبت را با کد پیگیری بررسی کن؛ فعلاً فیش را دوباره ارسال نکن.");
+    }
     if (!resumeBooking?.canPay) return setMessage("این نوبت هنوز مجاز به پرداخت نیست.");
     if (!receiptFile) return setMessage("برای بررسی پرداخت، ارسال تصویر فیش الزامی است.");
     if (!receiptFile.type.startsWith("image/")) return setMessage("فقط فایل تصویری فیش پرداخت را انتخاب کن.");
@@ -5855,18 +5859,53 @@ function BookingPage({
         receiptMimeType: receiptFile?.type || "",
       });
 
-      // The Worker uses no-cors for POST, so its response is opaque and cannot
-      // confirm success. Only show success after Apps Script's status poll
-      // confirms that the payment receipt was actually saved.
+      // The POST response is opaque. Confirm through the authoritative status read.
       await waitForBookingStatus(String(resumeBooking.requestId || ""), "paid", lookupMobile.trim());
 
       setTrackingCode(String(resumeBooking.trackingCode || trackingCode));
       setPaymentSubmitted(true);
+      setReceiptOutcomeUnknown(false);
       setState("success");
       setMessage("اطلاعات پرداخت ثبت شد و برای بررسی ادمین ارسال شد.");
     } catch (error) {
+      // A timeout does not prove the receipt write failed. Re-read status before
+      // showing an error or allowing another submission.
+      let statusResult: any = null;
+      try {
+        statusResult = await apiGet("bookingStatus", {
+          requestId: String(resumeBooking.requestId || ""),
+          mobile: lookupMobile.trim(),
+        });
+      } catch {}
+
+      const paymentStatus = String(statusResult?.paymentStatus || "").trim();
+      const receiptReceived = [
+        "RECEIPT_REVIEW",
+        "PAYMENT_RECEIVED",
+        "PAYMENT_APPROVED",
+        "فیش دریافت شد",
+        "تأیید شد",
+      ].includes(paymentStatus);
+
+      if (statusResult?.found && receiptReceived) {
+        setTrackingCode(String(resumeBooking.trackingCode || trackingCode));
+        setPaymentSubmitted(true);
+        setReceiptOutcomeUnknown(false);
+        setState("success");
+        setMessage("فیش پرداخت دریافت شده و برای بررسی ادمین ثبت شده است؛ نیازی به ارسال دوباره نیست.");
+        return;
+      }
+
+      if (statusResult?.found && paymentStatus === "PAYMENT_PENDING") {
+        setReceiptOutcomeUnknown(false);
+        setState("error");
+        setMessage("فیش در وضعیت پرداختِ در انتظار ثبت است و دریافت آن تأیید نشد. فرم محفوظ مانده است؛ پیش از تلاش دوباره، وضعیت را بررسی کن.");
+        return;
+      }
+
+      setReceiptOutcomeUnknown(true);
       setState("error");
-      setMessage(error instanceof Error ? error.message : "ثبت پرداخت ناموفق بود.");
+      setMessage("نتیجهٔ ارسال فیش هنوز مشخص نیست؛ ممکن است فیش در سامانه ثبت شده باشد. برای جلوگیری از ثبت تکراری، فعلاً دوباره ارسال نکن. کد پیگیری و شماره موبایل را در بخش بررسی وضعیت وارد کن و دوباره وضعیت را بخوان.");
     }
   };
 
@@ -6006,7 +6045,7 @@ function BookingPage({
             <input type="file" accept="image/*" onChange={e=>setReceiptFile(e.target.files?.[0] || null)} style={{display:"none"}} />
           </label>
           {message && <div style={{marginTop:"12px",fontSize:"13px",lineHeight:1.8,color:state==="error"?"#a52d2d":"#246347"}}>{message}</div>}
-          <button type="button" onClick={()=>void submitResumedPayment()} disabled={state==="submitting"} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px"}}>{state==="submitting" ? "در حال ثبت پرداخت..." : "ارسال پرداخت برای بررسی"}</button>
+          <button type="button" onClick={()=>void submitResumedPayment()} disabled={state==="submitting" || receiptOutcomeUnknown} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"18px",padding:"16px",background:"linear-gradient(135deg,#174b38,#2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"15px"}}>{state==="submitting" ? "در حال ثبت پرداخت..." : receiptOutcomeUnknown ? "ابتدا وضعیت را بررسی کن" : "ارسال پرداخت برای بررسی"}</button>
         </div>
       </div>
     );
