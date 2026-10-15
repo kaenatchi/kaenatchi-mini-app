@@ -5349,7 +5349,7 @@ function TherapyQuestionnairePage({ service, onBack }: { service: Service; onBac
       const payload={action:"submitQuestionnaire",submissionId:id,serviceKey:isCandle?"candle-therapy":"psychotherapy",topic:isCandle?answers.topic:"",answers:isCandle?{issue:answers.issue,duration:answers.duration,dailyImpact:answers.dailyImpact,pastActions:answers.pastActions,desiredChange:answers.desiredChange,additional:answers.additional}:{topic:answers.topic,lifeImpact:answers.lifeImpact,pastActions:answers.pastActions,desiredOutcome:answers.desiredOutcome,additional:answers.additional},telegramInitData};
       await fetch(BOOKING_TRANSPORT_ENDPOINT,{method:"POST",mode:"no-cors",credentials:"omit",cache:"no-store",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
       let latest:any=null;
-      for(let attempt=0;attempt<12;attempt+=1){latest=await apiGet("getQuestionnaireStatus",{submissionId:id,telegramInitData});if(latest?.ok&&latest?.submissionId)break;await new Promise(resolve=>window.setTimeout(resolve,1000));}
+      for(let attempt=0;attempt<12;attempt+=1){latest=await apiGetLive("getQuestionnaireStatus",{submissionId:id,telegramInitData});if(latest?.ok&&latest?.submissionId)break;await new Promise(resolve=>window.setTimeout(resolve,1000));}
       if(!latest?.ok||!latest?.submissionId) throw new Error("فرم ارسال شد، اما تأیید دریافت هنوز مشخص نیست. شناسهٔ فرم را نگه دار و از ارسال فرم تازه خودداری کن.");
       setStatusMessage("فرم دریافت شد. مایا آن را بررسی می‌کند؛ دسترسی رزرو فقط پس از تأیید دستی برای همین خدمت فعال می‌شود. شناسهٔ فرم: "+id);
     } catch(error){setStatusMessage(error instanceof Error?error.message:"ارسال فرم ناموفق بود؛ پاسخ‌ها در صفحه حفظ شده‌اند.");}
