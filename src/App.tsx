@@ -111,15 +111,15 @@ const MAIN_APP_URL =
 // Booking is a section inside the Main Mini App; the standalone booking app is retired.
 
 const BOOKING_TRANSPORT_ENDPOINT =
-  "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
+  "https://kaenatchi-booking-staging-transport.mayanaz-oriflame.workers.dev/";
 const BOOKING_BACKEND_ENDPOINT =
-  "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
+  "https://kaenatchi-booking-staging-transport.mayanaz-oriflame.workers.dev/";
 
-const BOOKING_TRANSPORT_VERSION = "v7-jsonp-fetch-backend";
-// Safety gate: the existing Worker still points at the live Apps Script URL.
-// Keep all write actions disabled in this preview until a dedicated staging transport is configured.
+const BOOKING_TRANSPORT_VERSION = "staging-worker-readonly-v1";
+// STAGING ONLY: all booking reads are routed through the dedicated staging Worker.
+// Keep write actions disabled while verifying read-only isolation.
 const BOOKING_MUTATIONS_ENABLED = false;
-// Questionnaire writes stay disabled until a dedicated staging Worker/backend route is verified.
+// Questionnaire writes stay disabled throughout read-only staging verification.
 const QUESTIONNAIRE_MUTATIONS_ENABLED = false;
 const BOOKING_CONFIG_CACHE_KEY =
   "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
