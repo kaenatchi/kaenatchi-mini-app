@@ -5401,14 +5401,18 @@ function BookingPage({
 
       if (data.found) {
         if (mode === "created" && data.bookingId) return data;
+        const observedPaymentStatus = String(
+          data.paymentStatus || data.status || ""
+        ).trim();
         if (
           mode === "paid" &&
-          (
-            data.paymentStatus === "PAYMENT_RECEIVED" ||
-            data.paymentStatus === "PAYMENT_APPROVED" ||
-            data.paymentStatus === "فیش دریافت شد" ||
-            data.paymentStatus === "تأیید شد"
-          )
+          [
+            "RECEIPT_REVIEW",
+            "PAYMENT_RECEIVED",
+            "PAYMENT_APPROVED",
+            "فیش دریافت شد",
+            "تأیید شد",
+          ].includes(observedPaymentStatus)
         ) {
           return data;
         }
