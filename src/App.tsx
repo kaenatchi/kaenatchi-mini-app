@@ -5803,7 +5803,7 @@ function BookingPage({
       setTrackingCode(String(booking.trackingCode || lookupTrackingCode.trim()));
       setMobile(lookupMobile.trim());
       setResumeBooking(booking);
-      const recoveredPaymentStatus = String(booking.paymentStatus || "").trim();
+      const recoveredPaymentStatus = String(booking.paymentStatus || booking.status || "").trim();
       const recoveredReceiptReceived = [
         "RECEIPT_REVIEW",
         "PAYMENT_RECEIVED",
@@ -5900,7 +5900,7 @@ function BookingPage({
         });
       } catch {}
 
-      const paymentStatus = String(statusResult?.paymentStatus || "").trim();
+      const paymentStatus = String(statusResult?.paymentStatus || statusResult?.status || "").trim();
       const receiptReceived = [
         "RECEIPT_REVIEW",
         "PAYMENT_RECEIVED",
