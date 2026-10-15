@@ -111,14 +111,16 @@ const MAIN_APP_URL =
 // Booking is a section inside the Main Mini App; the standalone booking app is retired.
 
 const BOOKING_TRANSPORT_ENDPOINT =
-  "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
+  "https://kaenatchi-booking-staging-transport.mayanaz-oriflame.workers.dev/";
 const BOOKING_BACKEND_ENDPOINT =
-  "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
+  "https://kaenatchi-booking-staging-transport.mayanaz-oriflame.workers.dev/";
 
-const BOOKING_TRANSPORT_VERSION = "v7-jsonp-fetch-backend";
-// Safety gate: the existing Worker still points at the live Apps Script URL.
-// Keep all write actions disabled in this preview until a dedicated staging transport is configured.
+const BOOKING_TRANSPORT_VERSION = "staging-worker-readonly-v1";
+// STAGING ONLY: all booking reads are routed through the dedicated staging Worker.
+// Keep write actions disabled while verifying read-only isolation.
 const BOOKING_MUTATIONS_ENABLED = false;
+// Questionnaire writes stay disabled throughout read-only staging verification.
+const QUESTIONNAIRE_MUTATIONS_ENABLED = false;
 const BOOKING_CONFIG_CACHE_KEY =
   "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
 const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
@@ -5319,6 +5321,76 @@ function buildLocalBookingSlots_(
   return result;
 }
 
+
+type QuestionnaireAnswers = {
+  issue: string; duration: string; dailyImpact: string; pastActions: string; desiredChange: string;
+  additional: string; topic: string; lifeImpact: string; desiredOutcome: string;
+};
+
+function TherapyQuestionnairePage({ service, onBack }: { service: Service; onBack: () => void }) {
+  const isCandle = service.category === "candle";
+  const topics = ["مسائل عاطفی و رابطه‌ای","جدایی، دلتنگی و وابستگی","ترس‌ها و نگرانی‌های شخصی","اعتمادبه‌نفس و ارزشمندی خود","احساس گیر افتادن یا تکرار الگوها","هدف‌ها، تصمیم‌ها و موانع شخصی","موضوعات دیگر با توضیح آزاد"];
+  const [answers, setAnswers] = useState<QuestionnaireAnswers>({issue:"",duration:"",dailyImpact:"",pastActions:"",desiredChange:"",additional:"",topic:"",lifeImpact:"",desiredOutcome:""});
+  const [busy,setBusy] = useState(false);
+  const [statusMessage,setStatusMessage] = useState("");
+  const [submissionId,setSubmissionId] = useState("");
+  const update = (key:keyof QuestionnaireAnswers,value:string) => setAnswers(current=>({...current,[key]:value}));
+  const submit = async () => {
+    const required = isCandle ? [answers.issue,answers.duration,answers.dailyImpact,answers.pastActions,answers.desiredChange] : [answers.topic,answers.lifeImpact,answers.pastActions,answers.desiredOutcome];
+    if(isCandle&&!answers.topic){setStatusMessage("لطفاً موضوع اصلی را انتخاب کن.");return;}
+    if(required.some(value=>!value.trim())){setStatusMessage("لطفاً همهٔ پرسش‌های اصلی را تکمیل کن.");return;}
+    if(!QUESTIONNAIRE_MUTATIONS_ENABLED){setStatusMessage("فرم در پیش‌نمایش تکمیل شده، اما هنوز ارسال نشده است. ارسال واقعی پس از تأیید مسیر مستقل استیجینگ فعال می‌شود؛ پاسخ‌ها را در این صفحه نگه دار و فعلاً صفحه را نبند.");return;}
+    setBusy(true);setStatusMessage("در حال ارسال امن فرم...");
+    try {
+      const telegramInitData=await getTelegramInitData();
+      if(!telegramInitData) throw new Error("برای ارسال امن فرم، مینی‌اپ را مستقیماً از داخل تلگرام باز کن.");
+      const id=submissionId||("QST-"+Date.now().toString(36).toUpperCase()+"-"+Math.random().toString(36).slice(2,10).toUpperCase());
+      setSubmissionId(id);
+      const payload={action:"submitQuestionnaire",submissionId:id,serviceKey:isCandle?"candle-therapy":"psychotherapy",topic:isCandle?answers.topic:"",answers:isCandle?{issue:answers.issue,duration:answers.duration,dailyImpact:answers.dailyImpact,pastActions:answers.pastActions,desiredChange:answers.desiredChange,additional:answers.additional}:{topic:answers.topic,lifeImpact:answers.lifeImpact,pastActions:answers.pastActions,desiredOutcome:answers.desiredOutcome,additional:answers.additional},telegramInitData};
+      await fetch(BOOKING_TRANSPORT_ENDPOINT,{method:"POST",mode:"no-cors",credentials:"omit",cache:"no-store",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
+      let latest:any=null;
+      for(let attempt=0;attempt<12;attempt+=1){latest=await apiGetLive("getQuestionnaireStatus",{submissionId:id,telegramInitData});if(latest?.ok&&latest?.submissionId)break;await new Promise(resolve=>window.setTimeout(resolve,1000));}
+      if(!latest?.ok||!latest?.submissionId) throw new Error("فرم ارسال شد، اما تأیید دریافت هنوز مشخص نیست. شناسهٔ فرم را نگه دار و از ارسال فرم تازه خودداری کن.");
+      setStatusMessage("فرم دریافت شد. مایا آن را بررسی می‌کند؛ دسترسی رزرو فقط پس از تأیید دستی برای همین خدمت فعال می‌شود. شناسهٔ فرم: "+id);
+    } catch(error){setStatusMessage(error instanceof Error?error.message:"ارسال فرم ناموفق بود؛ پاسخ‌ها در صفحه حفظ شده‌اند.");}
+    finally{setBusy(false);}
+  };
+  const fieldStyle:React.CSSProperties={width:"100%",boxSizing:"border-box",border:"1px solid rgba(23,75,56,.18)",borderRadius:"14px",padding:"12px 13px",font:"inherit",fontSize:"14px",lineHeight:1.8,background:"rgba(255,255,255,.78)",color:"#20382d"};
+  const labelStyle:React.CSSProperties={display:"block",fontSize:"13px",fontWeight:600,marginBottom:"7px",color:"#244638"};
+  const renderTextArea=(key:keyof QuestionnaireAnswers,label:string)=>(
+    <label key={key} style={{display:"block",marginTop:"15px"}}><span style={labelStyle}>{label}</span>
+      <textarea value={answers[key]} onChange={event=>update(key,event.target.value)} rows={3} maxLength={3000} placeholder="پاسخت را اینجا بنویس…" style={{...fieldStyle,resize:"vertical",minHeight:"88px"}} />
+    </label>
+  );
+  return <div className="inner-page" style={{paddingBottom:"30px"}}>
+    <button type="button" onClick={onBack} style={backButtonStyle}>← بازگشت</button>
+    <SectionHeaderCard kicker="BEFORE BOOKING" title={"فرم آشنایی پیش از "+service.title} description="پاسخ‌ها به مایا کمک می‌کند پیش از گفت‌وگو، موضوع و خواسته‌ات را بهتر بشناسد." icon="conversation" />
+    <section className="glass-list-card" style={{padding:"18px",marginTop:"16px"}}>
+      {isCandle ? <>
+        <p style={{margin:"0 0 8px",fontSize:"13px",lineHeight:1.9,color:"#52665a"}}>موضوع اصلی را انتخاب کن. این مسیر برای گفت‌وگو و بررسی مسئلهٔ بیان‌شده است و نتیجهٔ مشخص یا تضمین‌شده‌ای وعده نمی‌دهد.</p>
+        <label style={{display:"block",marginTop:"14px"}}><span style={labelStyle}>موضوع اصلی</span><select value={answers.topic} onChange={event=>update("topic",event.target.value)} style={fieldStyle}><option value="">انتخاب موضوع…</option>{topics.map(topic=><option key={topic} value={topic}>{topic}</option>)}</select></label>
+        {renderTextArea("issue","۱. دقیقاً چه مسئله‌ای تو را به این مسیر رسانده؟")}
+        {renderTextArea("duration","۲. این مسئله از چه زمانی وجود داشته؟")}
+        {renderTextArea("dailyImpact","۳. این مسئله چه تأثیری بر زندگی روزمره‌ات گذاشته؟")}
+        {renderTextArea("pastActions","۴. تا امروز برای تغییر این وضعیت چه کارهایی انجام داده‌ای؟")}
+        {renderTextArea("desiredChange","۵. اگر شرایط بهتر شود، چه تغییر مشخصی را می‌خواهی ببینی؟")}
+        {renderTextArea("additional","توضیحات تکمیلی (اختیاری)")}
+      </> : <>
+        <p style={{margin:"0 0 8px",fontSize:"13px",lineHeight:1.9,color:"#52665a"}}>این خدمت، گفت‌وگویی شخصی و آگاهی‌محور بر پایهٔ دیدگاه‌های معنوی مایا است؛ جایگزین روان‌درمانی تخصصی یا مراقبت پزشکی نیست و نتیجهٔ تضمین‌شده‌ای ندارد.</p>
+        {renderTextArea("topic","۱. موضوع یا مسئله‌ای که می‌خواهی درباره‌اش گفت‌وگو کنیم چیست؟")}
+        {renderTextArea("lifeImpact","۲. این مسئله چه تأثیری روی زندگی یا تصمیم‌هایت گذاشته؟")}
+        {renderTextArea("pastActions","۳. تاکنون برای تغییر شرایط چه اقداماتی انجام داده‌ای؟")}
+        {renderTextArea("desiredOutcome","۴. دوست داری در پایان این مسیر به چه نتیجه‌ای برسی؟")}
+        {renderTextArea("additional","۵. چه توضیح دیگری لازم است مایا پیش از گفت‌وگو بداند؟ (اختیاری)")}
+      </>}
+      <div style={{marginTop:"18px",padding:"12px 13px",borderRadius:"12px",background:"rgba(23,75,56,.06)",fontSize:"12px",lineHeight:1.9,color:"#496253"}}>ارسال فرم به معنی تأیید نوبت نیست. ابتدا مایا فرم را بررسی می‌کند و در صورت تأیید، مجوز رزرو فقط برای همین خدمت و همین حساب صادر می‌شود.</div>
+      {statusMessage&&<div role="status" style={{marginTop:"14px",fontSize:"13px",lineHeight:1.9,color:"#244638"}}>{statusMessage}</div>}
+      <button type="button" onClick={()=>void submit()} disabled={busy} style={{width:"100%",marginTop:"16px",border:"none",borderRadius:"15px",padding:"14px 16px",background:busy?"#87978e":"linear-gradient(135deg, #174b38, #2c7658)",color:"#fff",fontFamily:"inherit",fontSize:"14px",cursor:busy?"wait":"pointer"}}>{busy?"در حال ارسال…":"بررسی پاسخ‌ها و ارسال فرم"}</button>
+      {!QUESTIONNAIRE_MUTATIONS_ENABLED&&<p style={{margin:"10px 0 0",fontSize:"11px",lineHeight:1.8,color:"#7b7568"}}>حالت پیش‌نمایش استیجینگ: ارسال واقعی تا زمان آماده‌شدن مسیر امن غیرفعال است.</p>}
+    </section>
+  </div>;
+}
+
 function BookingPage({
   onBack,
   initialService,
@@ -6520,6 +6592,7 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchService, setSearchService] = useState<Service | null>(null);
   const [bookingService, setBookingService] = useState<Service | null>(null);
+  const [questionnaireService, setQuestionnaireService] = useState<Service | null>(null);
   const [vipOpen, setVipOpen] = useState(false);
   const [serviceFocus, setServiceFocus] = useState<"all" | "classes" | "events">("all");
   const [navDirection, setNavDirection] = useState<"forward" | "backward">("forward");
@@ -6745,6 +6818,10 @@ function App() {
     setVipOpen(true);
   };
 
+  if (questionnaireService) {
+    return <div className="app-shell app-shell-special"><div className="ambient ambient-one" /><div className="ambient ambient-two" /><TherapyQuestionnairePage service={questionnaireService} onBack={() => setQuestionnaireService(null)} /><AppFooter /></div>;
+  }
+
   if (vipOpen) {
     return (
       <div className="app-shell app-shell-special">
@@ -6767,6 +6844,7 @@ function App() {
             service={searchService}
             onBack={() => setSearchService(null)}
             onOpenBooking={() => {
+              if (searchService.category === "candle" || searchService.category === "psychotherapy") { setQuestionnaireService(searchService); setSearchOpen(false); setSearchService(null); return; }
               setBookingService(searchService);
               setSearchOpen(false);
               setSearchService(null);
@@ -6817,6 +6895,7 @@ function App() {
           <ServicesPage
             focus={serviceFocus}
             onOpenBooking={(service?: Service) => {
+              if (service && (service.category === "candle" || service.category === "psychotherapy")) { setQuestionnaireService(service); return; }
               setBookingService(service || null);
               changeSection("booking");
             }}
