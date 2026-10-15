@@ -1,0 +1,41 @@
+name: Isolated Receipt Preview Build
+
+on:
+  push:
+    branches:
+      - staging/isolated-ui-preview
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: isolated-receipt-preview
+  cancel-in-progress: true
+
+jobs:
+  build-isolated-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout isolated preview branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build static preview (no deployment)
+        run: npm run build
+
+      - name: Upload isolated preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaenatchi-isolated-receipt-preview-${{ github.run_number }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
