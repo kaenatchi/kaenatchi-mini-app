@@ -5352,6 +5352,7 @@ function BookingPage({
   const [discount, setDiscount] = useState<{valid:boolean; percent:number; amount:number}>({valid:false,percent:0,amount:0});
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [transactionNumber, setTransactionNumber] = useState("");
+  const [receiptOutcomeUnknown, setReceiptOutcomeUnknown] = useState(false);
   const [message, setMessage] = useState("");
   const [state, setState] = useState<BookingState>("loading");
   const [trackingCode, setTrackingCode] = useState("");
@@ -5559,6 +5560,11 @@ function BookingPage({
       }
       setBackendBookingStatus(String(data.status || ""));
       setPaymentDeadline(String(data.paymentDeadline || ""));
+      if (["PAYMENT_PENDING", "RECEIPT_REVIEW", "CONFIRMED"].includes(String(data.status || ""))) {
+        setReceiptOutcomeUnknown(false);
+      } else {
+        setReceiptOutcomeUnknown(true);
+      }
       setMessage(
         data.status === "REQUEST_PENDING" ? "درخواستت در صف بررسی مایا است؛ فعلاً پرداخت نکن." :
         data.status === "PAYMENT_PENDING" ? "درخواست پذیرفته شده است. فقط حالا پرداخت کن و فیش را ارسال کن." :
@@ -5607,11 +5613,47 @@ function BookingPage({
         transactionRef: transactionNumber.trim(),
       });
       setBackendBookingStatus(String(data.status || "RECEIPT_REVIEW"));
+      setReceiptOutcomeUnknown(false);
       setState("success");
       setMessage("فیش دریافت شد؛ نوبت تا بررسی واقعی پرداخت توسط مایا نگه داشته می‌شود.");
     } catch (error) {
+      // The POST response is opaque. Before showing an error, re-read the
+      // authoritative state: the backend may have stored the receipt even if
+      // the status poll timed out.
+      let recovered: any = null;
+      try {
+        recovered = await apiGet("getStatus", { requestId, phone: mobile.trim() });
+      } catch {}
+
+      if (recovered?.found) {
+        const recoveredStatus = String(recovered.status || "");
+        setBackendBookingStatus(recoveredStatus);
+        setPaymentDeadline(String(recovered.paymentDeadline || ""));
+
+        if (recoveredStatus === "RECEIPT_REVIEW" || recoveredStatus === "CONFIRMED") {
+          setReceiptOutcomeUnknown(false);
+          setState("success");
+          setMessage(
+            recoveredStatus === "CONFIRMED"
+              ? "وضعیت سامانه تأیید می‌کند که پرداخت نهایی شده است."
+              : "فیش در سامانه ثبت شده است؛ نوبت تا بررسی واقعی پرداخت توسط مایا نگه داشته می‌شود. فیش را دوباره ارسال نکن."
+          );
+          return;
+        }
+
+        if (recoveredStatus === "PAYMENT_PENDING") {
+          setReceiptOutcomeUnknown(false);
+          setState("success");
+          setMessage("سامانه هنوز فیشی برای این درخواست ثبت‌شده نشان نمی‌دهد. تصویر و شماره پیگیری حفظ شده‌اند؛ می‌توانی پس از بررسی وضعیت دوباره تلاش کنی.");
+          return;
+        }
+      }
+
+      // If the authoritative status cannot resolve the outcome, preserve the
+      // receipt form and disable resubmission until the customer checks status.
+      setReceiptOutcomeUnknown(true);
       setState("success");
-      setMessage(error instanceof Error ? error.message : "ارسال فیش ناموفق بود.");
+      setMessage("نتیجهٔ ارسال فیش هنوز مشخص نیست. برای جلوگیری از ارسال تکراری، فعلاً دوباره ارسال نکن؛ «بررسی وضعیت درخواست» را بزن. فرم فیش حفظ شده است.");
     }
   };
 
@@ -5872,7 +5914,7 @@ function BookingPage({
               <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e)=>setReceiptFile(e.target.files?.[0] || null)} style={{width:"100%",boxSizing:"border-box",marginTop:"10px",padding:"14px 15px",borderRadius:"18px",border:"1px solid rgba(53,59,50,.14)",background:"rgba(255,255,255,.78)",color:"#253128",fontFamily:"inherit",fontSize:"14px",outline:"none"}} />
             </label>
             <input value={transactionNumber} onChange={(e)=>setTransactionNumber(e.target.value)} placeholder="شماره پیگیری تراکنش" style={{width:"100%",boxSizing:"border-box",marginTop:"10px",padding:"14px 15px",borderRadius:"18px",border:"1px solid rgba(53,59,50,.14)",background:"rgba(255,255,255,.78)",color:"#253128",fontFamily:"inherit",fontSize:"14px",outline:"none"}} />
-            <button type="button" onClick={submitReceipt} style={{...backButtonStyle,width:"100%",marginTop:"12px"}}>ارسال فیش برای بررسی</button>
+            <button type="button" onClick={submitReceipt} disabled={receiptOutcomeUnknown} style={{...backButtonStyle,width:"100%",marginTop:"12px",opacity:receiptOutcomeUnknown ? 0.55 : 1,cursor:receiptOutcomeUnknown ? "not-allowed" : "pointer"}}>{receiptOutcomeUnknown ? "ابتدا وضعیت درخواست را بررسی کن" : "ارسال فیش برای بررسی"}</button>
           </div>
         )}
         {backendBookingStatus === "RECEIPT_REVIEW" && (
