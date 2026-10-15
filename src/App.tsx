@@ -5803,6 +5803,28 @@ function BookingPage({
       setTrackingCode(String(booking.trackingCode || lookupTrackingCode.trim()));
       setMobile(lookupMobile.trim());
       setResumeBooking(booking);
+      const recoveredPaymentStatus = String(booking.paymentStatus || "").trim();
+      const recoveredReceiptReceived = [
+        "RECEIPT_REVIEW",
+        "PAYMENT_RECEIVED",
+        "PAYMENT_APPROVED",
+        "فیش دریافت شد",
+        "تأیید شد",
+      ].includes(recoveredPaymentStatus);
+
+      if (receiptOutcomeUnknown && recoveredReceiptReceived) {
+        setTrackingCode(String(booking.trackingCode || lookupTrackingCode.trim()));
+        setPaymentSubmitted(true);
+        setReceiptOutcomeUnknown(false);
+        setState("success");
+        setMessage("فیش پرداخت دریافت شده و برای بررسی ادمین ثبت شده است؛ نیازی به ارسال دوباره نیست.");
+        return;
+      }
+
+      if (receiptOutcomeUnknown && recoveredPaymentStatus === "PAYMENT_PENDING") {
+        setReceiptOutcomeUnknown(false);
+      }
+
       if (!booking.canPay) {
         const status = String(booking.paymentStatus || "");
         const appointment = String(booking.appointmentStatus || "");
