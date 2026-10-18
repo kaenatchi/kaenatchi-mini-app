@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { createInitialMyPath, loadMyPath, writeMyPath, type MyPath, type Stage1Answers } from "./myPathModel";
 import MyPathExperience from "./MyPathExperience";
@@ -6845,8 +6845,8 @@ function StagingBookingPage({
     } catch (error) { setMessage(error instanceof Error ? error.message : "ارسال رسید انجام نشد."); }
     finally { setBusy(false); }
   };
-  const cardStyle: React.CSSProperties = { background: "#fffdf7", border: "1px solid #d9e2d4", borderRadius: 14, padding: 12, color: "#173f31" };
-  const inputStyle: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1px solid #cbd8cc", borderRadius: 10, padding: 12, background: "#fff", color: "#173f31", marginTop: 5 };
+  const cardStyle: CSSProperties = { background: "#fffdf7", border: "1px solid #d9e2d4", borderRadius: 14, padding: 12, color: "#173f31" };
+  const inputStyle: CSSProperties = { width: "100%", boxSizing: "border-box", border: "1px solid #cbd8cc", borderRadius: 10, padding: 12, background: "#fff", color: "#173f31", marginTop: 5 };
   return (
     <div dir="rtl" style={{maxWidth:620,margin:"0 auto",padding:"18px 14px 36px",color:"#173f31"}}>
       <button onClick={onBack} style={{border:0,background:"transparent",color:"#285b45",padding:"8px 0",fontSize:15}}>← بازگشت</button>
