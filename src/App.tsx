@@ -6676,7 +6676,7 @@ function App() {
         )}
 
         {section === "booking" && (
-          <BookingPage
+          <StagingBookingPage
             initialService={bookingService}
             onBack={() => {
               setBookingService(null);
@@ -6716,3 +6716,195 @@ function App() {
 
 
 export default App;
+
+
+function StagingBookingPage({
+  onBack,
+  initialService,
+}: {
+  onBack: () => void;
+  initialService?: Service | null;
+}) {
+  type CoreService = { id: string; name: string; category: "energy" | "therapy"; price: number };
+  type CoreSlot = { startTime: string; endTime: string; status: "AVAILABLE" | "BOOKED" | "CLOSED"; available: boolean; label?: string };
+  const endpoint = "https://kaenatchi-booking-staging-transport.mayanaz-oriflame.workers.dev/";
+  const [services, setServices] = useState<CoreService[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [dates, setDates] = useState<Array<{date:string;label:string}>>([]);
+  const [date, setDate] = useState("");
+  const [slots, setSlots] = useState<CoreSlot[]>([]);
+  const [time, setTime] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [deliveryMethod, setDeliveryMethod] = useState<"phone"|"voice">("phone");
+  const [booking, setBooking] = useState<any>(null);
+  const [receiptUrl, setReceiptUrl] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("در حال اتصال به سامانه رزرو آزمایشی…");
+
+  const callCore = async (action: string, payload: Record<string, unknown> = {}) => {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, ...payload }),
+      credentials: "omit",
+      cache: "no-store",
+    });
+    const data = await response.json();
+    if (!data?.ok) throw new Error(data?.error || "ارتباط با سامانه رزرو برقرار نشد.");
+    return data.result || {};
+  };
+
+  useEffect(() => {
+    let active = true;
+    void callCore("getServiceCatalog").then((result) => {
+      if (!active) return;
+      const list = Array.isArray(result.services) ? result.services as CoreService[] : [];
+      setServices(list);
+      const preferred = initialService ? list.find((item) => item.id === initialService.id) : null;
+      if (preferred) setSelected([preferred.id]);
+      setMessage(list.length ? "خدمات و ساعت‌ها مستقیماً از هستهٔ رزرو آزمایشی دریافت می‌شوند." : "فهرست خدمات در هستهٔ آزمایشی خالی است.");
+    }).catch((error) => {
+      if (active) setMessage(error instanceof Error ? error.message : "اتصال به سامانه رزرو آزمایشی برقرار نشد.");
+    });
+    try { (window as any).Telegram?.WebApp?.ready?.(); (window as any).Telegram?.WebApp?.expand?.(); } catch {}
+    return () => { active = false; };
+  }, []);
+
+  const chosen = services.filter((item) => selected.includes(item.id));
+  const isTherapy = chosen.some((item) => item.category === "therapy");
+  const total = chosen.reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const toggleService = (service: CoreService) => {
+    setDate(""); setDates([]); setSlots([]); setTime("");
+    setSelected((previous) => {
+      if (service.category === "therapy") return previous.includes(service.id) ? [] : [service.id];
+      if (previous.some((id) => services.find((item) => item.id === id)?.category === "therapy")) return [service.id];
+      return previous.includes(service.id) ? previous.filter((id) => id !== service.id) : [...previous, service.id];
+    });
+  };
+  const loadTimes = async () => {
+    if (!selected.length) { setMessage("اول خدمت موردنظرت را انتخاب کن."); return; }
+    setBusy(true); setMessage("");
+    try {
+      const dateResult = await callCore("getBookableDates", { services: selected });
+      const nextDates = Array.isArray(dateResult.dates) ? dateResult.dates : [];
+      setDates(nextDates);
+      if (!nextDates.length) { setDate(""); setSlots([]); setMessage("در حال حاضر تاریخ آزادی برای این خدمات پیدا نشد."); return; }
+      const nextDate = String(nextDates[0].date);
+      setDate(nextDate);
+      const availability = await callCore("getAvailability", { date: nextDate, services: selected });
+      setSlots(Array.isArray(availability.slots) ? availability.slots : []);
+      setMessage("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "دریافت ساعت‌های آزاد انجام نشد.");
+    } finally { setBusy(false); }
+  };
+  const submitRequest = async () => {
+    if (!firstName.trim() || !lastName.trim() || !mobile.trim() || !date || !time || !selected.length) {
+      setMessage("نام، نام خانوادگی، شماره تماس، خدمات و ساعت را کامل کن."); return;
+    }
+    setBusy(true); setMessage("");
+    const requestId = "KC_" + (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().replace(/-/g, "") : String(Date.now()) + Math.random().toString(36).slice(2)) + "_REQ";
+    try {
+      const result = await callCore("submitRequest", {
+        clientRequestId: requestId,
+        customer: { name: (firstName.trim() + " " + lastName.trim()), contact: mobile.trim() },
+        date, startTime: time, services: selected,
+        ...(isTherapy ? {} : { deliveryMethod }),
+      });
+      setBooking(result);
+      try { localStorage.setItem("kc_staging_booking", JSON.stringify({bookingId:result.bookingId,customerAccessToken:result.customerAccessToken})); } catch {}
+      setMessage("درخواست ثبت شد؛ تا تأیید مایا هیچ پرداختی لازم نیست.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "ثبت درخواست انجام نشد.");
+    } finally { setBusy(false); }
+  };
+  const restoreStatus = async () => {
+    let saved: any = null;
+    try { saved = JSON.parse(localStorage.getItem("kc_staging_booking") || "null"); } catch {}
+    if (!saved?.bookingId || !saved?.customerAccessToken) { setMessage("درخواستی برای پیگیری روی این دستگاه ذخیره نشده است."); return; }
+    setBusy(true);
+    try {
+      const result = await callCore("getBookingStatus", saved);
+      setBooking(result);
+      setMessage("آخرین وضعیت درخواست دریافت شد.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "وضعیت درخواست دریافت نشد."); }
+    finally { setBusy(false); }
+  };
+  const sendReceipt = async () => {
+    if (!receiptUrl.trim() || !/^https:\/\//i.test(receiptUrl.trim())) { setMessage("لینک امن HTTPS تصویر رسید را وارد کن."); return; }
+    let saved: any = null;
+    try { saved = JSON.parse(localStorage.getItem("kc_staging_booking") || "null"); } catch {}
+    if (!saved?.bookingId || !saved?.customerAccessToken) { setMessage("اطلاعات دسترسی درخواست پیدا نشد؛ وضعیت را بازیابی کن."); return; }
+    setBusy(true);
+    try {
+      const result = await callCore("submitReceipt", {...saved, receiptUrl:receiptUrl.trim(), claimedTrackingNumber:trackingNumber.trim()});
+      setBooking(result); setMessage("رسید برای بررسی مایا ارسال شد؛ نوبت هنوز تا تأیید واریز نهایی نیست.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "ارسال رسید انجام نشد."); }
+    finally { setBusy(false); }
+  };
+  const cardStyle: React.CSSProperties = { background: "#fffdf7", border: "1px solid #d9e2d4", borderRadius: 14, padding: 12, color: "#173f31" };
+  const inputStyle: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1px solid #cbd8cc", borderRadius: 10, padding: 12, background: "#fff", color: "#173f31", marginTop: 5 };
+  return (
+    <div dir="rtl" style={{maxWidth:620,margin:"0 auto",padding:"18px 14px 36px",color:"#173f31"}}>
+      <button onClick={onBack} style={{border:0,background:"transparent",color:"#285b45",padding:"8px 0",fontSize:15}}>← بازگشت</button>
+      <div style={{background:"#f5f1e5",border:"1px solid #d9e2d4",borderRadius:20,padding:18,marginBottom:14}}>
+        <div style={{fontSize:12,letterSpacing:1,color:"#647b68"}}>KAENATCHI · STAGING</div>
+        <h2 style={{fontSize:24,margin:"8px 0"}}>دریافت نوبت</h2>
+        <p style={{fontSize:13,lineHeight:1.8,margin:0}}>درخواست ابتدا برای بررسی مایا ثبت می‌شود. پرداخت فقط پس از تأیید درخواست فعال خواهد شد.</p>
+      </div>
+      <div style={{...cardStyle,marginBottom:14}}>
+        <h3 style={{margin:"0 0 12px"}}>۱. انتخاب خدمات</h3>
+        {(["energy","therapy"] as const).map((category) => (
+          <div key={category} style={{marginBottom:12}}>
+            <div style={{fontWeight:700,marginBottom:7}}>{category === "energy" ? "انرژی‌خوانی" : "تراپی"}</div>
+            {services.filter((service) => service.category === category).map((service) => (
+              <label key={service.id} style={{display:"flex",alignItems:"center",gap:9,padding:"9px 0",borderBottom:"1px solid #edf0e9"}}>
+                <input type={category === "energy" ? "checkbox" : "radio"} checked={selected.includes(service.id)} onChange={() => toggleService(service)} />
+                <span style={{flex:1}}>{service.name}</span>
+                <strong>{Number(service.price).toLocaleString("fa-IR")} تومان</strong>
+              </label>
+            ))}
+          </div>
+        ))}
+        {chosen.length > 0 && <div style={{fontWeight:800,marginTop:10}}>جمع خدمات: {total.toLocaleString("fa-IR")} تومان</div>}
+        {!isTherapy && chosen.length > 0 && <div style={{marginTop:12}}>
+          <div style={{fontWeight:700,marginBottom:7}}>روش دریافت انرژی‌خوانی</div>
+          <label style={{marginLeft:18}}><input type="radio" checked={deliveryMethod==="phone"} onChange={() => setDeliveryMethod("phone")} /> تماس تلفنی</label>
+          <label><input type="radio" checked={deliveryMethod==="voice"} onChange={() => setDeliveryMethod("voice")} /> پیام صوتی</label>
+        </div>}
+        <button disabled={busy || !selected.length} onClick={() => void loadTimes()} style={{width:"100%",marginTop:14,padding:13,border:0,borderRadius:10,background:"#285b45",color:"#fff",fontWeight:700}}>نمایش نزدیک‌ترین تاریخ و ساعت‌ها</button>
+      </div>
+      {dates.length > 0 && <div style={{...cardStyle,marginBottom:14}}>
+        <h3 style={{margin:"0 0 10px"}}>۲. زمان نوبت</h3>
+        <div style={{marginBottom:12,fontWeight:700}}>{dates[0].label}</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+          {slots.map((slot) => <button key={slot.startTime} disabled={!slot.available || busy} onClick={() => setTime(slot.startTime)} style={{padding:"11px 5px",borderRadius:10,border:time===slot.startTime?"2px solid #285b45":"1px solid #cbd8cc",background:time===slot.startTime?"#e7efe4":"#fff",color:slot.available?"#173f31":"#929b91",textDecoration:slot.available?"none":"line-through"}}>{slot.available ? slot.startTime : (slot.label || (slot.status==="BOOKED"?"❌ رزرو شده":"⛔️ تعطیل"))}</button>)}
+        </div>
+      </div>}
+      {!booking && <div style={{...cardStyle,marginBottom:14}}>
+        <h3 style={{margin:"0 0 12px"}}>۳. مشخصات درخواست</h3>
+        <label>نام<input style={inputStyle} value={firstName} onChange={(e)=>setFirstName(e.target.value)} /></label>
+        <label style={{display:"block",marginTop:10}}>نام خانوادگی<input style={inputStyle} value={lastName} onChange={(e)=>setLastName(e.target.value)} /></label>
+        <label style={{display:"block",marginTop:10}}>شماره تماس<input style={inputStyle} inputMode="tel" value={mobile} onChange={(e)=>setMobile(e.target.value)} /></label>
+        <button disabled={busy || !selected.length || !time} onClick={() => void submitRequest()} style={{width:"100%",marginTop:14,padding:13,border:0,borderRadius:10,background:"#285b45",color:"#fff",fontWeight:700}}>ثبت درخواست برای تأیید مایا</button>
+      </div>}
+      {booking && <div style={{...cardStyle,marginBottom:14}}>
+        <h3 style={{margin:"0 0 8px"}}>وضعیت درخواست</h3>
+        <p style={{margin:"6px 0"}}>کد پیگیری: <strong>{booking.trackingId || booking.bookingId}</strong></p>
+        <p style={{margin:"6px 0"}}>وضعیت: <strong>{booking.status}</strong></p>
+        <p style={{margin:"6px 0"}}>{booking.status === "PENDING_MANAGER" ? "در انتظار بررسی مایا؛ فعلاً پرداخت نکن." : booking.status === "AWAITING_PAYMENT" || booking.status === "PAYMENT_REJECTED" ? "درخواست تأیید شده؛ مهلت پرداخت ۳۰ دقیقه است." : booking.status === "RECEIPT_REVIEW" ? "رسید دریافت شد و تا بررسی دستی مایا نوبت نگه داشته می‌شود." : ""}</p>
+        {(booking.status === "AWAITING_PAYMENT" || booking.status === "PAYMENT_REJECTED") && <div style={{marginTop:12}}>
+          <label>لینک HTTPS تصویر رسید<input style={inputStyle} value={receiptUrl} onChange={(e)=>setReceiptUrl(e.target.value)} placeholder="https://…" /></label>
+          <label style={{display:"block",marginTop:10}}>شماره پیگیری انتقال (اختیاری)<input style={inputStyle} value={trackingNumber} onChange={(e)=>setTrackingNumber(e.target.value)} /></label>
+          <button disabled={busy} onClick={() => void sendReceipt()} style={{width:"100%",marginTop:12,padding:13,border:0,borderRadius:10,background:"#285b45",color:"#fff",fontWeight:700}}>ارسال رسید برای بررسی</button>
+        </div>}
+      </div>}
+      <button disabled={busy} onClick={() => void restoreStatus()} style={{width:"100%",padding:12,borderRadius:10,border:"1px solid #285b45",background:"transparent",color:"#285b45",fontWeight:700}}>پیگیری درخواست قبلی</button>
+      {message && <div role="status" style={{marginTop:14,padding:12,borderRadius:12,background:"#eef2e8",lineHeight:1.8,fontSize:13}}>{message}</div>}
+    </div>
+  );
+}
+
