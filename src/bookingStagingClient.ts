@@ -6,7 +6,7 @@
  * only when the explicit bookingStaging=1 route is opened.
  */
 export const BOOKING_STAGING_ENDPOINT =
-  "https://kaenatchi-booking-core-staging-v2.mayanaz-oriflame.workers.dev/";
+  "https://kaenatchi-booking-staging-transport.mayanaz-oriflame.workers.dev/";
 
 export type StagingService = {
   id: string;
