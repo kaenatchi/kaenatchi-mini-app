@@ -252,7 +252,7 @@ export default function StagingBookingPage({
           <input value={name} onChange={(event)=>setName(event.target.value)} placeholder="نام و نام خانوادگی" style={field} autoComplete="name" />
           <input value={contact} onChange={(event)=>setContact(event.target.value)} placeholder="شماره موبایل یا راه تماس" style={field} inputMode="tel" autoComplete="tel" />
           <textarea value={reason} onChange={(event)=>setReason(event.target.value)} placeholder="دلیل درخواست / توضیح کوتاه" style={{...field,minHeight:100,resize:"vertical"}} />
-          <button type="button" onClick={() => void createRequest()} disabled={busy} style={{...primary,marginTop:12,opacity:busy?.65:1}}>
+          <button type="button" onClick={() => void createRequest()} disabled={busy} style={{...primary,marginTop:12,opacity: busy ? 0.65 : 1}}>
             {busy ? "در حال ارسال…" : "ثبت درخواست برای بررسی"}
           </button>
         </section>
@@ -261,7 +261,7 @@ export default function StagingBookingPage({
           <h2 style={{fontSize:17,margin:"0 0 10px"}}>وضعیت درخواست</h2>
           <p style={{fontSize:13,lineHeight:1.9}}>کد درخواست: <b dir="ltr">{booking.appointmentCode || booking.bookingId}</b></p>
           <p style={{fontSize:13}}>وضعیت: <b dir="ltr">{booking.status}</b></p>
-          <button type="button" onClick={() => void refreshStatus()} disabled={busy} style={{...primary,background:"#52675a",opacity:busy?.65:1}}>بررسی وضعیت از سرور</button>
+          <button type="button" onClick={() => void refreshStatus()} disabled={busy} style={{...primary,background:"#52675a",opacity: busy ? 0.65 : 1}}>بررسی وضعیت از سرور</button>
           {canSubmitReceipt ? <>
             <div style={{marginTop:14,padding:14,borderRadius:14,background:"rgba(36,99,71,.07)"}}>
               <strong>درخواست تأیید شده؛ پرداخت مجاز است</strong>
@@ -272,7 +272,7 @@ export default function StagingBookingPage({
               </div> : <p style={{fontSize:12,lineHeight:1.8}}>اطلاعات کارت از CMS staging به این مسیر متصل نشده؛ پیش از پرداخت، شماره کارت را از منبع رسمی تأیید کن.</p>}
               <input value={trackingNumber} onChange={(event)=>setTrackingNumber(event.target.value)} placeholder="کد پیگیری پرداخت (در صورت وجود)" style={field} />
               <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event)=>setReceiptFile(event.target.files?.[0] || null)} style={{...field,padding:10}} />
-              <button type="button" onClick={() => void sendReceipt()} disabled={busy} style={{...primary,marginTop:12,opacity:busy?.65:1}}>
+              <button type="button" onClick={() => void sendReceipt()} disabled={busy} style={{...primary,marginTop:12,opacity: busy ? 0.65 : 1}}>
                 {busy ? "در حال ارسال فیش…" : "ارسال فیش پرداخت"}
               </button>
             </div>
