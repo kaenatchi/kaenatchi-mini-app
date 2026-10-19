@@ -68,7 +68,15 @@ export default function StagingBookingPage({
   const [deliveryMethod, setDeliveryMethod] = useState<"phone"|"voice">("phone");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [receiptFile, setReceiptFile] = useState<File|null>(null);
-  const [booking, setBooking] = useState<StagingBooking|null>(null);
+  const [booking, setBooking] = useState<StagingBooking|null>(() => {
+    try {
+      if (typeof window === "undefined") return null;
+      const saved = window.sessionStorage.getItem("kc-booking-staging-active");
+      return saved ? JSON.parse(saved) as StagingBooking : null;
+    } catch {
+      return null;
+    }
+  });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -81,6 +89,16 @@ export default function StagingBookingPage({
   const isEnergy = category === "energy";
   const isTherapy = category === "therapy";
   const canSubmitReceipt = booking?.status === "AWAITING_PAYMENT" || booking?.status === "PAYMENT_REJECTED";
+
+  useEffect(() => {
+    try {
+      if (booking?.bookingId && booking.customerAccessToken) {
+        window.sessionStorage.setItem("kc-booking-staging-active", JSON.stringify(booking));
+      } else {
+        window.sessionStorage.removeItem("kc-booking-staging-active");
+      }
+    } catch {}
+  }, [booking]);
 
   useEffect(() => {
     let active = true;
