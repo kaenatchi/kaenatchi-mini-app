@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "r
 import { createPortal } from "react-dom";
 import { createInitialMyPath, loadMyPath, writeMyPath, type MyPath, type Stage1Answers } from "./myPathModel";
 import MyPathExperience from "./MyPathExperience";
+import StagingBookingPage from "./StagingBookingPage";
 
 type Section = "home" | "services" | "booking" | "selected" | "more";
 
@@ -6685,6 +6686,26 @@ function App() {
   const handleTouchCancel = () => {
     touchStart.current = null;
   };
+
+  const stagingBookingRoute =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("bookingStaging") === "1";
+
+  if (stagingBookingRoute) {
+    return (
+      <div className="app-shell app-shell-special">
+        {bookingThemeStyle}
+        <StagingBookingPage
+          paymentCardNumber={cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || ""}
+          paymentBank={cmsSetting(["booking_bank_name", "نام بانک", "بانک"]) || ""}
+          paymentHolder={cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || ""}
+          onBack={() => {
+            window.location.href = window.location.pathname;
+          }}
+        />
+      </div>
+    );
+  }
 
   if (cmsLoading) {
     return (
