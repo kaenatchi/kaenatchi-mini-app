@@ -15,6 +15,7 @@ type Props = {
   paymentCardNumber?: string;
   paymentBank?: string;
   paymentHolder?: string;
+  paymentNote?: string;
 };
 
 const panel: React.CSSProperties = {
@@ -53,6 +54,7 @@ export default function StagingBookingPage({
   paymentCardNumber = "",
   paymentBank = "",
   paymentHolder = "",
+  paymentNote = "فقط پس از تأیید درخواست توسط مایا پرداخت کن.",
 }: Props) {
   const [services, setServices] = useState<StagingService[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -216,7 +218,7 @@ export default function StagingBookingPage({
               <strong>{kind === "energy" ? "انرژی‌خوانی" : "شمع‌تراپی / سایکوتراپی"}</strong>
               {services.filter((service) => service.category === kind).map((service) => (
                 <label key={service.id} style={{display:"flex",gap:10,alignItems:"center",padding:"10px 0",borderBottom:"1px solid rgba(53,59,50,.08)",fontSize:14}}>
-                  <input type="checkbox" checked={selectedIds.includes(service.id)} onChange={() => toggleService(service)} />
+                  <input type={kind === "energy" ? "checkbox" : "radio"} name={kind === "therapy" ? "staging-therapy-service" : undefined} checked={selectedIds.includes(service.id)} onChange={() => toggleService(service)} />
                   <span style={{flex:1}}>{service.name}</span>
                   <strong>{Number(service.price).toLocaleString("fa-IR")} تومان</strong>
                 </label>
@@ -265,7 +267,7 @@ export default function StagingBookingPage({
           {canSubmitReceipt ? <>
             <div style={{marginTop:14,padding:14,borderRadius:14,background:"rgba(36,99,71,.07)"}}>
               <strong>درخواست تأیید شده؛ پرداخت مجاز است</strong>
-              <p style={{fontSize:13,lineHeight:1.8}}>مهلت پرداخت: {booking.paymentDeadlineAt || "از وضعیت سرور دریافت نشد"}</p>
+              <p style={{fontSize:13,lineHeight:1.8}}>{paymentNote}</p><p style={{fontSize:13,lineHeight:1.8}}>مهلت پرداخت: {booking.paymentDeadlineAt || "از وضعیت سرور دریافت نشد"}</p>
               {paymentCardNumber ? <div style={{marginTop:10}}>
                 <div style={{fontSize:12,opacity:.7}}>شماره کارت</div><b dir="ltr">{paymentCardNumber}</b>
                 {(paymentBank || paymentHolder) && <div style={{fontSize:12,marginTop:5}}>{[paymentBank,paymentHolder].filter(Boolean).join(" · ")}</div>}
