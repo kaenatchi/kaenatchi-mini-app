@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "r
 import { createPortal } from "react-dom";
 import { createInitialMyPath, loadMyPath, writeMyPath, type MyPath, type Stage1Answers } from "./myPathModel";
 import MyPathExperience from "./MyPathExperience";
+import StagingBookingPage from "./StagingBookingPage";
 
 type Section = "home" | "services" | "booking" | "selected" | "more";
 
@@ -6686,6 +6687,27 @@ function App() {
     touchStart.current = null;
   };
 
+  const stagingBookingRoute =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("bookingStaging") === "1";
+
+  if (stagingBookingRoute) {
+    return (
+      <div className="app-shell app-shell-special">
+        {bookingThemeStyle}
+        <StagingBookingPage
+          paymentCardNumber={cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || ""}
+          paymentBank={cmsSetting(["booking_bank_name", "نام بانک", "بانک"]) || ""}
+          paymentHolder={cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || ""}
+          paymentNote={cmsSetting(["booking_payment_text", "توضیح پرداخت", "متن پرداخت"]) || "فقط پس از تأیید درخواست توسط مایا پرداخت کن."}
+          onBack={() => {
+            window.location.href = window.location.pathname;
+          }}
+        />
+      </div>
+    );
+  }
+
   if (cmsLoading) {
     return (
       <div className="app-shell app-shell-loading">
@@ -6719,6 +6741,27 @@ function App() {
           <span>اتصال به سامانه محتوا برقرار نشد. لطفاً چند لحظه بعد دوباره تلاش کن.</span>
           <button type="button" className="loading-retry-button" onClick={() => window.location.reload()}>تلاش دوباره</button>
         </div>
+      </div>
+    );
+  }
+
+  // Explicit opt-in staging route. The normal booking flow and live endpoint remain unchanged.
+  if (
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("bookingStaging") === "1"
+  ) {
+    return (
+      <div className="app-shell app-shell-special">
+        {bookingThemeStyle}
+        <div className="ambient ambient-one" />
+        <div className="ambient ambient-two" />
+        <StagingBookingPage
+          paymentCardNumber={cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"])}
+          paymentBank={cmsSetting(["booking_bank_name", "نام بانک", "بانک"])}
+          paymentHolder={cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"])}
+          paymentNote={cmsSetting(["booking_payment_text", "توضیح پرداخت", "متن پرداخت"]) || "فقط پس از تأیید درخواست توسط مایا پرداخت کن."}
+        />
+        <AppFooter />
       </div>
     );
   }

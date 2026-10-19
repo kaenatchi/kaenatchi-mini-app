@@ -7,6 +7,11 @@ const env = (globalThis as typeof globalThis & {
 
 export default defineConfig({
   plugins: [react()],
-  // GitHub Pages serves the app from its repository subpath; browser previews run at the domain root.
-  base: env?.GITHUB_ACTIONS === "true" ? "/kaenatchi-mini-app/" : "/",
+  // The independent Cloudflare Pages preview is served from the domain root.
+  // GitHub Pages production continues to use the repository subpath.
+  base: env?.PREVIEW_DEPLOY === "true"
+    ? "/"
+    : env?.GITHUB_ACTIONS === "true"
+      ? "/kaenatchi-mini-app/"
+      : "/",
 });
