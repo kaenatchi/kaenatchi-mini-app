@@ -2,8 +2,8 @@
  * KaenatChi Booking Core — isolated staging client.
  *
  * This module intentionally targets ONLY the staging Worker. It does not
- * replace the existing production transport and is not imported by the
- * current BookingPage until the staged booking UI is explicitly wired.
+ * replace the existing production transport; the isolated page imports it
+ * only when the explicit bookingStaging=1 route is opened.
  */
 export const BOOKING_STAGING_ENDPOINT =
   "https://kaenatchi-booking-staging-transport.mayanaz-oriflame.workers.dev/";
