@@ -6700,6 +6700,7 @@ function App() {
           paymentCardNumber={cmsSetting(["booking_card_number", "شماره کارت", "کارت بانکی"]) || ""}
           paymentBank={cmsSetting(["booking_bank_name", "نام بانک", "بانک"]) || ""}
           paymentHolder={cmsSetting(["booking_card_holder", "صاحب کارت", "نام صاحب کارت", "بنـام"]) || ""}
+          paymentNote={cmsSetting(["booking_payment_text", "توضیح پرداخت", "متن پرداخت"]) || "فقط پس از تأیید درخواست توسط مایا پرداخت کن."}
           onBack={() => {
             window.location.href = window.location.pathname;
           }}
