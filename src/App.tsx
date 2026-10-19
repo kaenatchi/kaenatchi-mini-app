@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { createInitialMyPath, loadMyPath, writeMyPath, type MyPath, type Stage1Answers } from "./myPathModel";
 import MyPathExperience from "./MyPathExperience";
 import StagingBookingPage from "./StagingBookingPage";
-import StagingBookingPage from "./StagingBookingPage";
 
 type Section = "home" | "services" | "booking" | "selected" | "more";
 
