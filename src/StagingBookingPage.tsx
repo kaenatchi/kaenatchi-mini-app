@@ -79,6 +79,8 @@ export default function StagingBookingPage({
   });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
 
   const chosenServices = useMemo(
     () => services.filter((service) => selectedIds.includes(service.id)),
@@ -102,11 +104,20 @@ export default function StagingBookingPage({
 
   useEffect(() => {
     let active = true;
+    setCatalogLoading(true);
+    setMessage("");
     getStagingServiceCatalog()
-      .then((items) => { if (active) setServices(items); })
-      .catch((error) => { if (active) setMessage(error instanceof Error ? error.message : "دریافت خدمات آزمایشی ناموفق بود."); });
+      .then((items) => {
+        if (!active) return;
+        setServices(items);
+        if (!items.length) setMessage("سرور پاسخ داد، اما فهرست خدمات خالی است.");
+      })
+      .catch((error) => {
+        if (active) setMessage(error instanceof Error ? error.message : "دریافت خدمات آزمایشی ناموفق بود.");
+      })
+      .finally(() => { if (active) setCatalogLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [catalogAttempt]);
 
   useEffect(() => {
     let active = true;
@@ -231,7 +242,13 @@ export default function StagingBookingPage({
         {!booking && <>
         <section style={panel}>
           <h2 style={{fontSize:17,margin:"0 0 10px"}}>۱. انتخاب خدمت</h2>
-          {!services.length && <p style={{fontSize:13}}>در حال دریافت خدمات آزمایشی…</p>}
+          {!services.length && (catalogLoading
+            ? <p role="status" aria-live="polite" style={{fontSize:13}}>در حال دریافت خدمات آزمایشی… (حداکثر ۱۵ ثانیه)</p>
+            : <div role="alert" style={{fontSize:13,lineHeight:1.9}}>
+                <p>{message || "فهرست خدمات دریافت نشد."}</p>
+                <button type="button" onClick={() => setCatalogAttempt((attempt) => attempt + 1)} style={{...primary,marginTop:8}}>تلاش دوباره برای دریافت خدمات</button>
+              </div>
+          )}
           {(["energy","therapy"] as const).map((kind) => (
             <div key={kind} style={{marginTop:12}}>
               <strong>{kind === "energy" ? "انرژی‌خوانی" : "شمع‌تراپی / سایکوتراپی"}</strong>
