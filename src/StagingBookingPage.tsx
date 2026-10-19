@@ -228,6 +228,7 @@ export default function StagingBookingPage({
           <p style={{fontSize:13,lineHeight:1.9,margin:0}}>این مسیر فقط به بک‌اند staging متصل است و نسخهٔ اصلی را تغییر نمی‌دهد.</p>
         </header>
 
+        {!booking && <>
         <section style={panel}>
           <h2 style={{fontSize:17,margin:"0 0 10px"}}>۱. انتخاب خدمت</h2>
           {!services.length && <p style={{fontSize:13}}>در حال دریافت خدمات آزمایشی…</p>}
@@ -276,6 +277,8 @@ export default function StagingBookingPage({
             {busy ? "در حال ارسال…" : "ثبت درخواست برای بررسی"}
           </button>
         </section>
+
+        </>}
 
         {booking && <section style={panel}>
           <h2 style={{fontSize:17,margin:"0 0 10px"}}>وضعیت درخواست</h2>
