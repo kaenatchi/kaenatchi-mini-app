@@ -117,7 +117,6 @@ export default function StagingBookingPage({ onBack, initialService }: Props) {
   const [lastName, setLastName] = useState("");
   const [mobile, setMobile] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState<"phone" | "voice" | "">("");
-  const [deliveryMethod, setDeliveryMethod] = useState<"phone" | "voice">("phone");
   const [receiptUrl, setReceiptUrl] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [saved, setSaved] = useState<SavedRequest | null>(() => {
