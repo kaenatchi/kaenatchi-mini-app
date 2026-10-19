@@ -39,18 +39,31 @@ async function stagingPost<T>(
   action: string,
   payload: Record<string, unknown> = {},
 ): Promise<T> {
-  const response = await fetch(BOOKING_STAGING_ENDPOINT, {
-    method: "POST",
-    mode: "cors",
-    credentials: "omit",
-    cache: "no-store",
-    redirect: "follow",
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ action, ...payload }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  let response: Response;
+  try {
+    response = await fetch(BOOKING_STAGING_ENDPOINT, {
+      method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      cache: "no-store",
+      redirect: "follow",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ action, ...payload }),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("پاسخ سامانه رزرو آزمایشی در ۱۵ ثانیه نرسید؛ اتصال Worker به Apps Script آزمایشی را بررسی کن.");
+    }
+    throw new Error("اتصال به سامانه رزرو آزمایشی برقرار نشد؛ Origin و پاسخ Worker را بررسی کن.");
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   let envelope: StagingEnvelope<T>;
   try {
