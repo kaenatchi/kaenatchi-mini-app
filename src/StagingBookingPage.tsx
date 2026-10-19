@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 type PublicService = {
   id: string;
@@ -86,7 +86,7 @@ function statusLabel(status: string) {
   return labels[status] || status || "وضعیت هنوز دریافت نشده";
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, CSSProperties> = {
   page: { direction: "rtl", color: "#183d32", background: "#fbf7ed", minHeight: "100%", padding: "18px 14px 30px", fontFamily: "inherit" },
   shell: { maxWidth: 620, margin: "0 auto" },
   top: { display: "flex", alignItems: "center", gap: 12, marginBottom: 16 },
