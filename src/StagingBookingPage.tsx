@@ -4,7 +4,6 @@ type PublicService = {
   id: string;
   name: string;
   category: string;
-  durationMinutes: number;
   price: number;
 };
 
@@ -117,6 +116,7 @@ export default function StagingBookingPage({ onBack, initialService }: Props) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [mobile, setMobile] = useState("");
+  const [deliveryMethod, setDeliveryMethod] = useState<"phone" | "voice" | "">("");
   const [deliveryMethod, setDeliveryMethod] = useState<"phone" | "voice">("phone");
   const [receiptUrl, setReceiptUrl] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -155,7 +155,6 @@ export default function StagingBookingPage({ onBack, initialService }: Props) {
           id: String(item.id || ""),
           name: String(item.name || ""),
           category: String(item.category || "energy"),
-          durationMinutes: Number(item.durationMinutes || 0),
           price: Number(item.price || 0),
         })).filter((item: PublicService) => item.id && item.name);
         setServices(next);
@@ -232,6 +231,7 @@ export default function StagingBookingPage({ onBack, initialService }: Props) {
   const submitRequest = async () => {
     if (!selectedIds.length) return say("لطفاً خدمت را انتخاب کن.", true);
     if (!date || !time) return say("لطفاً تاریخ و ساعت را انتخاب کن.", true);
+    if (category === "energy" && !deliveryMethod) return say("لطفاً روش دریافت انرژی‌خوانی را انتخاب کن.", true);
     if (!firstName.trim() || !lastName.trim() || !mobile.trim()) return say("نام، نام خانوادگی و شماره تماس الزامی است.", true);
     setBusy(true);
     say("");
@@ -368,7 +368,6 @@ export default function StagingBookingPage({ onBack, initialService }: Props) {
                       <button type="button" key={service.id} style={selectedIds.includes(service.id) ? styles.selected : styles.service} onClick={() => toggleService(service)}>
                         <strong style={{ display: "block", lineHeight: 1.7 }}>{service.name}</strong>
                         <span style={{ display: "block", fontSize: 12, marginTop: 5 }}>{formatMoney(service.price)}</span>
-                        <span style={{ display: "block", fontSize: 11, color: "#69776c", marginTop: 3 }}>{service.durationMinutes} دقیقه</span>
                       </button>
                     ))}
                   </div>
@@ -389,6 +388,22 @@ export default function StagingBookingPage({ onBack, initialService }: Props) {
               </div>
               {!slots.length && <p style={styles.hint}>پس از انتخاب خدمات و تاریخ، ساعت‌های آزاد از هستهٔ رزرو دریافت می‌شوند.</p>}
             </div>
+
+            {category === "energy" && (
+              <div style={styles.card}>
+                <h2 style={styles.sectionTitle}>روش دریافت انرژی‌خوانی</h2>
+                <div style={styles.grid}>
+                  <button type="button" style={deliveryMethod === "phone" ? styles.selected : styles.service} onClick={() => setDeliveryMethod("phone")}>
+                    <strong style={{ display: "block" }}>تماس تلفنی</strong>
+                    <span style={{ display: "block", fontSize: 12, marginTop: 5 }}>دریافت از طریق تماس</span>
+                  </button>
+                  <button type="button" style={deliveryMethod === "voice" ? styles.selected : styles.service} onClick={() => setDeliveryMethod("voice")}>
+                    <strong style={{ display: "block" }}>پیام صوتی</strong>
+                    <span style={{ display: "block", fontSize: 12, marginTop: 5 }}>دریافت فایل صوتی</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div style={styles.card}>
               <h2 style={styles.sectionTitle}>۳. اطلاعات تماس</h2>
