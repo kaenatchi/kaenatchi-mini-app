@@ -117,6 +117,7 @@ export default function StagingBookingPage({ onBack, initialService }: Props) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [mobile, setMobile] = useState("");
+  const [deliveryMethod, setDeliveryMethod] = useState<"phone" | "voice">("phone");
   const [receiptUrl, setReceiptUrl] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [saved, setSaved] = useState<SavedRequest | null>(() => {
@@ -241,6 +242,7 @@ export default function StagingBookingPage({ onBack, initialService }: Props) {
         date,
         startTime: time,
         services: selectedIds,
+        ...(category === "energy" ? { deliveryMethod } : {}),
       });
       const request: SavedRequest = {
         bookingId: String(result.bookingId || ""),
@@ -396,6 +398,15 @@ export default function StagingBookingPage({ onBack, initialService }: Props) {
               <input style={styles.input} value={lastName} onChange={(event) => setLastName(event.target.value)} autoComplete="family-name" />
               <label style={styles.label}>شماره تماس</label>
               <input style={styles.input} value={mobile} onChange={(event) => setMobile(event.target.value)} inputMode="tel" autoComplete="tel" />
+              {category === "energy" && (
+                <>
+                  <label style={styles.label}>روش دریافت انرژی‌خوانی</label>
+                  <div style={styles.grid}>
+                    <button type="button" style={deliveryMethod === "phone" ? styles.selected : styles.service} onClick={() => setDeliveryMethod("phone")}>تماس تلفنی</button>
+                    <button type="button" style={deliveryMethod === "voice" ? styles.selected : styles.service} onClick={() => setDeliveryMethod("voice")}>پیام صوتی</button>
+                  </div>
+                </>
+              )}
               <button type="button" style={styles.primary} disabled={busy || loading || !services.length} onClick={submitRequest}>{busy ? "در حال ثبت…" : "ثبت درخواست برای بررسی مایا"}</button>
               <p style={styles.hint}>با ثبت این فرم فقط درخواست اولیه ارسال می‌شود؛ هیچ پرداختی در این مرحله انجام نده.</p>
             </div>
