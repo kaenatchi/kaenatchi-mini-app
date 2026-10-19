@@ -143,14 +143,24 @@ export function createBookingCoreRequestId(): string {
 
 export async function submitBookingCoreRequest(input: {
   clientRequestId: string;
-  customer: { name: string; contact: string };
+  customer: { name: string; contact: string; reason: string };
   services: string[];
   date: string;
   startTime: string;
-  deliveryMethod?: string;
+  deliveryMethod?: "phone" | "voice";
 }): Promise<BookingCorePublicBooking> {
   if (!/^[A-Za-z0-9_-]{20,100}$/.test(input.clientRequestId)) {
     throw new Error("شناسه امن درخواست رزرو معتبر نیست.");
+  }
+  if (!input.customer.name.trim() || !input.customer.contact.trim()) {
+    throw new Error("نام و راه ارتباطی الزامی است.");
+  }
+  if (!input.customer.reason.trim()) {
+    throw new Error("توضیح دلیل درخواست الزامی است.");
+  }
+  if (input.services.length === 0) throw new Error("ابتدا خدمت را انتخاب کن.");
+  if (input.deliveryMethod && input.deliveryMethod !== "phone" && input.deliveryMethod !== "voice") {
+    throw new Error("روش دریافت انرژی‌خوانی معتبر نیست.");
   }
   return post<BookingCorePublicBooking>("submitRequest", input);
 }
