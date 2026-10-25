@@ -111,7 +111,7 @@ const MAIN_APP_URL =
 // Booking is a section inside the Main Mini App; the standalone booking app is retired.
 
 const BOOKING_TRANSPORT_ENDPOINT =
-  "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
+  "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
 const BOOKING_BACKEND_ENDPOINT =
   "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
 
@@ -272,57 +272,10 @@ const apiGetLive = async (
   params: Record<string, string> = {}
 ): Promise<any> => {
   /*
-   * Slot reads use the verified Apps Script JSONP path first.
-   * The Worker remains the transport for config/date reads and
-   * remains available as fallback for slots. This isolates the
-   * slot-loading path without changing the booking architecture.
+   * The Cloudflare Worker was retired. Apps Script is the single active
+   * booking transport, so never wait on the deleted Worker before reading
+   * config, dates, slots, or authoritative booking status.
    */
-  if (action === "getAvailableSlots" || action === "bookingStatus") {
-    try {
-      /*
-       * Slot reads and mutation-status reads are authoritative backend reads.
-       * Prefer the direct Apps Script JSONP path for these two actions so a
-       * transient Worker GET/JSONP issue cannot make a successful booking or
-       * payment look failed in the Mini App.
-       */
-      return await apiGetJsonpOnce(
-        action,
-        params,
-        BOOKING_BACKEND_ENDPOINT
-      );
-    } catch (backendFirstError) {
-      console.warn(
-        "[KaenatChi Booking] direct backend read failed; falling back to Worker",
-        action,
-        backendFirstError
-      );
-    }
-  }
-
-  let workerJsonpError: unknown = null;
-
-  try {
-    const data = await apiGetJsonpOnce(
-      action,
-      params,
-      BOOKING_TRANSPORT_ENDPOINT
-    );
-    if (action === "getConfig") writeBookingConfigCache(data);
-    return data;
-  } catch (error) {
-    workerJsonpError = error;
-  }
-
-  let fetchError: unknown = null;
-
-  try {
-    const data = await apiGetFetchOnce(action, params);
-    if (action === "getConfig") writeBookingConfigCache(data);
-    return data;
-  } catch (error) {
-    fetchError = error;
-  }
-
   try {
     const data = await apiGetJsonpOnce(
       action,
@@ -332,35 +285,32 @@ const apiGetLive = async (
     if (action === "getConfig") writeBookingConfigCache(data);
     return data;
   } catch (backendJsonpError) {
-    const firstError =
-      workerJsonpError instanceof Error
-        ? workerJsonpError.message
-        : "WORKER_JSONP_FAILED";
-    const secondError =
-      fetchError instanceof Error
-        ? fetchError.message
-        : "FETCH_FAILED";
-    const thirdError =
-      backendJsonpError instanceof Error
-        ? backendJsonpError.message
-        : "BACKEND_JSONP_FAILED";
-
-    console.warn(
-      "[KaenatChi Booking] Worker JSONP + fetch + backend JSONP failed",
-      action,
-      firstError,
-      secondError,
-      thirdError
-    );
-
-    throw new Error(
-      "BOOKING_TRANSPORT_FAILED:" +
-        firstError +
-        "|" +
-        secondError +
-        "|" +
-        thirdError
-    );
+    /*
+     * Apps Script JSONP is the primary cross-origin read path. Keep a
+     * same-backend fetch fallback for environments where JSONP is blocked;
+     * this does not route through the deleted Worker.
+     */
+    try {
+      const data = await apiGetFetchOnce(action, params);
+      if (action === "getConfig") writeBookingConfigCache(data);
+      return data;
+    } catch (fetchError) {
+      const jsonpMessage =
+        backendJsonpError instanceof Error
+          ? backendJsonpError.message
+          : "BACKEND_JSONP_FAILED";
+      const fetchMessage =
+        fetchError instanceof Error ? fetchError.message : "FETCH_FAILED";
+      console.warn(
+        "[KaenatChi Booking] Apps Script JSONP + fetch failed",
+        action,
+        jsonpMessage,
+        fetchMessage
+      );
+      throw new Error(
+        "BOOKING_TRANSPORT_FAILED:" + jsonpMessage + "|" + fetchMessage
+      );
+    }
   }
 };
 
