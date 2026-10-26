@@ -111,11 +111,11 @@ const MAIN_APP_URL =
 // Booking is a section inside the Main Mini App; the standalone booking app is retired.
 
 const BOOKING_TRANSPORT_ENDPOINT =
-  "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
+  "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
 const BOOKING_BACKEND_ENDPOINT =
   "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
 
-const BOOKING_TRANSPORT_VERSION = "v7-jsonp-fetch-backend";
+const BOOKING_TRANSPORT_VERSION = "v8-direct-apps-script";
 const BOOKING_CONFIG_CACHE_KEY =
   "kaenatchi:booking-config:" + BOOKING_TRANSPORT_VERSION;
 const BOOKING_CONFIG_CACHE_TTL = 15 * 60 * 1000;
@@ -272,18 +272,16 @@ const apiGetLive = async (
   params: Record<string, string> = {}
 ): Promise<any> => {
   /*
-   * Slot reads use the verified Apps Script JSONP path first.
-   * The Worker remains the transport for config/date reads and
-   * remains available as fallback for slots. This isolates the
-   * slot-loading path without changing the booking architecture.
+   * All booking reads use the verified direct Apps Script endpoint.
+   * The former Cloudflare Worker transport was deleted, so no read
+   * path should depend on it.
    */
   if (action === "getAvailableSlots" || action === "bookingStatus") {
     try {
       /*
        * Slot reads and mutation-status reads are authoritative backend reads.
-       * Prefer the direct Apps Script JSONP path for these two actions so a
-       * transient Worker GET/JSONP issue cannot make a successful booking or
-       * payment look failed in the Mini App.
+       * Use the direct Apps Script JSONP path so booking state is checked
+       * against the same backend that receives mutations.
        */
       return await apiGetJsonpOnce(
         action,
@@ -292,14 +290,14 @@ const apiGetLive = async (
       );
     } catch (backendFirstError) {
       console.warn(
-        "[KaenatChi Booking] direct backend read failed; falling back to Worker",
+        "[KaenatChi Booking] direct backend read failed; retrying through the same backend transport",
         action,
         backendFirstError
       );
     }
   }
 
-  let workerJsonpError: unknown = null;
+  let transportJsonpError: unknown = null;
 
   try {
     const data = await apiGetJsonpOnce(
@@ -310,7 +308,7 @@ const apiGetLive = async (
     if (action === "getConfig") writeBookingConfigCache(data);
     return data;
   } catch (error) {
-    workerJsonpError = error;
+    transportJsonpError = error;
   }
 
   let fetchError: unknown = null;
@@ -333,9 +331,9 @@ const apiGetLive = async (
     return data;
   } catch (backendJsonpError) {
     const firstError =
-      workerJsonpError instanceof Error
-        ? workerJsonpError.message
-        : "WORKER_JSONP_FAILED";
+      transportJsonpError instanceof Error
+        ? transportJsonpError.message
+        : "BACKEND_JSONP_FAILED";
     const secondError =
       fetchError instanceof Error
         ? fetchError.message
@@ -346,7 +344,7 @@ const apiGetLive = async (
         : "BACKEND_JSONP_FAILED";
 
     console.warn(
-      "[KaenatChi Booking] Worker JSONP + fetch + backend JSONP failed",
+      "[KaenatChi Booking] backend JSONP + fetch + backend JSONP failed",
       action,
       firstError,
       secondError,
@@ -5493,11 +5491,9 @@ function BookingPage({
     });
 
     /*
-     * Telegram WebView can stall when it tries to read the response of a
-     * cross-origin POST, even though the POST itself reaches the Worker.
-     * For booking mutations we therefore use a no-cors POST as the write
-     * transport and then read the authoritative result through the existing
-     * JSONP/Worker status endpoint.
+     * Telegram WebView can stall when it tries to read a cross-origin POST
+     * response. Send the mutation directly to Apps Script, then verify the
+     * result through the backend's bookingStatus JSONP endpoint.
      *
      * This is deliberately the same requestId-based recovery architecture
      * used by the backend: the UI never needs to read the opaque POST response.
@@ -5546,10 +5542,9 @@ function BookingPage({
       setState("loading");
       setMessage("");
 
-      // مستقیماً getConfig را می‌خوانیم. transportTest یک درخواست
-      // اضافه بود و در Telegram iOS می‌توانست کل صفحه رزرو را بی‌دلیل
-      // در حالت BOOKING_TRANSPORT_TIMEOUT نگه دارد. خود getConfig از
-      // همان Worker و همان fallback JSONP عبور می‌کند.
+      // مستقیماً getConfig را از Apps Script می‌خوانیم. transportTest
+      // یک درخواست اضافه بود و در Telegram iOS می‌توانست صفحه رزرو را
+      // بی‌دلیل معطل کند.
       const data = await apiGet("getConfig");
 
       if (!data || data.ok === false) {
