@@ -280,9 +280,8 @@ const apiGetLive = async (
     try {
       /*
        * Slot reads and mutation-status reads are authoritative backend reads.
-       * Prefer the direct Apps Script JSONP path for these two actions so a
-       * transient Worker GET/JSONP issue cannot make a successful booking or
-       * payment look failed in the Mini App.
+       * Use the direct Apps Script JSONP path so booking state is checked
+       * against the same backend that receives mutations.
        */
       return await apiGetJsonpOnce(
         action,
@@ -332,9 +331,9 @@ const apiGetLive = async (
     return data;
   } catch (backendJsonpError) {
     const firstError =
-      workerJsonpError instanceof Error
-        ? workerJsonpError.message
-        : "WORKER_JSONP_FAILED";
+      transportJsonpError instanceof Error
+        ? transportJsonpError.message
+        : "BACKEND_JSONP_FAILED";
     const secondError =
       fetchError instanceof Error
         ? fetchError.message
@@ -345,7 +344,7 @@ const apiGetLive = async (
         : "BACKEND_JSONP_FAILED";
 
     console.warn(
-      "[KaenatChi Booking] Worker JSONP + fetch + backend JSONP failed",
+      "[KaenatChi Booking] backend JSONP + fetch + backend JSONP failed",
       action,
       firstError,
       secondError,
