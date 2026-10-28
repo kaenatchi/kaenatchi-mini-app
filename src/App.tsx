@@ -5046,7 +5046,7 @@ function MoreDetail({
 
   return (
     <div className="inner-page">
-      {bookingThemeStyle}
+      
       <button type="button" onClick={onBack} style={backButtonStyle}>← بازگشت</button>
       <SectionHeaderCard
         kicker={isFaq ? "FAQ" : isHours ? "HOURS" : "CONTACT"}
@@ -5988,6 +5988,7 @@ function BookingPage({
 
   return (
     <div className="inner-page">
+      {bookingThemeStyle}
       <button type="button" onClick={onBack} style={backButtonStyle}>← بازگشت</button>
       <SectionHeaderCard
         kicker="KAENATCHI"
