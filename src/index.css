@@ -5618,3 +5618,34 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .my-path-experience .mp-artwork * { animation: none !important; }
 }
+
+
+/* Release notes — isolated overlay; no booking or CMS layout changes. */
+.cms-loading-version { color: rgba(255,255,255,.72); font-size: 11px; letter-spacing: .04em; margin-top: 2px; }
+.release-notes-backdrop {
+  position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center;
+  padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+  background: rgba(9, 7, 20, .68); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.release-notes-dialog {
+  position: relative; width: min(100%, 440px); max-height: min(82dvh, 720px); overflow-y: auto; overscroll-behavior: contain;
+  padding: 25px 22px 20px; border: 1px solid rgba(197, 165, 255, .28); border-radius: 26px; color: #f7f1ff;
+  background: radial-gradient(ellipse at 90% 0%, rgba(132, 80, 204, .2), transparent 43%), linear-gradient(155deg, rgba(29, 21, 48, .98), rgba(14, 11, 28, .985));
+  box-shadow: 0 24px 80px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.06); font-family: inherit;
+}
+.release-notes-orbit { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 12px; border: 1px solid rgba(221,190,119,.62); border-radius: 50%; color: #e7cb86; background: rgba(221,190,119,.08); font-size: 21px; }
+.release-notes-kicker { color: #d9c5ff; font-size: 10px; letter-spacing: .18em; }
+.release-notes-dialog h2 { margin: 7px 0 4px; color: #fff9ed; font-size: 23px; line-height: 1.5; }
+.release-notes-version { margin: 0 0 12px; color: #e3c981; font-size: 12px; }
+.release-notes-intro, .release-notes-beta-note { color: rgba(247,241,255,.78); font-size: 13px; line-height: 1.9; }
+.release-notes-group { padding: 12px 0; border-top: 1px solid rgba(255,255,255,.09); }
+.release-notes-group h3 { margin: 0 0 7px; color: #e5d5ff; font-size: 14px; }
+.release-notes-group ul { margin: 0; padding-right: 18px; color: rgba(247,241,255,.88); font-size: 13px; line-height: 1.9; }
+.release-notes-group li + li { margin-top: 3px; }
+.release-notes-beta-note { margin: 7px 0 15px; padding: 10px 12px; border: 1px solid rgba(221,190,119,.18); border-radius: 13px; background: rgba(221,190,119,.055); font-size: 12px; }
+.release-notes-actions { display: flex; gap: 10px; }
+.release-notes-actions button { min-height: 44px; flex: 1; border-radius: 13px; font: inherit; font-size: 13px; cursor: pointer; }
+.release-notes-secondary { color: #f0e8ff; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.04); }
+.release-notes-primary { color: #21172b; border: 1px solid #e3c981; background: linear-gradient(135deg, #f0dca0, #c9a85c); font-weight: 700; }
+.release-notes-actions button:focus-visible { outline: 3px solid #d6baff; outline-offset: 3px; }
+@media (max-width: 380px) { .release-notes-dialog { padding: 21px 17px 16px; border-radius: 22px; } .release-notes-dialog h2 { font-size: 21px; } }
