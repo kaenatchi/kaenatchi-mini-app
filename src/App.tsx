@@ -6608,6 +6608,40 @@ const bookingThemeStyle = (
         opacity: .78;
       }
     }
+    /* Final contrast override: warm cream fields with deep evergreen text.
+       Keep these specific controls readable even when Telegram forces dark mode. */
+    .booking-glass-card .booking-date-select,
+    .booking-glass-card .booking-time-select {
+      color: #20382b !important;
+      -webkit-text-fill-color: #20382b !important;
+      background: #f4efe3 !important;
+      border-color: #a58b5b !important;
+      color-scheme: light !important;
+      opacity: 1 !important;
+    }
+    .booking-glass-card .booking-date-select option,
+    .booking-glass-card .booking-time-select option,
+    .booking-glass-card option {
+      color: #20382b !important;
+      background: #f4efe3 !important;
+    }
+    .booking-glass-card .booking-service-option {
+      color: #20382b !important;
+      -webkit-text-fill-color: #20382b !important;
+      background: #f4efe3 !important;
+      border-color: rgba(165,139,91,.42) !important;
+    }
+    .booking-glass-card .booking-service-option * {
+      color: #20382b !important;
+      -webkit-text-fill-color: #20382b !important;
+    }
+    .booking-glass-card .booking-date-select:disabled,
+    .booking-glass-card .booking-time-select:disabled {
+      color: #657267 !important;
+      -webkit-text-fill-color: #657267 !important;
+      background: #e8e2d5 !important;
+      opacity: 1 !important;
+    }
   `}</style>
 );
 
