@@ -5046,6 +5046,7 @@ function MoreDetail({
 
   return (
     <div className="inner-page">
+      
       <button type="button" onClick={onBack} style={backButtonStyle}>← بازگشت</button>
       <SectionHeaderCard
         kicker={isFaq ? "FAQ" : isHours ? "HOURS" : "CONTACT"}
@@ -5987,6 +5988,7 @@ function BookingPage({
 
   return (
     <div className="inner-page">
+      {bookingThemeStyle}
       <button type="button" onClick={onBack} style={backButtonStyle}>← بازگشت</button>
       <SectionHeaderCard
         kicker="KAENATCHI"
@@ -6004,7 +6006,7 @@ function BookingPage({
         </div>
 
         {initialService && selectedService ? (
-          <div style={{marginTop:"12px",padding:"15px",borderRadius:"20px",background:"rgba(36,99,71,.07)",border:"1px solid rgba(36,99,71,.12)"}}>
+          <div className="booking-selected-service-card" style={{marginTop:"12px",padding:"15px",borderRadius:"20px",background:"rgba(36,99,71,.07)",border:"1px solid rgba(36,99,71,.12)"}}>
             <div className="list-copy">
               <strong>{selectedService.title}</strong>
               <span>{selectedService.description || "خدمت انتخاب‌شده"}</span>
@@ -6115,7 +6117,7 @@ function BookingPage({
                         )}
                       </button>
                     )) : (
-                      <div style={{padding:"13px",borderRadius:"16px",background:"rgba(53,59,50,.06)",fontSize:"12px",color:"#4b564e"}}>
+                      <div className="booking-empty-service-state" style={{padding:"13px",borderRadius:"16px",background:"rgba(53,59,50,.06)",fontSize:"12px",color:"#4b564e"}}>
                         هنوز خدمتی در این دسته فعال نیست.
                       </div>
                     )}
@@ -6127,7 +6129,7 @@ function BookingPage({
         )}
 
         {selectedService && (
-          <div style={{marginTop:"12px",fontSize:"12px",lineHeight:1.9,color:"#59655d"}}>
+          <div className="booking-selected-service-description" style={{marginTop:"12px",fontSize:"12px",lineHeight:1.9,color:"#59655d"}}>
             {selectedService.description}
           </div>
         )}
@@ -6141,6 +6143,7 @@ function BookingPage({
         </div>
 
         <select
+          className="booking-date-select"
           value={date}
           onChange={(e)=>{
             setDate(e.target.value);
@@ -6162,6 +6165,7 @@ function BookingPage({
         </select>
 
         <select
+          className="booking-time-select"
           value={time}
           onChange={(e)=>setTime(e.target.value)}
           disabled={!date}
@@ -6260,13 +6264,13 @@ function BookingPage({
         </div>
 
         {discount.valid && (
-          <div style={{marginTop:"10px",fontSize:"12px",color:"#246347",fontWeight:600}}>
+          <div className="booking-discount-success" style={{marginTop:"10px",fontSize:"12px",color:"#246347",fontWeight:600}}>
             تخفیف {discount.percent}% اعمال شد.
           </div>
         )}
 
         {basePrice > 0 && (
-          <div style={{marginTop:"14px",padding:"14px",borderRadius:"18px",background:"rgba(36,99,71,.06)",color:"#26342b"}}>
+          <div className="booking-price-summary" style={{marginTop:"14px",padding:"14px",borderRadius:"18px",background:"rgba(36,99,71,.06)",color:"#26342b"}}>
             <div style={{display:"flex",justifyContent:"space-between",gap:"12px",fontSize:"12px",marginBottom:"7px"}}>
               <span>مبلغ خدمت</span><strong>{basePrice.toLocaleString("fa-IR")} تومان</strong>
             </div>
@@ -6276,7 +6280,7 @@ function BookingPage({
               </div>
             )}
             <div style={{display:"flex",justifyContent:"space-between",gap:"12px",fontSize:"15px",color:"#174b38"}}>
-              <strong>مبلغ نهایی</strong><strong>{finalPrice.toLocaleString("fa-IR")} تومان</strong>
+              <strong>مبلغ نهایی</strong><strong className="booking-final-price">{finalPrice.toLocaleString("fa-IR")} تومان</strong>
             </div>
           </div>
         )}
@@ -6289,7 +6293,7 @@ function BookingPage({
         </div>
         {renderBookingContent(["payment_guide"])} 
 
-        <div style={{
+        <div className="booking-payment-card" style={{
           marginTop:"14px",
           padding:"16px",
           borderRadius:"20px",
@@ -6496,23 +6500,148 @@ function BottomNav({
 
 const bookingThemeStyle = (
   <style>{`
+    /* Booking-only visual tokens: preserve the existing daytime look. */
+    .booking-glass-card .booking-category-trigger,
+    .booking-glass-card .booking-service-option { -webkit-tap-highlight-color: transparent; }
     .booking-glass-card input::placeholder { color: #69746d; opacity: 1; }
     .booking-glass-card select { color: #253128; }
     .booking-glass-card option { color: #253128; background: #ffffff; }
+    .booking-glass-card .booking-selected-service-card { background: rgba(36,99,71,.07); border-color: rgba(36,99,71,.16); }
+    .booking-glass-card .booking-service-menu { background: rgba(255,255,255,.42); border-color: rgba(255,255,255,.58); }
+    .booking-glass-card .booking-service-option { color: #26342b; }
+    .booking-glass-card .booking-empty-service-state { color: #4b564e; }
+    .booking-glass-card .booking-selected-service-description { color: #59655d; }
+    .booking-glass-card .booking-price-summary { background: rgba(36,99,71,.06); color: #26342b; }
+    .booking-glass-card .booking-payment-card { background: rgba(165,139,91,.09); border-color: rgba(165,139,91,.18); color: #26342b; }
+    .booking-glass-card .booking-discount-success { color: #246347; }
+    /* Keep date/time controls legible when Telegram's theme differs from iOS. */
+    .booking-glass-card .booking-date-select,
+    .booking-glass-card .booking-time-select {
+      color: #f6f1e7 !important;
+      background: #1b2b23 !important;
+      border: 1px solid rgba(165,139,91,.48) !important;
+      border-radius: 16px !important;
+      -webkit-text-fill-color: #f6f1e7 !important;
+      color-scheme: dark;
+    }
+    .booking-glass-card .booking-date-select option,
+    .booking-glass-card .booking-time-select option {
+      color: #f6f1e7 !important;
+      background-color: #1b2b23 !important;
+    }
+    .booking-glass-card .booking-date-select:disabled,
+    .booking-glass-card .booking-time-select:disabled {
+      color: #c4c8bd !important;
+      -webkit-text-fill-color: #c4c8bd !important;
+      opacity: .82 !important;
+    }
     @media (prefers-color-scheme: dark) {
-      .booking-glass-card input,
-      .booking-glass-card select {
-        color: #f2f5f1 !important;
-        background: rgba(42,48,43,.88) !important;
-        border-color: rgba(255,255,255,.14) !important;
-      }
-      .booking-glass-card input::placeholder { color: #b9c2bb !important; }
-      .booking-glass-card select { color-scheme: dark; }
-      .booking-glass-card option { color: #f2f5f1; background: #2a302b; }
       .booking-glass-card .list-copy strong,
       .booking-glass-card .list-copy span,
       .booking-glass-card label,
-      .booking-glass-card button { text-shadow: none; }
+      .booking-glass-card button,
+      .booking-glass-card > div,
+      .booking-glass-card > div > div,
+      .booking-glass-card .booking-selected-service-description,
+      .booking-glass-card .booking-price-summary,
+      .booking-glass-card .booking-payment-card,
+      .booking-glass-card .booking-payment-card * {
+        color: #f0eadb !important;
+      }
+      .booking-glass-card input,
+      .booking-glass-card select {
+        color: #f6f1e7 !important;
+        background: rgba(27,43,35,.96) !important;
+        border-color: rgba(210,184,125,.28) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 5px 16px rgba(0,0,0,.12);
+      }
+      .booking-glass-card input::placeholder { color: #c4c8bd !important; }
+      .booking-glass-card select { color-scheme: dark; }
+      .booking-glass-card option { color: #f6f1e7; background: #1b2b23; }
+      .booking-glass-card .booking-category-trigger {
+        background: rgba(25,43,34,.96) !important;
+        border-color: rgba(210,184,125,.24) !important;
+        color: #f6f1e7 !important;
+        box-shadow: 0 8px 22px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.035) !important;
+      }
+      .booking-glass-card .booking-category-trigger[aria-expanded="true"] {
+        background: rgba(46,78,59,.96) !important;
+        border-color: rgba(210,184,125,.52) !important;
+      }
+      .booking-glass-card .booking-category-trigger > span:first-child { color: #d7bd80 !important; }
+      .booking-glass-card .booking-service-menu {
+        background: rgba(18,31,25,.98) !important;
+        border-color: rgba(210,184,125,.22) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 12px 28px rgba(0,0,0,.22) !important;
+      }
+      .booking-glass-card .booking-service-option {
+        background: rgba(34,52,42,.98) !important;
+        border-color: rgba(210,184,125,.16) !important;
+        color: #f6f1e7 !important;
+        box-shadow: 0 5px 14px rgba(0,0,0,.14) !important;
+      }
+      .booking-glass-card .booking-service-option:active,
+      .booking-glass-card .booking-category-trigger:active { border-color: rgba(210,184,125,.58) !important; }
+      .booking-glass-card .booking-selected-service-card,
+      .booking-glass-card .booking-price-summary {
+        background: rgba(38,67,50,.88) !important;
+        border-color: rgba(210,184,125,.3) !important;
+        color: #f6f1e7 !important;
+      }
+      .booking-glass-card .booking-price-summary strong,
+      .booking-glass-card .booking-price-summary span { color: #f6f1e7 !important; }
+      .booking-glass-card .booking-price-summary .booking-final-price { color: #e3c982 !important; }
+      .booking-glass-card .booking-payment-card {
+        background: rgba(50,43,29,.72) !important;
+        border-color: rgba(210,184,125,.32) !important;
+        color: #f6f1e7 !important;
+      }
+      .booking-glass-card .booking-payment-card * { color: #f6f1e7 !important; }
+      .booking-glass-card .booking-empty-service-state {
+        background: rgba(34,52,42,.96) !important;
+        color: #d9dfd6 !important;
+      }
+      .booking-glass-card .booking-discount-success { color: #b9d7bd !important; }
+      .booking-glass-card button:disabled {
+        color: #aeb7ae !important;
+        background: rgba(63,72,65,.72) !important;
+        border-color: rgba(255,255,255,.08) !important;
+        opacity: .78;
+      }
+    }
+    /* Final contrast override: warm cream fields with deep evergreen text.
+       Keep these specific controls readable even when Telegram forces dark mode. */
+    .booking-glass-card .booking-date-select,
+    .booking-glass-card .booking-time-select {
+      color: #20382b !important;
+      -webkit-text-fill-color: #20382b !important;
+      background: #f4efe3 !important;
+      border-color: #a58b5b !important;
+      color-scheme: light !important;
+      opacity: 1 !important;
+    }
+    .booking-glass-card .booking-date-select option,
+    .booking-glass-card .booking-time-select option,
+    .booking-glass-card option {
+      color: #20382b !important;
+      background: #f4efe3 !important;
+    }
+    .booking-glass-card .booking-service-option {
+      color: #20382b !important;
+      -webkit-text-fill-color: #20382b !important;
+      background: #f4efe3 !important;
+      border-color: rgba(165,139,91,.42) !important;
+    }
+    .booking-glass-card .booking-service-option * {
+      color: #20382b !important;
+      -webkit-text-fill-color: #20382b !important;
+    }
+    .booking-glass-card .booking-date-select:disabled,
+    .booking-glass-card .booking-time-select:disabled {
+      color: #657267 !important;
+      -webkit-text-fill-color: #657267 !important;
+      background: #e8e2d5 !important;
+      opacity: 1 !important;
     }
   `}</style>
 );
