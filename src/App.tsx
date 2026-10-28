@@ -6142,6 +6142,7 @@ function BookingPage({
         </div>
 
         <select
+          className="booking-date-select"
           value={date}
           onChange={(e)=>{
             setDate(e.target.value);
@@ -6163,6 +6164,7 @@ function BookingPage({
         </select>
 
         <select
+          className="booking-time-select"
           value={time}
           onChange={(e)=>setTime(e.target.value)}
           disabled={!date}
@@ -6511,6 +6513,27 @@ const bookingThemeStyle = (
     .booking-glass-card .booking-price-summary { background: rgba(36,99,71,.06); color: #26342b; }
     .booking-glass-card .booking-payment-card { background: rgba(165,139,91,.09); border-color: rgba(165,139,91,.18); color: #26342b; }
     .booking-glass-card .booking-discount-success { color: #246347; }
+    /* Keep date/time controls legible when Telegram's theme differs from iOS. */
+    .booking-glass-card .booking-date-select,
+    .booking-glass-card .booking-time-select {
+      color: #f6f1e7 !important;
+      background: #1b2b23 !important;
+      border: 1px solid rgba(165,139,91,.48) !important;
+      border-radius: 16px !important;
+      -webkit-text-fill-color: #f6f1e7 !important;
+      color-scheme: dark;
+    }
+    .booking-glass-card .booking-date-select option,
+    .booking-glass-card .booking-time-select option {
+      color: #f6f1e7 !important;
+      background-color: #1b2b23 !important;
+    }
+    .booking-glass-card .booking-date-select:disabled,
+    .booking-glass-card .booking-time-select:disabled {
+      color: #c4c8bd !important;
+      -webkit-text-fill-color: #c4c8bd !important;
+      opacity: .82 !important;
+    }
     @media (prefers-color-scheme: dark) {
       .booking-glass-card .list-copy strong,
       .booking-glass-card .list-copy span,
