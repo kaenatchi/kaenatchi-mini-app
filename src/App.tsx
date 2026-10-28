@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "react";
+import { APP_RELEASE } from "./release-notes";
 import { createPortal } from "react-dom";
 import { createInitialMyPath, loadMyPath, writeMyPath, type MyPath, type Stage1Answers } from "./myPathModel";
 import MyPathExperience from "./MyPathExperience";
@@ -6526,11 +6527,22 @@ function App() {
   const [vipOpen, setVipOpen] = useState(false);
   const [serviceFocus, setServiceFocus] = useState<"all" | "classes" | "events">("all");
   const [navDirection, setNavDirection] = useState<"forward" | "backward">("forward");
+  const [releaseNotesOpen, setReleaseNotesOpen] = useState(false);
 
   const touchStart = useRef<{ x: number; y: number; identifier: number } | null>(null);
   const [cmsReady, setCmsReady] = useState(false);
   const [cmsLoading, setCmsLoading] = useState(true);
   const [cmsLoadProgress, setCmsLoadProgress] = useState<number | null>(null);
+  useEffect(() => {
+    if (!cmsReady || cmsLoading) return;
+    try {
+      const seenVersion = window.localStorage.getItem("kaenatchi-release-notes-version");
+      if (seenVersion !== APP_RELEASE.version) setReleaseNotesOpen(true);
+    } catch {
+      setReleaseNotesOpen(true);
+    }
+  }, [cmsReady, cmsLoading]);
+
   useEffect(() => {
     let mounted = true;
     loadCmsData((progress) => {
@@ -6701,6 +6713,7 @@ function App() {
           </div>
           <strong className="cms-loading-brand">کائنات‌چی</strong>
           <span className="cms-loading-subtitle">در حال آماده‌سازی دنیای تو...</span>
+          <span className="cms-loading-version">نسخه {APP_RELEASE.version}</span>
           <div className={`loading-progress ${cmsLoadProgress === null ? "is-indeterminate" : ""}`} role="progressbar" aria-label="پیشرفت بارگذاری" aria-valuemin={0} aria-valuemax={100} aria-valuenow={cmsLoadProgress === null ? undefined : cmsLoadProgress}>
             <span style={cmsLoadProgress === null ? undefined : { width: `${cmsLoadProgress}%` }} />
           </div>
@@ -6852,6 +6865,31 @@ function App() {
 
       <AppFooter />
 
+      {releaseNotesOpen && (
+        <div className="release-notes-backdrop" role="presentation">
+          <section className="release-notes-dialog" role="dialog" aria-modal="true" aria-labelledby="release-notes-title" aria-describedby="release-notes-description" dir="rtl">
+            <div className="release-notes-orbit" aria-hidden="true">✦</div>
+            <span className="release-notes-kicker">KAENATCHI · BETA</span>
+            <h2 id="release-notes-title">تازه‌های کائنات‌چی</h2>
+            <p className="release-notes-version">نسخه {APP_RELEASE.version}</p>
+            <p id="release-notes-description" className="release-notes-intro">{APP_RELEASE.summary}</p>
+            {APP_RELEASE.sections.map((group) => (
+              <div className="release-notes-group" key={group.title}>
+                <h3>{group.title}</h3>
+                <ul>{group.items.map((item) => <li key={item}>{item}</li>)}</ul>
+              </div>
+            ))}
+            <p className="release-notes-beta-note">{APP_RELEASE.betaNotice}</p>
+            <div className="release-notes-actions">
+              <button type="button" className="release-notes-secondary" onClick={() => setReleaseNotesOpen(false)}>بعداً</button>
+              <button type="button" className="release-notes-primary" onClick={() => {
+                try { window.localStorage.setItem("kaenatchi-release-notes-version", APP_RELEASE.version); } catch { /* Dismiss for this visit if storage is unavailable. */ }
+                setReleaseNotesOpen(false);
+              }}>متوجه شدم</button>
+            </div>
+          </section>
+        </div>
+      )}
       <BottomNav
         active={section}
         onChange={changeSection}
