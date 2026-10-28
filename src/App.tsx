@@ -111,9 +111,9 @@ const MAIN_APP_URL =
 // Booking is a section inside the Main Mini App; the standalone booking app is retired.
 
 const BOOKING_TRANSPORT_ENDPOINT =
-  "https://kaenatchi-booking-transport.mayanaz-oriflame.workers.dev/";
+  "https://script.google.com/macros/s/AKfycbzlFoGUBucjGGQ5clU3aOKrfxd7MbpSVHbOKeRMyLHa3J-SzcDcRk7P0Y4SHHOrg1wPIw/exec";
 const BOOKING_BACKEND_ENDPOINT =
-  "https://script.google.com/macros/s/AKfycbyEh9txZP7nWdLoTtNvbQn_aKxiI0syH3M8Qh0TXR6C6AFC5rEuyidq1tMo5ufpKdXzHg/exec";
+  "https://script.google.com/macros/s/AKfycbzlFoGUBucjGGQ5clU3aOKrfxd7MbpSVHbOKeRMyLHa3J-SzcDcRk7P0Y4SHHOrg1wPIw/exec";
 
 const BOOKING_TRANSPORT_VERSION = "v7-jsonp-fetch-backend";
 const BOOKING_CONFIG_CACHE_KEY =
