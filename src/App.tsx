@@ -6687,6 +6687,40 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // Prevent the fixed bottom navigation from jumping into the keyboard area.
+    const editableSelector = 'input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"]';
+    let restoreTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const onFocusIn = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Element) || !target.matches(editableSelector)) return;
+      if (restoreTimer) clearTimeout(restoreTimer);
+      document.documentElement.classList.add("kaenatchi-keyboard-open");
+    };
+
+    const onFocusOut = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Element) || !target.matches(editableSelector)) return;
+      if (restoreTimer) clearTimeout(restoreTimer);
+      restoreTimer = setTimeout(() => {
+        const active = document.activeElement;
+        if (!(active instanceof Element) || !active.matches(editableSelector)) {
+          document.documentElement.classList.remove("kaenatchi-keyboard-open");
+        }
+      }, 160);
+    };
+
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
+      if (restoreTimer) clearTimeout(restoreTimer);
+      document.documentElement.classList.remove("kaenatchi-keyboard-open");
+    };
+  }, []);
+
+  useEffect(() => {
     let telegramWebApp: any = null;
     let cleanupViewportListener: (() => void) | null = null;
 

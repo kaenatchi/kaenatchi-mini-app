@@ -1668,6 +1668,16 @@ button:active,
   -webkit-backdrop-filter: blur(28px);
 }
 
+/* Keep the floating navigation out of the way while a mobile text keyboard is open. */
+html.kaenatchi-keyboard-open .bottom-nav {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(50%, 12px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms;
+}
+
+
 .nav-item {
   min-height: 58px;
 
